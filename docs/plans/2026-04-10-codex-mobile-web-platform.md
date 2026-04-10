@@ -237,7 +237,7 @@ Protocol should be defined at the bridge layer rather than exposing app-server d
   - `thread/read`
   - `thread/start`
 - turns
-  - `turn/send`
+  - `turn/start`
   - `turn/interrupt`
 - pending requests
   - `request/respond`
