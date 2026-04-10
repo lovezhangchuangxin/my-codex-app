@@ -23,6 +23,14 @@ Already implemented:
   - `POST /api/requests/respond`
 - [x] browser client thread list
 - [x] browser client thread detail
+- [x] route-based client app shell with:
+  - `Threads`
+  - `Inbox`
+  - `Connection`
+- [x] standardized `apps/client` Vite React + TypeScript scaffold
+- [x] client UI rebuild using:
+  - Tailwind CSS
+  - shadcn CLI-generated base components
 - [x] minimal live event handling for:
   - thread status changes
   - turn started / completed
@@ -40,7 +48,7 @@ Already implemented:
 Known constraints of the current baseline:
 
 - [ ] auth is only a temporary local bootstrap token, not the final pairing model
-- [ ] pending request UX is intentionally minimal and still needs reconnect hardening polish
+- [ ] pending request UX is now structured, but reconnect/resync hardening still needs polish
 - [ ] reconnect/resync behavior is still minimal
 - [ ] Tauri mobile shell and relay are not implemented
 
@@ -50,7 +58,7 @@ Known constraints of the current baseline:
 
 Goal:
 
-- move thread list/detail/live merge logic out of `apps/client/src/App.tsx`
+- move thread list/detail/live merge logic out of the original single-file client app
 - introduce a shared client SDK or state module aligned with the plan
 
 Expected outcome:
@@ -58,6 +66,7 @@ Expected outcome:
 - [x] `packages/sdk` exists
 - [x] thread read + live event merge is encapsulated behind typed APIs
 - [x] UI components stop owning transport-level event stitching
+- [x] rebuilt client routes and feature components consume runtime state through dedicated providers/hooks
 
 ### [x] 2. Implement Thread Actions
 

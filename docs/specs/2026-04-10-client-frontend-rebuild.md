@@ -13,8 +13,10 @@ Tauri-mobile hosting.
 
 ## Background
 
-The current `apps/client` implementation is a manually assembled Vite project that
-proved the first end-to-end bridge flow, but it is still a prototype:
+This spec captured the rebuild of `apps/client` from the original manually assembled
+Vite prototype into the current standardized frontend application.
+
+Before this rebuild, the client had these problems:
 
 - most UI, routing, state wiring, and event handling live in one top-level file
 - the project layout does not match the standard Vite React + TypeScript scaffold
@@ -22,9 +24,18 @@ proved the first end-to-end bridge flow, but it is still a prototype:
 - build output artifacts have leaked into the source tree
 - the app does not yet provide a clear mobile-first information architecture
 
-The project goal is to become an excellent open-source product. The client therefore
-needs to move from prototype code to a maintainable, typed, well-structured frontend
-application.
+The project goal is to become an excellent open-source product. The rebuild therefore
+replaced prototype code with a maintainable, typed, well-structured frontend
+application while preserving the existing bridge and SDK integration surface.
+
+## Current Status
+
+The rebuild defined by this spec is now implemented in `apps/client`:
+
+- the client uses a standard Vite React + TypeScript structure
+- Tailwind CSS and shadcn are integrated
+- route-based `Threads`, `Inbox`, and `Connection` surfaces are implemented
+- the SDK remains the source of bridge transport and live thread state
 
 ## Goals
 

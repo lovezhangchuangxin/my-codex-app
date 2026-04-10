@@ -20,6 +20,52 @@ application structure.
 The work should be treated as a controlled in-place rebuild of `apps/client`, not as
 a protocol redesign.
 
+## Current Implementation Snapshot
+
+The plan has now been implemented. The current client structure is:
+
+```text
+apps/client/
+  components.json
+  eslint.config.js
+  index.html
+  package.json
+  tsconfig.app.json
+  tsconfig.json
+  tsconfig.node.json
+  vite.config.ts
+  src/
+    App.tsx
+    main.tsx
+    index.css
+    app/
+      providers.tsx
+      router.tsx
+      layouts/
+        app-shell.tsx
+        threads-shell.tsx
+    components/
+      common/
+      ui/
+    features/
+      connection/
+        routes/
+      requests/
+        components/
+        lib/
+      threads/
+        components/
+        lib/
+    hooks/
+      use-media-query.ts
+    lib/
+      env.ts
+      utils.ts
+      runtime/
+        runtime-provider.tsx
+        use-runtime-snapshot.ts
+```
+
 ## Guiding Decisions
 
 ### Decision 1: Recreate the client from an official Vite scaffold
@@ -62,19 +108,21 @@ Implementation consequence:
 - low-level controls are sourced from shadcn CLI-generated components
 - custom code focuses on product-specific composition, not primitive reinvention
 
-## Expected Project Structure
+## Implemented Project Structure
 
 ```text
 apps/client/
+  components.json
+  eslint.config.js
   index.html
   package.json
-  vite.config.ts
-  tsconfig.json
   tsconfig.app.json
+  tsconfig.json
   tsconfig.node.json
-  eslint.config.js
-  components.json
+  vite.config.ts
   src/
+    App.tsx
+    index.css
     main.tsx
     app/
       providers.tsx
@@ -83,34 +131,30 @@ apps/client/
         app-shell.tsx
         threads-shell.tsx
     components/
-      ui/
       common/
-      brand/
+      ui/
     features/
       threads/
-        routes/
         components/
-        hooks/
         lib/
       requests/
         components/
         lib/
       connection/
         routes/
-        components/
-        lib/
+    hooks/
+      use-media-query.ts
     lib/
       env.ts
       utils.ts
       runtime/
         runtime-provider.tsx
         use-runtime-snapshot.ts
-    styles/
-      globals.css
 ```
 
-This layout keeps route composition, product features, and shared helpers separated
-without introducing unnecessary architectural overhead.
+This is the structure that now exists in the codebase. It keeps route composition,
+feature code, generated UI primitives, and runtime helpers separated without adding
+extra abstraction layers that the current bridge/client scope does not need.
 
 ## Tooling Changes
 
@@ -281,7 +325,8 @@ Suggested components:
 
 ## Global styles
 
-Replace the current monolithic `src/styles.css` with:
+The rebuild replaced the old monolithic `src/styles.css` with `src/index.css`,
+containing:
 
 - Tailwind base/theme layers
 - CSS variables for semantic colors, spacing accents, radius, and shadows
@@ -340,6 +385,7 @@ becoming a generic admin dashboard.
 ### Phase 6: Validate and review
 
 - typecheck
+- lint
 - build
 - review route behavior
 - review pending-request behavior

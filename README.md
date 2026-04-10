@@ -39,9 +39,25 @@ The current repository bootstrap implements the first local bridge/client slice 
 - `packages/protocol`: typed bridge/client contracts for thread reads, writes, pending-request responses, and live events
 - `packages/sdk`: shared browser-first bridge transport plus thread state/live merge runtime, including pending-request state
 - `apps/bridge`: a local bridge that starts `codex app-server`, initializes it over stdio JSON-RPC, exposes `GET /api/threads`, `GET /api/threads/:threadId`, `GET /api/events`, and write-path APIs for `thread/start`, `turn/start`, `turn/interrupt`, and `request/respond`
-- `apps/client`: a browser-first React app that reads thread summaries, opens thread detail, creates threads, sends messages, interrupts active turns, responds to pending command/file/permission requests and tool user-input prompts, and listens to a thin live SSE stream through the shared SDK
+- `apps/client`: a browser-first React app rebuilt on a standard Vite React + TypeScript scaffold with Tailwind CSS and shadcn, including:
+  - route-based `Threads`, `Inbox`, and `Connection` surfaces
+  - desktop split-view and mobile-first thread detail navigation
+  - thread list, thread detail, composer, and interrupt flows
+  - aggregated pending-request handling for command, file-change, permission, and tool user-input prompts
+  - bridge diagnostics and health checks through the shared SDK/runtime layer
 
 This is intentionally still a thin end-to-end flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, `request/respond`, and a minimal live event bridge for the selected thread. Pairing, reconnect hardening, Tauri shell integration, and relay support are still pending.
+
+## Client implementation status
+
+The current client implementation is no longer the original hand-assembled prototype. It now uses:
+
+- the official Vite React + TypeScript project structure
+- route-based navigation via React Router
+- Tailwind CSS for app styling
+- shadcn CLI-generated UI primitives
+
+The shared client runtime still remains in `packages/sdk`, so bridge transport and live thread state are not duplicated across UI components.
 
 ## Local bootstrap auth
 
