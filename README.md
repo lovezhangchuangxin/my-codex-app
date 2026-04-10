@@ -34,13 +34,14 @@ For upstream Codex integration behavior, this project references:
 
 ## Current bootstrap
 
-The current repository bootstrap implements the first Phase 1 slice from the plan:
+The current repository bootstrap implements the first local bridge/client slice from the plan:
 
-- `packages/protocol`: typed bridge/client contracts for thread list reads
-- `apps/bridge`: a local bridge that starts `codex app-server`, initializes it over stdio JSON-RPC, and exposes `GET /api/threads` plus `GET /api/threads/:threadId`
-- `apps/client`: a browser-first React app that reads thread summaries from the bridge, opens thread detail, and listens to a thin live SSE stream
+- `packages/protocol`: typed bridge/client contracts for thread reads, writes, and live events
+- `packages/sdk`: shared browser-first bridge transport plus thread state/live merge runtime
+- `apps/bridge`: a local bridge that starts `codex app-server`, initializes it over stdio JSON-RPC, exposes `GET /api/threads`, `GET /api/threads/:threadId`, `GET /api/events`, and the first write-path APIs for `thread/start`, `turn/start`, and `turn/interrupt`
+- `apps/client`: a browser-first React app that reads thread summaries, opens thread detail, creates threads, sends messages, interrupts active turns, and listens to a thin live SSE stream through the shared SDK
 
-This is intentionally a thin end-to-end flow for `thread/list`, `thread/read`, and a minimal live event bridge for selected threads. Approvals, user-input handling, pairing, reconnect recovery, Tauri shell integration, and relay support are still pending.
+This is intentionally still a thin end-to-end flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, and a minimal live event bridge for the selected thread. Approvals, user-input handling, pairing, reconnect recovery, Tauri shell integration, and relay support are still pending.
 
 ## Local bootstrap auth
 

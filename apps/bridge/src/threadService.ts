@@ -1,13 +1,19 @@
 import type {
   BridgeEvent,
   ThreadDetail,
+  ThreadStartRequest,
+  ThreadStartResponse,
   ThreadItem,
+  TurnInterruptRequest,
+  TurnInterruptResponse,
   ThreadListRequest,
   ThreadListResponse,
   ThreadReadResponse,
   ThreadRuntimeStatus,
   ThreadSummary,
   TurnDetail,
+  TurnStartRequest,
+  TurnStartResponse,
   UserInput
 } from "@my-codex-app/protocol";
 
@@ -47,6 +53,13 @@ interface AppServerThreadItem {
   [key: string]: unknown;
 }
 
+type AppServerUserInput =
+  | { type: "text"; text: string; textElements: [] }
+  | { type: "image"; url: string }
+  | { type: "localImage"; path: string }
+  | { type: "skill"; name: string; path: string }
+  | { type: "mention"; name: string; path: string };
+
 export class ThreadService {
   constructor(private readonly appServerClient: AppServerClient) {}
 
@@ -72,12 +85,42 @@ export class ThreadService {
     };
   }
 
+  async startThread(request: ThreadStartRequest): Promise<ThreadStartResponse> {
+    const result = await this.appServerClient.startThread({
+      ...(request.cwd !== undefined ? { cwd: request.cwd } : {})
+    });
+
+    return {
+      thread: this.#toThreadDetail(result.thread)
+    };
+  }
+
   async resumeThread(threadId: string): Promise<void> {
     await this.appServerClient.resumeThread(threadId);
   }
 
   async unsubscribeThread(threadId: string): Promise<void> {
     await this.appServerClient.unsubscribeThread(threadId);
+  }
+
+  async startTurn(request: TurnStartRequest): Promise<TurnStartResponse> {
+    const result = await this.appServerClient.startTurn({
+      threadId: request.threadId,
+      input: request.input.map((input) => this.#toAppServerUserInput(input))
+    });
+
+    return {
+      turn: this.#toTurnDetail(result.turn)
+    };
+  }
+
+  async interruptTurn(request: TurnInterruptRequest): Promise<TurnInterruptResponse> {
+    await this.appServerClient.interruptTurn({
+      threadId: request.threadId,
+      turnId: request.turnId
+    });
+
+    return {};
   }
 
   onBridgeEvent(listener: (event: BridgeEvent) => void): () => void {
@@ -142,6 +185,10 @@ export class ThreadService {
     }
 
     switch (method) {
+      case "thread/started": {
+        const thread = this.#toThreadDetail(payload.thread as AppServerThread);
+        return { type: "threadStarted", threadId: thread.id, thread };
+      }
       case "thread/status/changed": {
         const threadId = asString(payload.threadId);
         const status = this.#toRuntimeStatus(payload.status as AppServerThread["status"]);
@@ -282,6 +329,21 @@ export class ThreadService {
         };
       default:
         return { type: "text", text: "" };
+    }
+  }
+
+  #toAppServerUserInput(input: UserInput): AppServerUserInput {
+    switch (input.type) {
+      case "text":
+        return { type: "text", text: input.text, textElements: [] };
+      case "image":
+        return { type: "image", url: input.url };
+      case "localImage":
+        return { type: "localImage", path: input.path };
+      case "skill":
+        return { type: "skill", name: input.name, path: input.path };
+      case "mention":
+        return { type: "mention", name: input.name, path: input.path };
     }
   }
 

@@ -11,11 +11,15 @@ Already implemented:
   - `apps/client`
   - `apps/bridge`
   - `packages/protocol`
+- [x] shared client runtime in `packages/sdk`
 - [x] bridge -> Codex app-server stdio JSON-RPC initialization
 - [x] bridge HTTP APIs:
   - `GET /api/threads`
   - `GET /api/threads/:threadId`
   - `GET /api/events` (minimal SSE stream for a selected thread)
+  - `POST /api/threads/start`
+  - `POST /api/turns/start`
+  - `POST /api/turns/interrupt`
 - [x] browser client thread list
 - [x] browser client thread detail
 - [x] minimal live event handling for:
@@ -31,13 +35,12 @@ Known constraints of the current baseline:
 
 - [ ] auth is only a temporary local bootstrap token, not the final pairing model
 - [ ] approvals and `requestUserInput` are not implemented
-- [ ] `turn/start` and `turn/interrupt` are not implemented
 - [ ] reconnect/resync behavior is still minimal
 - [ ] Tauri mobile shell and relay are not implemented
 
 ## Next Major Goals
 
-### [ ] 1. Build a Real Client State Layer
+### [x] 1. Build a Real Client State Layer
 
 Goal:
 
@@ -46,11 +49,11 @@ Goal:
 
 Expected outcome:
 
-- `packages/sdk` exists
-- thread read + live event merge is encapsulated behind typed APIs
-- UI components stop owning transport-level event stitching
+- [x] `packages/sdk` exists
+- [x] thread read + live event merge is encapsulated behind typed APIs
+- [x] UI components stop owning transport-level event stitching
 
-### [ ] 2. Implement Thread Actions
+### [x] 2. Implement Thread Actions
 
 Goal:
 
@@ -64,10 +67,10 @@ Scope:
 
 Expected outcome:
 
-- create a new thread from the client
-- send a message to an existing thread
-- interrupt an in-progress turn
-- verify that live updates work against real turn execution
+- [x] create a new thread from the client
+- [x] send a message to an existing thread
+- [x] interrupt an in-progress turn
+- [ ] verify that live updates work against real turn execution
 
 ### [ ] 3. Implement Pending Request Flows
 

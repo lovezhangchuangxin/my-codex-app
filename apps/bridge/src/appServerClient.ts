@@ -71,6 +71,7 @@ interface AppServerTurnError {
 interface AppServerUserInput {
   type: "text" | "image" | "localImage" | "skill" | "mention";
   text?: string;
+  textElements?: unknown[];
   url?: string;
   path?: string;
   name?: string;
@@ -103,6 +104,16 @@ interface ThreadReadResult {
   };
 }
 
+interface ThreadStartParams {
+  cwd?: string;
+}
+
+interface ThreadStartResult {
+  thread: AppServerThread & {
+    turns: AppServerTurn[];
+  };
+}
+
 interface ThreadResumeParams {
   threadId: string;
 }
@@ -115,6 +126,20 @@ interface ThreadResumeResult {
 
 interface ThreadUnsubscribeParams {
   threadId: string;
+}
+
+interface TurnStartParams {
+  threadId: string;
+  input: AppServerUserInput[];
+}
+
+interface TurnStartResult {
+  turn: AppServerTurn;
+}
+
+interface TurnInterruptParams {
+  threadId: string;
+  turnId: string;
 }
 
 interface NotificationEnvelope {
@@ -201,6 +226,14 @@ export class AppServerClient extends EventEmitter {
     });
   }
 
+  async startThread(params: ThreadStartParams): Promise<ThreadStartResult> {
+    if (!this.#initialized) {
+      throw new Error("App-server client must be initialized before use");
+    }
+
+    return this.#sendRequest<ThreadStartParams, ThreadStartResult>("thread/start", params);
+  }
+
   async resumeThread(threadId: string): Promise<ThreadResumeResult> {
     if (!this.#initialized) {
       throw new Error("App-server client must be initialized before use");
@@ -219,6 +252,22 @@ export class AppServerClient extends EventEmitter {
     await this.#sendRequest<ThreadUnsubscribeParams, unknown>("thread/unsubscribe", {
       threadId
     });
+  }
+
+  async startTurn(params: TurnStartParams): Promise<TurnStartResult> {
+    if (!this.#initialized) {
+      throw new Error("App-server client must be initialized before use");
+    }
+
+    return this.#sendRequest<TurnStartParams, TurnStartResult>("turn/start", params);
+  }
+
+  async interruptTurn(params: TurnInterruptParams): Promise<void> {
+    if (!this.#initialized) {
+      throw new Error("App-server client must be initialized before use");
+    }
+
+    await this.#sendRequest<TurnInterruptParams, unknown>("turn/interrupt", params);
   }
 
   async close(): Promise<void> {

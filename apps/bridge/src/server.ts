@@ -1,6 +1,12 @@
 import { createServer } from "node:http";
 
-import type { ApiErrorPayload, ThreadListRequest } from "@my-codex-app/protocol";
+import type {
+  ApiErrorPayload,
+  ThreadListRequest,
+  ThreadStartRequest,
+  TurnInterruptRequest,
+  TurnStartRequest
+} from "@my-codex-app/protocol";
 
 import { AppServerClient } from "./appServerClient.js";
 import { ThreadService } from "./threadService.js";
@@ -36,8 +42,8 @@ async function main(): Promise<void> {
 
   const server = createServer(async (request, response) => {
     response.setHeader("Access-Control-Allow-Origin", bridgeOrigin);
-    response.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+    response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    response.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type");
 
     if (request.method === "OPTIONS") {
       response.writeHead(204);
@@ -74,8 +80,7 @@ async function main(): Promise<void> {
         const result = await threadService.listThreads(payload);
         writeJson(response, 200, result);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown bridge error";
-        writeJson(response, 502, { error: { message } } satisfies ApiErrorPayload);
+        writeError(response, error, 502);
       }
       return;
     }
@@ -90,8 +95,7 @@ async function main(): Promise<void> {
         const result = await threadService.readThread(threadId);
         writeJson(response, 200, result);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown bridge error";
-        writeJson(response, 502, { error: { message } } satisfies ApiErrorPayload);
+        writeError(response, error, classifyAppServerError(error, 502));
       }
       return;
     }
@@ -142,6 +146,49 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/threads/start") {
+      try {
+        const payload = await readJsonBody<ThreadStartRequest>(request);
+        const result = await threadService.startThread(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/turns/start") {
+      try {
+        const payload = await readJsonBody<TurnStartRequest>(request);
+        if (!payload.threadId || !Array.isArray(payload.input)) {
+          writeJson(response, 400, { error: { message: "Invalid turn/start payload" } });
+          return;
+        }
+
+        const result = await threadService.startTurn(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/turns/interrupt") {
+      try {
+        const payload = await readJsonBody<TurnInterruptRequest>(request);
+        if (!payload.threadId || !payload.turnId) {
+          writeJson(response, 400, { error: { message: "Invalid turn/interrupt payload" } });
+          return;
+        }
+
+        const result = await threadService.interruptTurn(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return;
+    }
+
     writeJson(response, 404, { error: { message: "Route not found" } });
   });
 
@@ -176,6 +223,63 @@ function writeJson(
 ): void {
   response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
   response.end(JSON.stringify(payload));
+}
+
+function writeError(
+  response: import("node:http").ServerResponse,
+  error: unknown,
+  statusCode: number
+): void {
+  const message = error instanceof Error ? error.message : "Unknown bridge error";
+  writeJson(response, statusCode, { error: { message } } satisfies ApiErrorPayload);
+}
+
+async function readJsonBody<T>(request: import("node:http").IncomingMessage): Promise<T> {
+  const chunks: Buffer[] = [];
+
+  for await (const chunk of request) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  const raw = Buffer.concat(chunks).toString("utf8").trim();
+  if (raw.length === 0) {
+    return {} as T;
+  }
+
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    throw new Error("Invalid JSON request body");
+  }
+}
+
+function classifyAppServerError(error: unknown, fallbackStatusCode: number): number {
+  const message = error instanceof Error ? error.message : "";
+  if (message === "Invalid JSON request body") {
+    return 400;
+  }
+
+  if (
+    message.includes("not materialized yet") ||
+    message.includes("includeTurns is unavailable before first user message") ||
+    message.includes("thread not loaded") ||
+    message.includes("active turn") ||
+    message.includes("cannot accept same-turn steering")
+  ) {
+    return 409;
+  }
+
+  if (
+    message.includes("missing") ||
+    message.includes("invalid") ||
+    message.includes("failed to parse") ||
+    message.includes("unknown thread") ||
+    message.includes("unknown turn")
+  ) {
+    return 400;
+  }
+
+  return fallbackStatusCode;
 }
 
 function hasValidAccessToken(

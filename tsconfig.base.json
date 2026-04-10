@@ -5,7 +5,8 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "paths": {
-      "@my-codex-app/protocol": ["packages/protocol/src/index.ts"]
+      "@my-codex-app/protocol": ["packages/protocol/src/index.ts"],
+      "@my-codex-app/sdk": ["packages/sdk/src/index.ts"]
     },
     "strict": true,
     "noUncheckedIndexedAccess": true,

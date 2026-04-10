@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "declaration": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "paths": {
+      "@my-codex-app/protocol": ["../protocol/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

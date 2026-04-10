@@ -1,147 +1,87 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 
-import type {
-  ThreadDetail,
-  ThreadItem,
-  ThreadListResponse,
-  ThreadReadResponse,
-  ThreadSummary,
-  UserInput,
-  BridgeEvent,
-  ThreadRuntimeStatus
-} from "@my-codex-app/protocol";
+import type { ThreadDetail, ThreadItem, ThreadSummary, UserInput } from "@my-codex-app/protocol";
+import { BridgeClient, BridgeThreadRuntime, findActiveTurnId } from "@my-codex-app/sdk";
 
 const bridgeBaseUrl = import.meta.env.VITE_BRIDGE_BASE_URL ?? "http://127.0.0.1:8787";
 const bridgeAccessToken = import.meta.env.VITE_BRIDGE_ACCESS_TOKEN ?? "";
 
-type ViewState =
-  | { kind: "loading" }
-  | { kind: "ready"; threads: ThreadSummary[] }
-  | { kind: "error"; message: string };
-
-type DetailState =
-  | { kind: "idle" }
-  | { kind: "loading"; threadId: string }
-  | { kind: "ready"; thread: ThreadDetail }
-  | { kind: "error"; threadId: string; message: string };
-
 export function App() {
-  const [state, setState] = useState<ViewState>({ kind: "loading" });
-  const [detailState, setDetailState] = useState<DetailState>({ kind: "idle" });
-  const pendingEventsRef = useRef(new Map<string, BridgeEvent[]>());
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(() => {
+  const [runtime] = useState(
+    () =>
+      new BridgeThreadRuntime(
+        new BridgeClient({
+          baseUrl: bridgeBaseUrl,
+          accessToken: bridgeAccessToken
+        })
+      )
+  );
+  const snapshot = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot, runtime.getSnapshot);
+  const [composerText, setComposerText] = useState("");
+  const activeTurnId =
+    snapshot.detail.kind === "ready" ? findActiveTurnId(snapshot.detail.thread) : null;
+
+  useEffect(() => {
+    const initialThreadId = new URL(window.location.href).searchParams.get("threadId");
+    void (async () => {
+      await runtime.loadThreads();
+      await runtime.selectThread(initialThreadId);
+    })();
+
+    return () => {
+      runtime.dispose();
+    };
+  }, [runtime]);
+
+  useEffect(() => {
     const url = new URL(window.location.href);
-    return url.searchParams.get("threadId");
-  });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadThreads(): Promise<void> {
-      try {
-        const response = await fetch(bridgeUrl("/api/threads"));
-        if (!response.ok) {
-          const payload = (await response.json()) as { error?: { message?: string } };
-          throw new Error(payload.error?.message ?? `Bridge request failed with ${response.status}`);
-        }
-        const payload = (await response.json()) as ThreadListResponse;
-        if (!cancelled) {
-          setState({ kind: "ready", threads: payload.data });
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown client error";
-        if (!cancelled) {
-          setState({ kind: "error", message });
-        }
-      }
+    if (snapshot.selectedThreadId) {
+      url.searchParams.set("threadId", snapshot.selectedThreadId);
+    } else {
+      url.searchParams.delete("threadId");
     }
+    window.history.replaceState({}, "", url);
+  }, [snapshot.selectedThreadId]);
 
-    void loadThreads();
+  async function handleStartThread(): Promise<void> {
+    try {
+      await runtime.startThread();
+      setComposerText("");
+    } catch {
+      // Surface the error through runtime mutation state.
+    }
+  }
 
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  async function handleOpenThread(threadId: string): Promise<void> {
+    setComposerText("");
+    await runtime.selectThread(threadId);
+  }
 
-  useEffect(() => {
-    if (!selectedThreadId) {
-      setDetailState({ kind: "idle" });
+  async function handleSendMessage(event: FormEvent<HTMLFormElement>): Promise<void> {
+    event.preventDefault();
+    if (!snapshot.selectedThreadId) {
       return;
     }
 
-    const threadId = selectedThreadId;
-    let cancelled = false;
-    setDetailState({ kind: "loading", threadId });
-    pendingEventsRef.current.set(threadId, []);
-
-    async function loadThread(): Promise<void> {
-      try {
-        const response = await fetch(bridgeUrl(`/api/threads/${encodeURIComponent(threadId)}`));
-        if (!response.ok) {
-          const payload = (await response.json()) as { error?: { message?: string } };
-          throw new Error(payload.error?.message ?? `Bridge request failed with ${response.status}`);
-        }
-        const payload = (await response.json()) as ThreadReadResponse;
-        if (!cancelled) {
-          const queuedEvents = pendingEventsRef.current.get(threadId) ?? [];
-          pendingEventsRef.current.delete(threadId);
-          const nextThread = queuedEvents.reduce(
-            (currentThread, event) => applyThreadEvent(currentThread, event),
-            payload.thread
-          );
-          setDetailState({ kind: "ready", thread: nextThread });
-        }
-      } catch (error) {
-        const message = error instanceof Error ? error.message : "Unknown client error";
-        if (!cancelled) {
-          setDetailState({ kind: "error", threadId, message });
-        }
-      }
+    try {
+      await runtime.sendMessage(snapshot.selectedThreadId, composerText);
+      setComposerText("");
+    } catch {
+      // Surface the error through runtime mutation state.
     }
+  }
 
-    void loadThread();
-
-    return () => {
-      cancelled = true;
-      pendingEventsRef.current.delete(threadId);
-    };
-  }, [selectedThreadId]);
-
-  useEffect(() => {
-    if (!selectedThreadId) {
+  async function handleInterrupt(): Promise<void> {
+    if (!snapshot.selectedThreadId || !activeTurnId) {
       return;
     }
 
-    const eventSource = new EventSource(
-      bridgeUrl(`/api/events?threadId=${encodeURIComponent(selectedThreadId)}`)
-    );
-
-    eventSource.onmessage = (message) => {
-      const payload = JSON.parse(message.data) as BridgeEvent | { type: "connected" } | { type: "error"; message: string };
-      if (payload.type === "connected") {
-        return;
-      }
-      if (payload.type === "error") {
-        setDetailState({ kind: "error", threadId: selectedThreadId, message: payload.message });
-        return;
-      }
-
-      setState((current) => applyThreadSummaryEvent(current, payload));
-      setDetailState((current) => {
-        if (current.kind !== "ready") {
-          const queued = pendingEventsRef.current.get(selectedThreadId) ?? [];
-          pendingEventsRef.current.set(selectedThreadId, [...queued, payload]);
-          return current;
-        }
-
-        return applyThreadDetailEvent(current, payload, selectedThreadId);
-      });
-    };
-
-    return () => {
-      eventSource.close();
-    };
-  }, [selectedThreadId]);
+    try {
+      await runtime.interruptTurn(snapshot.selectedThreadId, activeTurnId);
+    } catch {
+      // Surface the error through runtime mutation state.
+    }
+  }
 
   return (
     <main className="app-shell">
@@ -154,76 +94,128 @@ export function App() {
       </section>
       <section className="workspace-grid">
         <section className="threads-panel">
-        <div className="panel-header">
-          <h2>Threads</h2>
-          <span className="bridge-chip">Bridge: {bridgeBaseUrl}</span>
-        </div>
-        {state.kind === "loading" ? <p className="status-line">Loading thread list…</p> : null}
-        {state.kind === "error" ? <p className="status-line error">{state.message}</p> : null}
-        {state.kind === "ready" ? (
-          state.threads.length > 0 ? (
-            <ul className="thread-list">
-              {state.threads.map((thread) => (
-                <li
-                  className={`thread-card ${selectedThreadId === thread.id ? "thread-card-selected" : ""}`}
-                  key={thread.id}
-                >
-                  <div className="thread-card-top">
-                    <strong>{thread.name ?? (thread.preview || "Untitled thread")}</strong>
-                    <span className={`status-tag status-${thread.status.type}`}>
-                      {formatStatus(thread.status)}
-                    </span>
-                  </div>
-                  <p>{thread.preview || "No preview yet."}</p>
-                  <dl className="thread-meta">
-                    <div>
-                      <dt>CWD</dt>
-                      <dd>{thread.cwd}</dd>
-                    </div>
-                    <div>
-                      <dt>Provider</dt>
-                      <dd>{thread.modelProvider}</dd>
-                    </div>
-                    <div>
-                      <dt>Updated</dt>
-                      <dd>{new Date(thread.updatedAt * 1000).toLocaleString()}</dd>
-                    </div>
-                  </dl>
-                  <button
-                    className="thread-open-button"
-                    onClick={() => {
-                      setSelectedThreadId(thread.id);
-                      const url = new URL(window.location.href);
-                      url.searchParams.set("threadId", thread.id);
-                      window.history.replaceState({}, "", url);
-                    }}
-                    type="button"
+          <div className="panel-header">
+            <h2>Threads</h2>
+            <span className="bridge-chip">Bridge: {bridgeBaseUrl}</span>
+          </div>
+          <div className="panel-actions">
+            <button
+              className="thread-open-button"
+              disabled={snapshot.mutations.startThreadPending}
+              onClick={() => {
+                void handleStartThread();
+              }}
+              type="button"
+            >
+              {snapshot.mutations.startThreadPending ? "Creating…" : "New thread"}
+            </button>
+          </div>
+          {snapshot.threads.kind === "loading" ? (
+            <p className="status-line">Loading thread list…</p>
+          ) : null}
+          {snapshot.threads.kind === "error" ? (
+            <p className="status-line error">{snapshot.threads.message}</p>
+          ) : null}
+          {snapshot.threads.kind === "ready" ? (
+            snapshot.threads.threads.length > 0 ? (
+              <ul className="thread-list">
+                {snapshot.threads.threads.map((thread) => (
+                  <li
+                    className={`thread-card ${snapshot.selectedThreadId === thread.id ? "thread-card-selected" : ""}`}
+                    key={thread.id}
                   >
-                    Open thread
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="status-line">No threads returned by the bridge.</p>
-          )
-        ) : null}
+                    <div className="thread-card-top">
+                      <strong>{thread.name ?? (thread.preview || "Untitled thread")}</strong>
+                      <span className={`status-tag status-${thread.status.type}`}>
+                        {formatStatus(thread.status)}
+                      </span>
+                    </div>
+                    <p>{thread.preview || "No preview yet."}</p>
+                    <dl className="thread-meta">
+                      <div>
+                        <dt>CWD</dt>
+                        <dd>{thread.cwd}</dd>
+                      </div>
+                      <div>
+                        <dt>Provider</dt>
+                        <dd>{thread.modelProvider}</dd>
+                      </div>
+                      <div>
+                        <dt>Updated</dt>
+                        <dd>{new Date(thread.updatedAt * 1000).toLocaleString()}</dd>
+                      </div>
+                    </dl>
+                    <button
+                      className="thread-open-button"
+                      onClick={() => {
+                        void handleOpenThread(thread.id);
+                      }}
+                      type="button"
+                    >
+                      Open thread
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="status-line">No threads returned by the bridge.</p>
+            )
+          ) : null}
         </section>
         <section className="threads-panel detail-panel">
           <div className="panel-header">
             <h2>Thread Detail</h2>
-            {selectedThreadId ? <span className="bridge-chip">Selected: {selectedThreadId}</span> : null}
+            {snapshot.selectedThreadId ? (
+              <span className="bridge-chip">Selected: {snapshot.selectedThreadId}</span>
+            ) : null}
           </div>
-          {detailState.kind === "idle" ? (
+          {snapshot.mutations.lastError ? (
+            <p className="status-line error">{snapshot.mutations.lastError}</p>
+          ) : null}
+          {snapshot.selectedThreadId ? (
+            <form className="composer-form" onSubmit={(event) => void handleSendMessage(event)}>
+              <textarea
+                className="composer-input"
+                onChange={(event) => {
+                  setComposerText(event.target.value);
+                }}
+                placeholder="Send a message to this thread"
+                rows={4}
+                value={composerText}
+              />
+              <div className="composer-actions">
+                <button
+                  className="thread-open-button"
+                  disabled={snapshot.mutations.sendMessagePending || composerText.trim().length === 0}
+                  type="submit"
+                >
+                  {snapshot.mutations.sendMessagePending ? "Sending…" : "Send message"}
+                </button>
+                {activeTurnId ? (
+                  <button
+                    className="secondary-button"
+                    disabled={snapshot.mutations.interruptPending}
+                    onClick={() => {
+                      void handleInterrupt();
+                    }}
+                    type="button"
+                  >
+                    {snapshot.mutations.interruptPending ? "Interrupting…" : "Interrupt turn"}
+                  </button>
+                ) : null}
+              </div>
+            </form>
+          ) : null}
+          {snapshot.detail.kind === "idle" ? (
             <p className="status-line">Select a thread to read full history from the bridge.</p>
           ) : null}
-          {detailState.kind === "loading" ? (
+          {snapshot.detail.kind === "loading" ? (
             <p className="status-line">Loading thread detail…</p>
           ) : null}
-          {detailState.kind === "error" ? (
-            <p className="status-line error">{detailState.message}</p>
+          {snapshot.detail.kind === "error" ? (
+            <p className="status-line error">{snapshot.detail.message}</p>
           ) : null}
-          {detailState.kind === "ready" ? <ThreadDetailPanel thread={detailState.thread} /> : null}
+          {snapshot.detail.kind === "ready" ? <ThreadDetailPanel thread={snapshot.detail.thread} /> : null}
         </section>
       </section>
     </main>
@@ -238,7 +230,7 @@ function ThreadDetailPanel({ thread }: { thread: ThreadDetail }) {
         <p>{thread.cwd}</p>
       </div>
       {thread.turns.length === 0 ? (
-        <p className="status-line">No turns were returned for this thread.</p>
+        <p className="status-line">No turns yet. Send the first message to materialize this thread.</p>
       ) : (
         <ol className="turn-list">
           {thread.turns.map((turn) => (
@@ -347,154 +339,4 @@ function formatUserInput(input: UserInput): string {
     case "mention":
       return `mention: ${input.name} (${input.path})`;
   }
-}
-
-function applyThreadSummaryEvent(
-  state: ViewState,
-  event: BridgeEvent
-): ViewState {
-  if (state.kind !== "ready") {
-    return state;
-  }
-
-  if (event.type !== "threadStatusChanged") {
-    return state;
-  }
-
-  return {
-    kind: "ready",
-    threads: state.threads.map((thread) =>
-      thread.id === event.threadId ? { ...thread, status: event.status } : thread
-    )
-  };
-}
-
-function applyThreadDetailEvent(
-  state: DetailState,
-  event: BridgeEvent,
-  selectedThreadId: string
-): DetailState {
-  if (event.threadId !== selectedThreadId) {
-    return state;
-  }
-
-  if (state.kind !== "ready") {
-    return state;
-  }
-
-  switch (event.type) {
-    case "threadStatusChanged":
-      return {
-        kind: "ready",
-        thread: {
-          ...applyThreadEvent(state.thread, event)
-        }
-      };
-    case "turnStarted":
-    case "turnCompleted":
-    case "itemStarted":
-    case "itemCompleted":
-    case "agentMessageDelta":
-      return {
-        kind: "ready",
-        thread: applyThreadEvent(state.thread, event)
-      };
-  }
-}
-
-function upsertTurn(turns: ThreadDetail["turns"], nextTurn: ThreadDetail["turns"][number]) {
-  const found = turns.some((turn) => turn.id === nextTurn.id);
-  if (found) {
-    return turns.map((turn) =>
-      turn.id === nextTurn.id
-        ? {
-            ...turn,
-            ...nextTurn,
-            items: nextTurn.items.length > 0 ? nextTurn.items : turn.items
-          }
-        : turn
-    );
-  }
-
-  return [...turns, nextTurn];
-}
-
-function upsertItem(items: ThreadItem[], nextItem: ThreadItem): ThreadItem[] {
-  const found = items.some((item) => item.id === nextItem.id);
-  if (found) {
-    return items.map((item) => (item.id === nextItem.id ? nextItem : item));
-  }
-
-  return [...items, nextItem];
-}
-
-function toActiveStatus(current: ThreadRuntimeStatus): ThreadRuntimeStatus {
-  if (current.type === "active") {
-    return current;
-  }
-
-  return { type: "active", activeFlags: [] };
-}
-
-function applyThreadEvent(thread: ThreadDetail, event: BridgeEvent): ThreadDetail {
-  switch (event.type) {
-    case "threadStatusChanged":
-      return {
-        ...thread,
-        status: event.status
-      };
-    case "turnStarted":
-      return {
-        ...thread,
-        status: toActiveStatus(thread.status),
-        turns: upsertTurn(thread.turns, event.turn)
-      };
-    case "turnCompleted":
-      return {
-        ...thread,
-        turns: upsertTurn(thread.turns, event.turn)
-      };
-    case "itemStarted":
-      return {
-        ...thread,
-        turns: thread.turns.map((turn) =>
-          turn.id === event.turnId
-            ? { ...turn, items: upsertItem(turn.items, event.item) }
-            : turn
-        )
-      };
-    case "itemCompleted":
-      return {
-        ...thread,
-        turns: thread.turns.map((turn) =>
-          turn.id === event.turnId
-            ? { ...turn, items: upsertItem(turn.items, event.item) }
-            : turn
-        )
-      };
-    case "agentMessageDelta":
-      return {
-        ...thread,
-        turns: thread.turns.map((turn) =>
-          turn.id === event.turnId
-            ? {
-                ...turn,
-                items: turn.items.map((item) =>
-                  item.type === "agentMessage" && item.id === event.itemId
-                    ? { ...item, text: `${item.text}${event.delta}` }
-                    : item
-                )
-              }
-            : turn
-        )
-      };
-  }
-}
-
-function bridgeUrl(path: string): string {
-  const base = new URL(path, bridgeBaseUrl);
-  if (bridgeAccessToken) {
-    base.searchParams.set("access_token", bridgeAccessToken);
-  }
-  return base.toString();
 }

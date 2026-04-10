@@ -30,6 +30,9 @@ importers:
       '@my-codex-app/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      '@my-codex-app/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       react:
         specifier: ^19.2.0
         version: 19.2.5
@@ -51,6 +54,12 @@ importers:
         version: 7.3.2(@types/node@24.12.2)(tsx@4.21.0)
 
   packages/protocol: {}
+
+  packages/sdk:
+    dependencies:
+      '@my-codex-app/protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
 packages:
 

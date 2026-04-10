@@ -96,7 +96,36 @@ export interface ThreadReadResponse {
   thread: ThreadDetail;
 }
 
+export interface ThreadStartRequest {
+  cwd?: string;
+}
+
+export interface ThreadStartResponse {
+  thread: ThreadDetail;
+}
+
+export interface TurnStartRequest {
+  threadId: string;
+  input: UserInput[];
+}
+
+export interface TurnStartResponse {
+  turn: TurnDetail;
+}
+
+export interface TurnInterruptRequest {
+  threadId: string;
+  turnId: string;
+}
+
+export interface TurnInterruptResponse {}
+
 export type BridgeEvent =
+  | {
+      type: "threadStarted";
+      threadId: string;
+      thread: ThreadDetail;
+    }
   | {
       type: "threadStatusChanged";
       threadId: string;
