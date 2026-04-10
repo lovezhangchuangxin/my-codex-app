@@ -1,0 +1,15 @@
+{
+  "name": "my-codex-app",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.22.0",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:bridge": "pnpm --filter @my-codex-app/bridge dev",
+    "dev:client": "pnpm --filter @my-codex-app/client dev",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

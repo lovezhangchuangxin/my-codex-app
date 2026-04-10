@@ -1,0 +1,280 @@
+:root {
+  color-scheme: light;
+  font-family: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+  background:
+    radial-gradient(circle at top, rgba(217, 119, 6, 0.18), transparent 28%),
+    linear-gradient(180deg, #f6efe5 0%, #efe3d4 100%);
+  color: #1b1209;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+.app-shell {
+  width: min(1100px, calc(100vw - 32px));
+  margin: 0 auto;
+  padding: 48px 0 64px;
+}
+
+.hero-panel,
+.threads-panel {
+  border: 1px solid rgba(84, 46, 9, 0.12);
+  border-radius: 28px;
+  background: rgba(255, 252, 248, 0.82);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 24px 60px rgba(84, 46, 9, 0.08);
+}
+
+.hero-panel {
+  padding: 28px 32px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #92400e;
+}
+
+.hero-panel h1 {
+  margin: 0;
+  font-family: "Iowan Old Style", Georgia, serif;
+  font-size: clamp(2.5rem, 4vw, 4rem);
+}
+
+.lede {
+  max-width: 52rem;
+  margin: 12px 0 0;
+  font-size: 1.05rem;
+  color: #5f3c1a;
+}
+
+.threads-panel {
+  margin-top: 24px;
+  padding: 24px;
+}
+
+.workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.panel-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.bridge-chip,
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: #f7d7a8;
+  color: #6c3d11;
+}
+
+.thread-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.thread-card {
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid rgba(84, 46, 9, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.thread-card-selected {
+  border-color: rgba(180, 83, 9, 0.45);
+  box-shadow: inset 0 0 0 1px rgba(180, 83, 9, 0.2);
+}
+
+.thread-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.thread-card p {
+  margin: 10px 0 0;
+  color: #4b3520;
+}
+
+.thread-open-button {
+  margin-top: 14px;
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 14px;
+  background: #2a211a;
+  color: #fffaf2;
+  cursor: pointer;
+}
+
+.detail-panel {
+  min-height: 480px;
+}
+
+.thread-detail-header h3 {
+  margin: 0;
+}
+
+.thread-detail-header p {
+  margin: 6px 0 0;
+  color: #6b4a28;
+}
+
+.turn-list,
+.item-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.turn-list {
+  display: grid;
+  gap: 14px;
+}
+
+.turn-card,
+.item-card {
+  border: 1px solid rgba(84, 46, 9, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.68);
+}
+
+.turn-card {
+  padding: 16px;
+}
+
+.item-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.item-card {
+  padding: 12px;
+}
+
+.turn-header,
+.item-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.turn-meta,
+.item-header span {
+  color: #6b4a28;
+  font-size: 0.88rem;
+}
+
+.item-body {
+  margin-top: 10px;
+  color: #2b2119;
+}
+
+.item-body pre,
+.turn-card pre {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.84rem;
+}
+
+.thread-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+  margin: 16px 0 0;
+}
+
+.thread-meta div {
+  margin: 0;
+}
+
+.thread-meta dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8a5a2f;
+}
+
+.thread-meta dd {
+  margin: 4px 0 0;
+  color: #20150d;
+}
+
+.status-line {
+  margin: 0;
+  color: #6b4a28;
+}
+
+.status-line.error {
+  color: #9f1239;
+}
+
+.status-active {
+  background: #d8f0d1;
+  color: #215c24;
+}
+
+.status-idle {
+  background: #e9e5de;
+  color: #5b5147;
+}
+
+.status-notLoaded,
+.status-systemError {
+  background: #f8d7da;
+  color: #8b1e2d;
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    width: min(100vw - 20px, 100%);
+    padding-top: 20px;
+  }
+
+  .hero-panel,
+  .threads-panel {
+    padding: 18px;
+    border-radius: 20px;
+  }
+
+  .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel-header,
+  .thread-card-top {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
