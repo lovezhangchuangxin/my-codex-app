@@ -20,6 +20,7 @@ Already implemented:
   - `POST /api/threads/start`
   - `POST /api/turns/start`
   - `POST /api/turns/interrupt`
+  - `POST /api/requests/respond`
 - [x] browser client thread list
 - [x] browser client thread detail
 - [x] minimal live event handling for:
@@ -27,6 +28,11 @@ Already implemented:
   - turn started / completed
   - item started / completed
   - agent message delta
+- [x] pending request handling for:
+  - command approvals
+  - file-change approvals
+  - permission requests
+  - tool user-input requests
 - [x] temporary bootstrap auth using:
   - `BRIDGE_ACCESS_TOKEN`
   - `VITE_BRIDGE_ACCESS_TOKEN`
@@ -34,7 +40,7 @@ Already implemented:
 Known constraints of the current baseline:
 
 - [ ] auth is only a temporary local bootstrap token, not the final pairing model
-- [ ] approvals and `requestUserInput` are not implemented
+- [ ] pending request UX is intentionally minimal and still needs reconnect hardening polish
 - [ ] reconnect/resync behavior is still minimal
 - [ ] Tauri mobile shell and relay are not implemented
 
@@ -72,7 +78,7 @@ Expected outcome:
 - [x] interrupt an in-progress turn
 - [ ] verify that live updates work against real turn execution
 
-### [ ] 3. Implement Pending Request Flows
+### [x] 3. Implement Pending Request Flows
 
 Goal:
 
@@ -86,9 +92,9 @@ Scope:
 
 Expected outcome:
 
-- bridge normalizes pending request state
-- client can render pending requests at thread level and detail level
-- bridge persists enough pending state to survive reconnect
+- [x] bridge normalizes pending request state
+- [x] client can render pending requests at thread level and detail level
+- [x] bridge persists enough pending state to survive reconnect
 
 ### [ ] 4. Replace Bootstrap Token Auth With Pairing
 

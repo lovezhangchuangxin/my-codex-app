@@ -36,12 +36,12 @@ For upstream Codex integration behavior, this project references:
 
 The current repository bootstrap implements the first local bridge/client slice from the plan:
 
-- `packages/protocol`: typed bridge/client contracts for thread reads, writes, and live events
-- `packages/sdk`: shared browser-first bridge transport plus thread state/live merge runtime
-- `apps/bridge`: a local bridge that starts `codex app-server`, initializes it over stdio JSON-RPC, exposes `GET /api/threads`, `GET /api/threads/:threadId`, `GET /api/events`, and the first write-path APIs for `thread/start`, `turn/start`, and `turn/interrupt`
-- `apps/client`: a browser-first React app that reads thread summaries, opens thread detail, creates threads, sends messages, interrupts active turns, and listens to a thin live SSE stream through the shared SDK
+- `packages/protocol`: typed bridge/client contracts for thread reads, writes, pending-request responses, and live events
+- `packages/sdk`: shared browser-first bridge transport plus thread state/live merge runtime, including pending-request state
+- `apps/bridge`: a local bridge that starts `codex app-server`, initializes it over stdio JSON-RPC, exposes `GET /api/threads`, `GET /api/threads/:threadId`, `GET /api/events`, and write-path APIs for `thread/start`, `turn/start`, `turn/interrupt`, and `request/respond`
+- `apps/client`: a browser-first React app that reads thread summaries, opens thread detail, creates threads, sends messages, interrupts active turns, responds to pending command/file/permission requests and tool user-input prompts, and listens to a thin live SSE stream through the shared SDK
 
-This is intentionally still a thin end-to-end flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, and a minimal live event bridge for the selected thread. Approvals, user-input handling, pairing, reconnect recovery, Tauri shell integration, and relay support are still pending.
+This is intentionally still a thin end-to-end flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, `request/respond`, and a minimal live event bridge for the selected thread. Pairing, reconnect hardening, Tauri shell integration, and relay support are still pending.
 
 ## Local bootstrap auth
 

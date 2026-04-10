@@ -71,6 +71,12 @@ export class BridgeThreadRuntime {
             const thread = this.#drainPendingEvents(threadId, response.thread);
             this.#update((current) => ({
                 ...current,
+                threads: current.threads.kind === "ready"
+                    ? {
+                        kind: "ready",
+                        threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
+                    }
+                    : current.threads,
                 detail: { kind: "ready", thread }
             }));
         }
@@ -84,6 +90,12 @@ export class BridgeThreadRuntime {
                 if (thread) {
                     this.#update((current) => ({
                         ...current,
+                        threads: current.threads.kind === "ready"
+                            ? {
+                                kind: "ready",
+                                threads: upsertThreadSummary(current.threads.threads, thread)
+                            }
+                            : current.threads,
                         detail: { kind: "ready", thread: this.#drainPendingEvents(threadId, toThreadDetail(thread)) }
                     }));
                     return;
@@ -163,6 +175,20 @@ export class BridgeThreadRuntime {
         }
         finally {
             this.#updateMutations({ interruptPending: false });
+        }
+    }
+    async respondToRequest(request) {
+        this.#setPendingRequestResponse(request.requestId, true);
+        this.#updateMutations({ lastError: null });
+        try {
+            await this.client.respondToRequest(request);
+        }
+        catch (error) {
+            this.#setActionError(error);
+            throw error;
+        }
+        finally {
+            this.#setPendingRequestResponse(request.requestId, false);
         }
     }
     dispose() {
@@ -302,6 +328,23 @@ export class BridgeThreadRuntime {
             }
         }));
     }
+    #setPendingRequestResponse(requestId, isPending) {
+        const requestKey = toRequestKey(requestId);
+        this.#update((current) => {
+            const nextIds = isPending
+                ? current.mutations.respondingRequestIds.some((id) => toRequestKey(id) === requestKey)
+                    ? current.mutations.respondingRequestIds
+                    : [...current.mutations.respondingRequestIds, requestId]
+                : current.mutations.respondingRequestIds.filter((id) => toRequestKey(id) !== requestKey);
+            return {
+                ...current,
+                mutations: {
+                    ...current.mutations,
+                    respondingRequestIds: nextIds
+                }
+            };
+        });
+    }
     #update(updater) {
         this.#snapshot = updater(this.#snapshot);
         for (const listener of this.#listeners) {
@@ -311,4 +354,7 @@ export class BridgeThreadRuntime {
 }
 function toErrorMessage(error) {
     return error instanceof Error ? error.message : "Unknown client error";
+}
+function toRequestKey(requestId) {
+    return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
 }

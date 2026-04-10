@@ -1,6 +1,8 @@
 import type {
   ApiErrorPayload,
   BridgeEvent,
+  RequestRespondRequest,
+  RequestRespondResponse,
   ThreadListRequest,
   ThreadListResponse,
   ThreadReadResponse,
@@ -68,6 +70,16 @@ export class BridgeClient {
 
   interruptTurn(request: TurnInterruptRequest): Promise<TurnInterruptResponse> {
     return this.#requestJson<TurnInterruptResponse>("/api/turns/interrupt", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  respondToRequest(request: RequestRespondRequest): Promise<RequestRespondResponse> {
+    return this.#requestJson<RequestRespondResponse>("/api/requests/respond", {
       method: "POST",
       body: JSON.stringify(request),
       headers: {

@@ -1,5 +1,7 @@
 import type {
   BridgeEvent,
+  JsonRpcRequestId,
+  PendingRequest,
   ThreadDetail,
   ThreadItem,
   ThreadRuntimeStatus,
@@ -23,6 +25,7 @@ export interface ThreadMutationState {
   startThreadPending: boolean;
   sendMessagePending: boolean;
   interruptPending: boolean;
+  respondingRequestIds: JsonRpcRequestId[];
   lastError: string | null;
 }
 
@@ -42,6 +45,7 @@ export function createInitialSnapshot(): ThreadRuntimeSnapshot {
       startThreadPending: false,
       sendMessagePending: false,
       interruptPending: false,
+      respondingRequestIds: [],
       lastError: null
     }
   };
@@ -63,6 +67,7 @@ export function toThreadSummary(thread: ThreadDetail): ThreadSummary {
     cwd: thread.cwd,
     modelProvider: thread.modelProvider,
     status: thread.status,
+    pendingRequests: thread.pendingRequests,
     ...(thread.name !== undefined ? { name: thread.name } : {})
   };
 }
@@ -139,6 +144,34 @@ export function updateThreadSummaryState(
     case "turnCompleted":
     case "agentMessageDelta":
       return state;
+    case "pendingRequestAdded":
+      return {
+        kind: "ready",
+        threads: sortThreads(
+          state.threads.map((thread) =>
+            thread.id === event.threadId
+              ? {
+                  ...thread,
+                  pendingRequests: upsertPendingRequest(thread.pendingRequests, event.request)
+                }
+              : thread
+          )
+        )
+      };
+    case "pendingRequestResolved":
+      return {
+        kind: "ready",
+        threads: sortThreads(
+          state.threads.map((thread) =>
+            thread.id === event.threadId
+              ? {
+                  ...thread,
+                  pendingRequests: removePendingRequest(thread.pendingRequests, event.requestId)
+                }
+              : thread
+          )
+        )
+      };
   }
 }
 
@@ -193,6 +226,16 @@ export function applyThreadEvent(thread: ThreadDetail, event: BridgeEvent): Thre
               }
             : turn
         )
+      };
+    case "pendingRequestAdded":
+      return {
+        ...thread,
+        pendingRequests: upsertPendingRequest(thread.pendingRequests, event.request)
+      };
+    case "pendingRequestResolved":
+      return {
+        ...thread,
+        pendingRequests: removePendingRequest(thread.pendingRequests, event.requestId)
       };
   }
 }
@@ -287,6 +330,27 @@ function toActiveStatus(current: ThreadRuntimeStatus): ThreadRuntimeStatus {
   }
 
   return { type: "active", activeFlags: [] };
+}
+
+function upsertPendingRequest(
+  pendingRequests: PendingRequest[],
+  nextRequest: PendingRequest
+): PendingRequest[] {
+  const nextKey = toRequestKey(nextRequest.requestId);
+  const remaining = pendingRequests.filter((request) => toRequestKey(request.requestId) !== nextKey);
+  return [...remaining, nextRequest].sort((left, right) => left.requestedAt - right.requestedAt);
+}
+
+function removePendingRequest(
+  pendingRequests: PendingRequest[],
+  requestId: JsonRpcRequestId
+): PendingRequest[] {
+  const requestKey = toRequestKey(requestId);
+  return pendingRequests.filter((request) => toRequestKey(request.requestId) !== requestKey);
+}
+
+function toRequestKey(requestId: JsonRpcRequestId): string {
+  return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
 }
 
 function nowInSeconds(): number {

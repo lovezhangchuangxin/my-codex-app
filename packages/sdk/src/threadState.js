@@ -7,6 +7,7 @@ export function createInitialSnapshot() {
             startThreadPending: false,
             sendMessagePending: false,
             interruptPending: false,
+            respondingRequestIds: [],
             lastError: null
         }
     };
@@ -26,6 +27,7 @@ export function toThreadSummary(thread) {
         cwd: thread.cwd,
         modelProvider: thread.modelProvider,
         status: thread.status,
+        pendingRequests: thread.pendingRequests,
         ...(thread.name !== undefined ? { name: thread.name } : {})
     };
 }
@@ -81,6 +83,26 @@ export function updateThreadSummaryState(state, event) {
         case "turnCompleted":
         case "agentMessageDelta":
             return state;
+        case "pendingRequestAdded":
+            return {
+                kind: "ready",
+                threads: sortThreads(state.threads.map((thread) => thread.id === event.threadId
+                    ? {
+                        ...thread,
+                        pendingRequests: upsertPendingRequest(thread.pendingRequests, event.request)
+                    }
+                    : thread))
+            };
+        case "pendingRequestResolved":
+            return {
+                kind: "ready",
+                threads: sortThreads(state.threads.map((thread) => thread.id === event.threadId
+                    ? {
+                        ...thread,
+                        pendingRequests: removePendingRequest(thread.pendingRequests, event.requestId)
+                    }
+                    : thread))
+            };
     }
 }
 export function applyThreadEvent(thread, event) {
@@ -128,6 +150,16 @@ export function applyThreadEvent(thread, event) {
                         items: appendAgentMessageDelta(turn.items, event.itemId, event.delta)
                     }
                     : turn)
+            };
+        case "pendingRequestAdded":
+            return {
+                ...thread,
+                pendingRequests: upsertPendingRequest(thread.pendingRequests, event.request)
+            };
+        case "pendingRequestResolved":
+            return {
+                ...thread,
+                pendingRequests: removePendingRequest(thread.pendingRequests, event.requestId)
             };
     }
 }
@@ -196,6 +228,18 @@ function toActiveStatus(current) {
         return current;
     }
     return { type: "active", activeFlags: [] };
+}
+function upsertPendingRequest(pendingRequests, nextRequest) {
+    const nextKey = toRequestKey(nextRequest.requestId);
+    const remaining = pendingRequests.filter((request) => toRequestKey(request.requestId) !== nextKey);
+    return [...remaining, nextRequest].sort((left, right) => left.requestedAt - right.requestedAt);
+}
+function removePendingRequest(pendingRequests, requestId) {
+    const requestKey = toRequestKey(requestId);
+    return pendingRequests.filter((request) => toRequestKey(request.requestId) !== requestKey);
+}
+function toRequestKey(requestId) {
+    return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
 }
 function nowInSeconds() {
     return Math.floor(Date.now() / 1000);

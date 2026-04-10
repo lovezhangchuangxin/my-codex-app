@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 
 import type {
   ApiErrorPayload,
+  RequestRespondRequest,
   ThreadListRequest,
   ThreadStartRequest,
   TurnInterruptRequest,
@@ -189,6 +190,22 @@ async function main(): Promise<void> {
       return;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/requests/respond") {
+      try {
+        const payload = await readJsonBody<RequestRespondRequest>(request);
+        if (!isRecord(payload) || !("requestId" in payload) || !("response" in payload)) {
+          writeJson(response, 400, { error: { message: "Invalid request/respond payload" } });
+          return;
+        }
+
+        const result = await threadService.respondToRequest(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return;
+    }
+
     writeJson(response, 404, { error: { message: "Route not found" } });
   });
 
@@ -264,7 +281,8 @@ function classifyAppServerError(error: unknown, fallbackStatusCode: number): num
     message.includes("includeTurns is unavailable before first user message") ||
     message.includes("thread not loaded") ||
     message.includes("active turn") ||
-    message.includes("cannot accept same-turn steering")
+    message.includes("cannot accept same-turn steering") ||
+    message.includes("Unknown or resolved pending request")
   ) {
     return 409;
   }
@@ -280,6 +298,10 @@ function classifyAppServerError(error: unknown, fallbackStatusCode: number): num
   }
 
   return fallbackStatusCode;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
 }
 
 function hasValidAccessToken(

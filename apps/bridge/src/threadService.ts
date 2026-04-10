@@ -1,23 +1,33 @@
 import type {
   BridgeEvent,
+  CommandApprovalDecision,
+  FileChangeApprovalDecision,
+  GrantedPermissionProfile,
+  JsonRpcRequestId,
+  PendingRequest,
+  PendingUserInputQuestion,
+  RequestPermissionProfile,
+  RequestRespondRequest,
+  RequestRespondResponse,
   ThreadDetail,
-  ThreadStartRequest,
-  ThreadStartResponse,
   ThreadItem,
-  TurnInterruptRequest,
-  TurnInterruptResponse,
   ThreadListRequest,
   ThreadListResponse,
   ThreadReadResponse,
   ThreadRuntimeStatus,
+  ThreadStartRequest,
+  ThreadStartResponse,
   ThreadSummary,
   TurnDetail,
+  TurnInterruptRequest,
+  TurnInterruptResponse,
   TurnStartRequest,
   TurnStartResponse,
   UserInput
 } from "@my-codex-app/protocol";
 
 import { AppServerClient } from "./appServerClient.js";
+import { PendingRequestState } from "./pendingRequestState.js";
 
 interface AppServerThread {
   id: string;
@@ -60,7 +70,18 @@ type AppServerUserInput =
   | { type: "skill"; name: string; path: string }
   | { type: "mention"; name: string; path: string };
 
+type JsonRpcParams = Record<string, unknown>;
+
+interface AppServerRequestEnvelope {
+  id: JsonRpcRequestId;
+  method: string;
+  params?: unknown;
+}
+
 export class ThreadService {
+  readonly #pendingRequestState = new PendingRequestState();
+  readonly #requestMethodById = new Map<string, string>();
+
   constructor(private readonly appServerClient: AppServerClient) {}
 
   async listThreads(request: ThreadListRequest): Promise<ThreadListResponse> {
@@ -123,6 +144,59 @@ export class ThreadService {
     return {};
   }
 
+  async respondToRequest(request: RequestRespondRequest): Promise<RequestRespondResponse> {
+    const pendingRequest = this.#pendingRequestState.get(request.requestId);
+    if (!pendingRequest) {
+      throw new Error("Unknown or resolved pending request");
+    }
+    const requestMethod = this.#requestMethodById.get(toRequestKey(request.requestId));
+
+    switch (request.response.kind) {
+      case "command":
+        if (pendingRequest.kind !== "command") {
+          throw new Error("Pending request kind mismatch");
+        }
+        this.appServerClient.sendServerRequestResponse(request.requestId, {
+          decision: this.#toAppServerCommandDecision(request.response.decision, requestMethod)
+        });
+        break;
+      case "fileChange":
+        if (pendingRequest.kind !== "fileChange") {
+          throw new Error("Pending request kind mismatch");
+        }
+        this.appServerClient.sendServerRequestResponse(request.requestId, {
+          decision: this.#toAppServerFileChangeDecision(request.response.decision, requestMethod)
+        });
+        break;
+      case "permissions":
+        if (pendingRequest.kind !== "permissions") {
+          throw new Error("Pending request kind mismatch");
+        }
+        this.appServerClient.sendServerRequestResponse(request.requestId, {
+          permissions: this.#toGrantedPermissionProfile(request.response.permissions),
+          scope: request.response.scope
+        });
+        break;
+      case "userInput":
+        if (pendingRequest.kind !== "userInput") {
+          throw new Error("Pending request kind mismatch");
+        }
+        this.appServerClient.sendServerRequestResponse(request.requestId, {
+          answers: Object.fromEntries(
+            Object.entries(request.response.answers).map(([questionId, answer]) => [
+              questionId,
+              {
+                answers: answer.answers
+              }
+            ])
+          )
+        });
+        break;
+    }
+
+    return {};
+  }
+
   onBridgeEvent(listener: (event: BridgeEvent) => void): () => void {
     const onNotification = (notification: { method: string; params?: unknown }) => {
       const event = this.#toBridgeEvent(notification.method, notification.params);
@@ -130,10 +204,18 @@ export class ThreadService {
         listener(event);
       }
     };
+    const onRequest = (request: AppServerRequestEnvelope) => {
+      const event = this.#toRequestBridgeEvent(request);
+      if (event) {
+        listener(event);
+      }
+    };
 
     this.appServerClient.on("notification", onNotification);
+    this.appServerClient.on("request", onRequest);
     return () => {
       this.appServerClient.off("notification", onNotification);
+      this.appServerClient.off("request", onRequest);
     };
   }
 
@@ -146,6 +228,7 @@ export class ThreadService {
       cwd: thread.cwd,
       modelProvider: thread.modelProvider,
       status: this.#toRuntimeStatus(thread.status),
+      pendingRequests: this.#pendingRequestState.listForThread(thread.id),
       ...(thread.name !== undefined ? { name: thread.name } : {})
     };
   }
@@ -179,7 +262,7 @@ export class ThreadService {
   }
 
   #toBridgeEvent(method: string, params: unknown): BridgeEvent | null {
-    const payload = typeof params === "object" && params !== null ? (params as Record<string, unknown>) : null;
+    const payload = this.#toObject(params);
     if (!payload) {
       return null;
     }
@@ -225,9 +308,274 @@ export class ThreadService {
           ? { type: "agentMessageDelta", threadId, turnId, itemId, delta }
           : null;
       }
+      case "serverRequest/resolved": {
+        const threadId = asString(payload.threadId);
+        const requestId = asRequestId(payload.requestId);
+        if (!threadId || requestId === null) {
+          return null;
+        }
+
+        this.#pendingRequestState.resolve(requestId);
+        this.#requestMethodById.delete(toRequestKey(requestId));
+        return { type: "pendingRequestResolved", threadId, requestId };
+      }
+      case "thread/closed": {
+        const threadId = asString(payload.threadId);
+        if (threadId) {
+          this.#pendingRequestState.clearThread(threadId);
+        }
+        return null;
+      }
       default:
         return null;
     }
+  }
+
+  #toRequestBridgeEvent(request: AppServerRequestEnvelope): BridgeEvent | null {
+    const nextRequest = this.#toPendingRequest(request);
+    if (!nextRequest) {
+      return null;
+    }
+
+    this.#pendingRequestState.upsert(nextRequest);
+    this.#requestMethodById.set(toRequestKey(request.id), request.method);
+    return {
+      type: "pendingRequestAdded",
+      threadId: nextRequest.threadId,
+      request: nextRequest
+    };
+  }
+
+  #toPendingRequest(request: AppServerRequestEnvelope): PendingRequest | null {
+    const params = this.#toObject(request.params);
+    if (!params) {
+      return null;
+    }
+
+    const requestedAt = nowInSeconds();
+    switch (request.method) {
+      case "item/commandExecution/requestApproval": {
+        const threadId = asString(params.threadId);
+        const turnId = asString(params.turnId);
+        const itemId = asString(params.itemId);
+        if (!threadId || !turnId || !itemId) {
+          return null;
+        }
+
+        const approvalId = asString(params.approvalId);
+        const reason = asString(params.reason);
+        const command = asString(params.command);
+        const cwd = asString(params.cwd);
+        return {
+          kind: "command",
+          requestId: request.id,
+          threadId,
+          turnId,
+          itemId,
+          requestedAt,
+          ...(approvalId ? { approvalId } : {}),
+          ...(reason ? { reason } : {}),
+          ...(command ? { command } : {}),
+          ...(cwd ? { cwd } : {})
+        };
+      }
+      case "execCommandApproval": {
+        const threadId = asString(params.conversationId);
+        const turnId = "";
+        const itemId = asString(params.callId);
+        if (!threadId || !itemId) {
+          return null;
+        }
+
+        const command =
+          Array.isArray(params.command) && params.command.every(isString)
+            ? params.command.join(" ")
+            : undefined;
+        const approvalId = asString(params.approvalId);
+        const reason = asString(params.reason);
+        const cwd = asString(params.cwd);
+        return {
+          kind: "command",
+          requestId: request.id,
+          threadId,
+          turnId,
+          itemId,
+          requestedAt,
+          ...(approvalId ? { approvalId } : {}),
+          ...(reason ? { reason } : {}),
+          ...(command ? { command } : {}),
+          ...(cwd ? { cwd } : {})
+        };
+      }
+      case "item/fileChange/requestApproval": {
+        const threadId = asString(params.threadId);
+        const turnId = asString(params.turnId);
+        const itemId = asString(params.itemId);
+        if (!threadId || !turnId || !itemId) {
+          return null;
+        }
+
+        const reason = asString(params.reason);
+        const grantRoot = asString(params.grantRoot);
+        return {
+          kind: "fileChange",
+          requestId: request.id,
+          threadId,
+          turnId,
+          itemId,
+          requestedAt,
+          ...(reason ? { reason } : {}),
+          ...(grantRoot ? { grantRoot } : {})
+        };
+      }
+      case "applyPatchApproval": {
+        const threadId = asString(params.conversationId);
+        const itemId = asString(params.callId);
+        if (!threadId || !itemId) {
+          return null;
+        }
+
+        const reason = asString(params.reason);
+        const grantRoot = asString(params.grantRoot);
+        return {
+          kind: "fileChange",
+          requestId: request.id,
+          threadId,
+          turnId: "",
+          itemId,
+          requestedAt,
+          ...(reason ? { reason } : {}),
+          ...(grantRoot ? { grantRoot } : {})
+        };
+      }
+      case "item/permissions/requestApproval": {
+        const threadId = asString(params.threadId);
+        const turnId = asString(params.turnId);
+        const itemId = asString(params.itemId);
+        if (!threadId || !turnId || !itemId) {
+          return null;
+        }
+
+        const reason = asString(params.reason);
+        return {
+          kind: "permissions",
+          requestId: request.id,
+          threadId,
+          turnId,
+          itemId,
+          requestedAt,
+          ...(reason ? { reason } : {}),
+          permissions: this.#toRequestPermissionProfile(params.permissions)
+        };
+      }
+      case "item/tool/requestUserInput": {
+        const threadId = asString(params.threadId);
+        const turnId = asString(params.turnId);
+        const itemId = asString(params.itemId);
+        if (!threadId || !turnId || !itemId) {
+          return null;
+        }
+
+        return {
+          kind: "userInput",
+          requestId: request.id,
+          threadId,
+          turnId,
+          itemId,
+          requestedAt,
+          questions: Array.isArray(params.questions)
+            ? params.questions.flatMap((question) => {
+                const nextQuestion = this.#toPendingUserInputQuestion(question);
+                return nextQuestion ? [nextQuestion] : [];
+              })
+            : []
+        };
+      }
+      default:
+        return null;
+    }
+  }
+
+  #toRequestPermissionProfile(value: unknown): RequestPermissionProfile {
+    const payload = this.#toObject(value);
+    if (!payload) {
+      return {};
+    }
+
+    const network = this.#toObject(payload.network);
+    const fileSystem = this.#toObject(payload.fileSystem);
+
+    return {
+      ...(network && typeof network.enabled === "boolean" ? { network: { enabled: network.enabled } } : {}),
+      ...(fileSystem
+        ? {
+            fileSystem: {
+              ...(Array.isArray(fileSystem.read)
+                ? { read: fileSystem.read.filter(isString) }
+                : {}),
+              ...(Array.isArray(fileSystem.write)
+                ? { write: fileSystem.write.filter(isString) }
+                : {})
+            }
+          }
+        : {})
+    };
+  }
+
+  #toGrantedPermissionProfile(value: GrantedPermissionProfile): Record<string, unknown> {
+    return {
+      ...(value.network ? { network: { enabled: value.network.enabled ?? null } } : {}),
+      ...(value.fileSystem
+        ? {
+            fileSystem: {
+              read: value.fileSystem.read ?? null,
+              write: value.fileSystem.write ?? null
+            }
+          }
+        : {})
+    };
+  }
+
+  #toPendingUserInputQuestion(value: unknown): PendingUserInputQuestion | null {
+    const payload = this.#toObject(value);
+    const id = payload ? asString(payload.id) : null;
+    const header = payload ? asString(payload.header) : null;
+    const question = payload ? asString(payload.question) : null;
+    if (!payload || !id || !header || !question) {
+      return null;
+    }
+
+    return {
+      id,
+      header,
+      question,
+      isOther: payload.isOther === true,
+      isSecret: payload.isSecret === true,
+      ...(Array.isArray(payload.options)
+        ? {
+            options: payload.options.flatMap((option) => {
+              const nextOption = this.#toPendingUserInputQuestionOption(option);
+              return nextOption ? [nextOption] : [];
+            })
+          }
+        : {})
+    };
+  }
+
+  #toPendingUserInputQuestionOption(
+    value: unknown
+  ): NonNullable<PendingUserInputQuestion["options"]>[number] | null {
+    const payload = this.#toObject(value);
+    const label = payload ? asString(payload.label) : null;
+    const description = payload ? asString(payload.description) : null;
+    if (!payload || !label || !description) {
+      return null;
+    }
+
+    return {
+      label,
+      description
+    };
   }
 
   #toThreadItem(item: AppServerThreadItem): ThreadItem {
@@ -362,6 +710,50 @@ export class ThreadService {
         };
     }
   }
+
+  #toObject(value: unknown): JsonRpcParams | null {
+    return typeof value === "object" && value !== null ? (value as JsonRpcParams) : null;
+  }
+
+  #toAppServerCommandDecision(
+    decision: CommandApprovalDecision,
+    requestMethod: string | undefined
+  ): string {
+    if (requestMethod === "execCommandApproval") {
+      switch (decision) {
+        case "accept":
+          return "approved";
+        case "acceptForSession":
+          return "approved_for_session";
+        case "decline":
+          return "denied";
+        case "cancel":
+          return "abort";
+      }
+    }
+
+    return decision;
+  }
+
+  #toAppServerFileChangeDecision(
+    decision: FileChangeApprovalDecision,
+    requestMethod: string | undefined
+  ): string {
+    if (requestMethod === "applyPatchApproval") {
+      switch (decision) {
+        case "accept":
+          return "approved";
+        case "acceptForSession":
+          return "approved_for_session";
+        case "decline":
+          return "denied";
+        case "cancel":
+          return "abort";
+      }
+    }
+
+    return decision;
+  }
 }
 
 function isString(value: unknown): value is string {
@@ -370,4 +762,16 @@ function isString(value: unknown): value is string {
 
 function asString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
+}
+
+function asRequestId(value: unknown): JsonRpcRequestId | null {
+  return typeof value === "string" || typeof value === "number" ? value : null;
+}
+
+function nowInSeconds(): number {
+  return Math.floor(Date.now() / 1000);
+}
+
+function toRequestKey(requestId: JsonRpcRequestId): string {
+  return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
 }

@@ -124,6 +124,18 @@ body {
   color: #4b3520;
 }
 
+.thread-request-summary {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(146, 64, 14, 0.08);
+}
+
+.thread-request-summary strong,
+.thread-request-summary p {
+  margin: 0;
+}
+
 .thread-open-button {
   margin-top: 14px;
   border: 0;
@@ -146,6 +158,10 @@ body {
 
 .detail-panel {
   min-height: 480px;
+}
+
+.panel-header-tight {
+  margin-bottom: 12px;
 }
 
 .composer-form {
@@ -187,6 +203,57 @@ body {
 .thread-detail-header p {
   margin: 6px 0 0;
   color: #6b4a28;
+}
+
+.pending-requests-panel {
+  margin-bottom: 22px;
+}
+
+.pending-request-list,
+.pending-question-list {
+  display: grid;
+  gap: 12px;
+}
+
+.pending-request-card {
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(146, 64, 14, 0.16);
+  background: rgba(255, 248, 240, 0.92);
+}
+
+.pending-question {
+  display: grid;
+  gap: 8px;
+}
+
+.pending-question-label {
+  display: grid;
+  gap: 4px;
+  color: #3f2a16;
+}
+
+.pending-option-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.option-chip {
+  border: 1px solid rgba(84, 46, 9, 0.18);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #5f3c1a;
+  cursor: pointer;
+}
+
+.pending-answer-input {
+  min-height: 84px;
+}
+
+.pending-answer-field {
+  min-height: auto;
 }
 
 .turn-list,

@@ -1,6 +1,14 @@
 import { useEffect, useState, useSyncExternalStore, type FormEvent } from "react";
 
-import type { ThreadDetail, ThreadItem, ThreadSummary, UserInput } from "@my-codex-app/protocol";
+import type {
+  PendingRequest,
+  PendingUserInputRequest,
+  RequestRespondRequest,
+  ThreadDetail,
+  ThreadItem,
+  ThreadSummary,
+  UserInput
+} from "@my-codex-app/protocol";
 import { BridgeClient, BridgeThreadRuntime, findActiveTurnId } from "@my-codex-app/sdk";
 
 const bridgeBaseUrl = import.meta.env.VITE_BRIDGE_BASE_URL ?? "http://127.0.0.1:8787";
@@ -18,6 +26,7 @@ export function App() {
   );
   const snapshot = useSyncExternalStore(runtime.subscribe, runtime.getSnapshot, runtime.getSnapshot);
   const [composerText, setComposerText] = useState("");
+  const [requestAnswers, setRequestAnswers] = useState<Record<string, string>>({});
   const activeTurnId =
     snapshot.detail.kind === "ready" ? findActiveTurnId(snapshot.detail.thread) : null;
 
@@ -83,6 +92,25 @@ export function App() {
     }
   }
 
+  async function handleRespondToRequest(request: RequestRespondRequest): Promise<void> {
+    try {
+      await runtime.respondToRequest(request);
+    } catch {
+      // Surface the error through runtime mutation state.
+    }
+  }
+
+  function updateRequestAnswer(requestId: string | number, questionId: string, value: string): void {
+    setRequestAnswers((current) => ({
+      ...current,
+      [toQuestionAnswerKey(requestId, questionId)]: value
+    }));
+  }
+
+  function getRequestAnswer(requestId: string | number, questionId: string): string {
+    return requestAnswers[toQuestionAnswerKey(requestId, questionId)] ?? "";
+  }
+
   return (
     <main className="app-shell">
       <section className="hero-panel">
@@ -131,6 +159,12 @@ export function App() {
                       </span>
                     </div>
                     <p>{thread.preview || "No preview yet."}</p>
+                    {thread.pendingRequests.length > 0 ? (
+                      <div className="thread-request-summary">
+                        <strong>Pending requests</strong>
+                        <p>{thread.pendingRequests.map((request) => request.kind).join(", ")}</p>
+                      </div>
+                    ) : null}
                     <dl className="thread-meta">
                       <div>
                         <dt>CWD</dt>
@@ -215,20 +249,60 @@ export function App() {
           {snapshot.detail.kind === "error" ? (
             <p className="status-line error">{snapshot.detail.message}</p>
           ) : null}
-          {snapshot.detail.kind === "ready" ? <ThreadDetailPanel thread={snapshot.detail.thread} /> : null}
+          {snapshot.detail.kind === "ready" ? (
+            <ThreadDetailPanel
+              getRequestAnswer={getRequestAnswer}
+              onRequestAnswerChange={updateRequestAnswer}
+              onRespondToRequest={handleRespondToRequest}
+              respondingRequestIds={snapshot.mutations.respondingRequestIds}
+              thread={snapshot.detail.thread}
+            />
+          ) : null}
         </section>
       </section>
     </main>
   );
 }
 
-function ThreadDetailPanel({ thread }: { thread: ThreadDetail }) {
+function ThreadDetailPanel({
+  getRequestAnswer,
+  onRequestAnswerChange,
+  onRespondToRequest,
+  respondingRequestIds,
+  thread
+}: {
+  getRequestAnswer: (requestId: string | number, questionId: string) => string;
+  onRequestAnswerChange: (requestId: string | number, questionId: string, value: string) => void;
+  onRespondToRequest: (request: RequestRespondRequest) => Promise<void>;
+  respondingRequestIds: Array<string | number>;
+  thread: ThreadDetail;
+}) {
   return (
     <div className="thread-detail">
       <div className="thread-detail-header">
         <h3>{thread.name ?? (thread.preview || thread.id)}</h3>
         <p>{thread.cwd}</p>
       </div>
+      {thread.pendingRequests.length > 0 ? (
+        <section className="pending-requests-panel">
+          <div className="panel-header panel-header-tight">
+            <h3>Pending Requests</h3>
+            <span className="bridge-chip">{thread.pendingRequests.length}</span>
+          </div>
+          <div className="pending-request-list">
+            {thread.pendingRequests.map((request) => (
+              <PendingRequestCard
+                getRequestAnswer={getRequestAnswer}
+                key={`${request.kind}-${String(request.requestId)}`}
+                onRequestAnswerChange={onRequestAnswerChange}
+                onRespondToRequest={onRespondToRequest}
+                request={request}
+                responding={respondingRequestIds.some((id) => toRequestKey(id) === toRequestKey(request.requestId))}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
       {thread.turns.length === 0 ? (
         <p className="status-line">No turns yet. Send the first message to materialize this thread.</p>
       ) : (
@@ -259,6 +333,262 @@ function ThreadDetailPanel({ thread }: { thread: ThreadDetail }) {
         </ol>
       )}
     </div>
+  );
+}
+
+function PendingRequestCard({
+  getRequestAnswer,
+  onRequestAnswerChange,
+  onRespondToRequest,
+  request,
+  responding
+}: {
+  getRequestAnswer: (requestId: string | number, questionId: string) => string;
+  onRequestAnswerChange: (requestId: string | number, questionId: string, value: string) => void;
+  onRespondToRequest: (request: RequestRespondRequest) => Promise<void>;
+  request: PendingRequest;
+  responding: boolean;
+}) {
+  switch (request.kind) {
+    case "command":
+      return (
+        <section className="pending-request-card">
+          <div className="item-header">
+            <strong>Command approval</strong>
+            <span>{request.itemId}</span>
+          </div>
+          <p className="status-line">{request.reason ?? "Codex requested command approval."}</p>
+          {request.command ? <pre className="item-body">{request.command}</pre> : null}
+          {request.cwd ? <p className="item-body">cwd: {request.cwd}</p> : null}
+          <div className="composer-actions">
+            <button
+              className="thread-open-button"
+              disabled={responding}
+              onClick={() => {
+                void onRespondToRequest({
+                  requestId: request.requestId,
+                  response: { kind: "command", decision: "accept" }
+                });
+              }}
+              type="button"
+            >
+              {responding ? "Responding…" : "Allow"}
+            </button>
+            <button
+              className="secondary-button"
+              disabled={responding}
+              onClick={() => {
+                void onRespondToRequest({
+                  requestId: request.requestId,
+                  response: { kind: "command", decision: "decline" }
+                });
+              }}
+              type="button"
+            >
+              Deny
+            </button>
+          </div>
+        </section>
+      );
+    case "fileChange":
+      return (
+        <section className="pending-request-card">
+          <div className="item-header">
+            <strong>File change approval</strong>
+            <span>{request.itemId}</span>
+          </div>
+          <p className="status-line">{request.reason ?? "Codex requested file-change approval."}</p>
+          {request.grantRoot ? <p className="item-body">grant root: {request.grantRoot}</p> : null}
+          <div className="composer-actions">
+            <button
+              className="thread-open-button"
+              disabled={responding}
+              onClick={() => {
+                void onRespondToRequest({
+                  requestId: request.requestId,
+                  response: { kind: "fileChange", decision: "accept" }
+                });
+              }}
+              type="button"
+            >
+              {responding ? "Responding…" : "Allow"}
+            </button>
+            <button
+              className="secondary-button"
+              disabled={responding}
+              onClick={() => {
+                void onRespondToRequest({
+                  requestId: request.requestId,
+                  response: { kind: "fileChange", decision: "decline" }
+                });
+              }}
+              type="button"
+            >
+              Deny
+            </button>
+          </div>
+        </section>
+      );
+    case "permissions":
+      return (
+        <section className="pending-request-card">
+          <div className="item-header">
+            <strong>Permission request</strong>
+            <span>{request.itemId}</span>
+          </div>
+          <p className="status-line">{request.reason ?? "Codex requested additional permissions."}</p>
+          <pre className="item-body">{JSON.stringify(request.permissions, null, 2)}</pre>
+          <div className="composer-actions">
+            <button
+              className="thread-open-button"
+              disabled={responding}
+              onClick={() => {
+                void onRespondToRequest({
+                  requestId: request.requestId,
+                  response: {
+                    kind: "permissions",
+                    permissions: request.permissions,
+                    scope: "turn"
+                  }
+                });
+              }}
+              type="button"
+            >
+              {responding ? "Responding…" : "Allow"}
+            </button>
+            <button
+              className="secondary-button"
+              disabled={responding}
+              onClick={() => {
+                void onRespondToRequest({
+                  requestId: request.requestId,
+                  response: {
+                    kind: "permissions",
+                    permissions: {},
+                    scope: "turn"
+                  }
+                });
+              }}
+              type="button"
+            >
+              Deny
+            </button>
+          </div>
+        </section>
+      );
+    case "userInput":
+      return (
+        <PendingUserInputCard
+          getRequestAnswer={getRequestAnswer}
+          onRequestAnswerChange={onRequestAnswerChange}
+          onRespondToRequest={onRespondToRequest}
+          request={request}
+          responding={responding}
+        />
+      );
+  }
+}
+
+function PendingUserInputCard({
+  getRequestAnswer,
+  onRequestAnswerChange,
+  onRespondToRequest,
+  request,
+  responding
+}: {
+  getRequestAnswer: (requestId: string | number, questionId: string) => string;
+  onRequestAnswerChange: (requestId: string | number, questionId: string, value: string) => void;
+  onRespondToRequest: (request: RequestRespondRequest) => Promise<void>;
+  request: PendingUserInputRequest;
+  responding: boolean;
+}) {
+  const canSubmit = request.questions.every(
+    (question) => getRequestAnswer(request.requestId, question.id).trim().length > 0
+  );
+
+  return (
+    <section className="pending-request-card">
+      <div className="item-header">
+        <strong>User input</strong>
+        <span>{request.itemId}</span>
+      </div>
+      <div className="pending-question-list">
+        {request.questions.map((question) => (
+          <div className="pending-question" key={question.id}>
+            <label className="pending-question-label" htmlFor={`${String(request.requestId)}-${question.id}`}>
+              <strong>{question.header}</strong>
+              <span>{question.question}</span>
+            </label>
+            {question.options?.length ? (
+              <div className="pending-option-list">
+                {question.options.map((option) => (
+                  <button
+                    className="option-chip"
+                    key={option.label}
+                    onClick={() => {
+                      onRequestAnswerChange(request.requestId, question.id, option.label);
+                    }}
+                    type="button"
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {question.isSecret ? (
+              <input
+                autoComplete="off"
+                className="composer-input pending-answer-field"
+                id={`${String(request.requestId)}-${question.id}`}
+                onChange={(event) => {
+                  onRequestAnswerChange(request.requestId, question.id, event.target.value);
+                }}
+                placeholder="Enter your response"
+                spellCheck={false}
+                type="password"
+                value={getRequestAnswer(request.requestId, question.id)}
+              />
+            ) : (
+              <textarea
+                className="composer-input pending-answer-input"
+                id={`${String(request.requestId)}-${question.id}`}
+                onChange={(event) => {
+                  onRequestAnswerChange(request.requestId, question.id, event.target.value);
+                }}
+                placeholder="Enter your response"
+                rows={3}
+                value={getRequestAnswer(request.requestId, question.id)}
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="composer-actions">
+        <button
+          className="thread-open-button"
+          disabled={responding || !canSubmit}
+          onClick={() => {
+            void onRespondToRequest({
+              requestId: request.requestId,
+              response: {
+                kind: "userInput",
+                answers: Object.fromEntries(
+                  request.questions.map((question) => [
+                    question.id,
+                    {
+                      answers: [getRequestAnswer(request.requestId, question.id).trim()]
+                    }
+                  ])
+                )
+              }
+            });
+          }}
+          type="button"
+        >
+          {responding ? "Responding…" : "Submit response"}
+        </button>
+      </div>
+    </section>
   );
 }
 
@@ -339,4 +669,12 @@ function formatUserInput(input: UserInput): string {
     case "mention":
       return `mention: ${input.name} (${input.path})`;
   }
+}
+
+function toQuestionAnswerKey(requestId: string | number, questionId: string): string {
+  return `${toRequestKey(requestId)}:${questionId}`;
+}
+
+function toRequestKey(requestId: string | number): string {
+  return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
 }

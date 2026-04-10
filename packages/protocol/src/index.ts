@@ -1,5 +1,7 @@
 export type ConnectionMode = "local" | "relay";
 
+export type JsonRpcRequestId = string | number;
+
 export type ClientConnectionState =
   | "connected"
   | "reconnecting"
@@ -23,6 +25,7 @@ export interface ThreadSummary {
   cwd: string;
   modelProvider: string;
   status: ThreadRuntimeStatus;
+  pendingRequests: PendingRequest[];
   name?: string;
 }
 
@@ -78,6 +81,86 @@ export interface ThreadDetail extends ThreadSummary {
   turns: TurnDetail[];
 }
 
+export type PendingRequestKind = "command" | "fileChange" | "permissions" | "userInput";
+
+export type CommandApprovalDecision = "accept" | "acceptForSession" | "decline" | "cancel";
+
+export type FileChangeApprovalDecision = "accept" | "acceptForSession" | "decline" | "cancel";
+
+export type PermissionGrantScope = "turn" | "session";
+
+export interface FileSystemPermissionProfile {
+  read?: string[];
+  write?: string[];
+}
+
+export interface NetworkPermissionProfile {
+  enabled?: boolean;
+}
+
+export interface RequestPermissionProfile {
+  network?: NetworkPermissionProfile;
+  fileSystem?: FileSystemPermissionProfile;
+}
+
+export interface GrantedPermissionProfile {
+  network?: NetworkPermissionProfile;
+  fileSystem?: FileSystemPermissionProfile;
+}
+
+export interface PendingRequestBase {
+  requestId: JsonRpcRequestId;
+  threadId: string;
+  turnId: string;
+  itemId: string;
+  requestedAt: number;
+}
+
+export interface PendingCommandRequest extends PendingRequestBase {
+  kind: "command";
+  approvalId?: string;
+  reason?: string;
+  command?: string;
+  cwd?: string;
+}
+
+export interface PendingFileChangeRequest extends PendingRequestBase {
+  kind: "fileChange";
+  reason?: string;
+  grantRoot?: string;
+}
+
+export interface PendingPermissionsRequest extends PendingRequestBase {
+  kind: "permissions";
+  reason?: string;
+  permissions: RequestPermissionProfile;
+}
+
+export interface PendingUserInputQuestionOption {
+  label: string;
+  description: string;
+}
+
+export interface PendingUserInputQuestion {
+  id: string;
+  header: string;
+  question: string;
+  isOther: boolean;
+  isSecret: boolean;
+  options?: PendingUserInputQuestionOption[];
+}
+
+export interface PendingUserInputRequest extends PendingRequestBase {
+  kind: "userInput";
+  questions: PendingUserInputQuestion[];
+}
+
+export type PendingRequest =
+  | PendingCommandRequest
+  | PendingFileChangeRequest
+  | PendingPermissionsRequest
+  | PendingUserInputRequest;
+
 export interface ThreadListRequest {
   limit?: number;
   cursor?: string;
@@ -120,6 +203,39 @@ export interface TurnInterruptRequest {
 
 export interface TurnInterruptResponse {}
 
+export type RequestRespondRequest =
+  | {
+      requestId: JsonRpcRequestId;
+      response: {
+        kind: "command";
+        decision: CommandApprovalDecision;
+      };
+    }
+  | {
+      requestId: JsonRpcRequestId;
+      response: {
+        kind: "fileChange";
+        decision: FileChangeApprovalDecision;
+      };
+    }
+  | {
+      requestId: JsonRpcRequestId;
+      response: {
+        kind: "permissions";
+        permissions: GrantedPermissionProfile;
+        scope: PermissionGrantScope;
+      };
+    }
+  | {
+      requestId: JsonRpcRequestId;
+      response: {
+        kind: "userInput";
+        answers: Record<string, { answers: string[] }>;
+      };
+    };
+
+export interface RequestRespondResponse {}
+
 export type BridgeEvent =
   | {
       type: "threadStarted";
@@ -159,6 +275,16 @@ export type BridgeEvent =
       turnId: string;
       itemId: string;
       delta: string;
+    }
+  | {
+      type: "pendingRequestAdded";
+      threadId: string;
+      request: PendingRequest;
+    }
+  | {
+      type: "pendingRequestResolved";
+      threadId: string;
+      requestId: JsonRpcRequestId;
     };
 
 export interface ApiErrorPayload {

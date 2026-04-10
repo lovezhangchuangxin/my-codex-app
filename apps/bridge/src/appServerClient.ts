@@ -147,6 +147,12 @@ interface NotificationEnvelope {
   params?: unknown;
 }
 
+interface RequestEnvelope {
+  id: number | string;
+  method: string;
+  params?: unknown;
+}
+
 type PendingRequest = {
   resolve: (value: unknown) => void;
   reject: (reason?: unknown) => void;
@@ -270,6 +276,13 @@ export class AppServerClient extends EventEmitter {
     await this.#sendRequest<TurnInterruptParams, unknown>("turn/interrupt", params);
   }
 
+  sendServerRequestResponse(id: number | string, result: unknown): void {
+    this.#write({
+      id,
+      result
+    });
+  }
+
   async close(): Promise<void> {
     this.#child.stdin.end();
     this.#lineReader.close();
@@ -308,6 +321,11 @@ export class AppServerClient extends EventEmitter {
     };
 
     if (payload.method) {
+      if ("id" in payload && (typeof payload.id === "number" || typeof payload.id === "string")) {
+        this.emit("request", payload as RequestEnvelope);
+        return;
+      }
+
       this.emit("notification", payload as NotificationEnvelope);
       return;
     }

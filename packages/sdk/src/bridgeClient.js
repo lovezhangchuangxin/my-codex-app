@@ -45,6 +45,15 @@ export class BridgeClient {
             }
         });
     }
+    respondToRequest(request) {
+        return this.#requestJson("/api/requests/respond", {
+            method: "POST",
+            body: JSON.stringify(request),
+            headers: {
+                "Content-Type": "application/json"
+            }
+        });
+    }
     subscribeToThreadEvents(threadId, handlers) {
         const eventSource = new EventSource(this.#buildUrl("/api/events", {
             threadId
