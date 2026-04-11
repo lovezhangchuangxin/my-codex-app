@@ -13,7 +13,7 @@ The user primarily uses Codex CLI on their computer, not the Codex desktop app. 
 
 This project must actively reference the local Codex open-source repository at:
 
-- `~/Desktop/projects/sources/codex`
+- `$CODEX_SOURCE_CODE_HOME` — read this value from the project root `.env` file
 
 That repository is the authoritative implementation reference for Codex app-server capabilities, protocol behavior, session lifecycle, approvals, and related integration details.
 

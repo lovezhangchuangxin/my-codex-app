@@ -5,7 +5,7 @@
 This document is the standing reference for how `my-codex-app` should read and
 use the local upstream Codex source repository at:
 
-- `~/Desktop/projects/sources/codex`
+- `$CODEX_SOURCE_CODE_HOME` — read this value from the project root `.env` file. If `.env` does not exist or `CODEX_SOURCE_CODE_HOME` is empty, ask the user to create `.env` (copy from `.env.example`) and set the path before continuing.
 
 The goal is to avoid re-discovering the same upstream structure in every new
 session. For most `my-codex-app` tasks, this guide should be read before doing a

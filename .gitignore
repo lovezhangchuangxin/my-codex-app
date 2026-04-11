@@ -6,6 +6,8 @@ dist
 .designs/
 apps/bridge/.local/
 
+.env
+
 # agent
 .claude
 .codex

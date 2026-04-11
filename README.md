@@ -28,9 +28,13 @@ The product is designed around a local desktop bridge that connects to Codex run
 
 Codex execution stays on the user's computer. This repository will contain the shared client, bridge, relay, and protocol layers needed to make that work.
 
-For upstream Codex integration behavior, this project references:
+For upstream Codex integration behavior, this project references the local Codex source repository via the `CODEX_SOURCE_CODE_HOME` environment variable:
 
-- `~/Desktop/projects/sources/codex`
+```sh
+# Copy .env.example to .env and set your local path
+cp .env.example .env
+# Edit .env: CODEX_SOURCE_CODE_HOME=/path/to/your/codex
+```
 
 Reference guide for this repository:
 

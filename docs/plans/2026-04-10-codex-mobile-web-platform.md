@@ -10,7 +10,7 @@ The system is designed as a shared Web client running in both browser and Tauri 
 
 Implementation and protocol decisions in this repository must be validated against the local Codex source tree at:
 
-- `~/Desktop/projects/sources/codex`
+- `$CODEX_SOURCE_CODE_HOME` — read this value from the project root `.env` file
 
 In practice, the bridge and protocol layers should be developed with that repository open as the primary upstream reference for app-server methods, event semantics, and request/response behavior.
 

@@ -17,7 +17,7 @@ Codex itself always runs on the user's computer.
 
 When implementing Codex integration behavior, always reference the local Codex source repository at:
 
-- `~/Desktop/projects/sources/codex`
+- `$CODEX_SOURCE_CODE_HOME` — read this value from the project root `.env` file. If `.env` does not exist or `CODEX_SOURCE_CODE_HOME` is empty, ask the user to create `.env` (copy from `.env.example`) and set the path before continuing.
 - `docs/reference/2026-04-11-codex-upstream-integration-guide.md`
 
 That repository is the upstream authority for:
