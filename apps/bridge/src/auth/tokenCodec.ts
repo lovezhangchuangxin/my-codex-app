@@ -63,7 +63,7 @@ export function verifyAccessToken(
 }
 
 function signPayload(encodedPayload: string, secret: string): string {
-  return createHmac("sha256", secret).update(encodedPayload).digest("base64url");
+  return createHmac("sha256", secret).update(encodedPayload).digest("hex");
 }
 
 function encodeSegment(value: string): string {
@@ -75,7 +75,5 @@ function decodeSegment(value: string): string {
 }
 
 function safeEquals(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-  return leftBuffer.length === rightBuffer.length && timingSafeEqual(leftBuffer, rightBuffer);
+  return timingSafeEqual(Buffer.from(left), Buffer.from(right));
 }

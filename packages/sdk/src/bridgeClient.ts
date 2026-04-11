@@ -186,6 +186,7 @@ export class BridgeClient {
   ): () => void {
     let closed = false;
     let eventSource: EventSource | null = null;
+    let reconnectAttempt = 0;
 
     const connect = async (): Promise<void> => {
       const credentials = await this.#getValidCredentials();
@@ -219,6 +220,10 @@ export class BridgeClient {
         handlers.onEvent(payload);
       };
 
+      eventSource.onopen = () => {
+        reconnectAttempt = 0;
+      };
+
       eventSource.onerror = () => {
         if (closed) {
           return;
@@ -226,15 +231,19 @@ export class BridgeClient {
 
         eventSource?.close();
         eventSource = null;
-        void this.#refreshCredentials()
-          .then(() => {
-            if (!closed) {
-              void connect();
-            }
-          })
-          .catch(() => {
-            handlers.onError("Bridge event stream disconnected");
-          });
+        reconnectAttempt++;
+        const delay = Math.min(1000 * 2 ** (reconnectAttempt - 1), 30_000) + Math.floor(Math.random() * 1000);
+        setTimeout(() => {
+          void this.#refreshCredentials()
+            .then(() => {
+              if (!closed) {
+                void connect();
+              }
+            })
+            .catch(() => {
+              handlers.onError("Bridge event stream disconnected");
+            });
+        }, delay);
       };
     };
 
@@ -304,14 +313,14 @@ export class BridgeClient {
     return this.getCredentials();
   }
 
-  async #refreshCredentials(): Promise<BridgeSessionCredentials> {
+  #refreshCredentials(): Promise<BridgeSessionCredentials> {
     if (this.#refreshPromise) {
       return this.#refreshPromise;
     }
 
     const startingCredentials = this.getCredentials();
     if (!startingCredentials) {
-      throw new Error("Bridge session is unavailable");
+      return Promise.reject(new Error("Bridge session is unavailable"));
     }
 
     this.#refreshPromise = this.#performRefresh(startingCredentials)
