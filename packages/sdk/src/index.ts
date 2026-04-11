@@ -3,8 +3,8 @@ export {
   type BridgeClientConfig,
   type BridgeCredentialStore,
   type BridgeSessionCredentials
-} from "./bridgeClient.js";
-export { BridgeThreadRuntime } from "./threadRuntime.js";
+} from "./bridgeClient";
+export { BridgeThreadRuntime } from "./threadRuntime";
 export {
   createInitialSnapshot,
   findActiveTurnId,
@@ -15,4 +15,4 @@ export {
   type ThreadListState,
   type ThreadMutationState,
   type ThreadRuntimeSnapshot
-} from "./threadState.js";
+} from "./threadState";

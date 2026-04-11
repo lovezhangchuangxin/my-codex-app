@@ -2,8 +2,8 @@
   "compilerOptions": {
     "baseUrl": ".",
     "target": "ES2022",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "paths": {
       "@my-codex-app/protocol": ["packages/protocol/src/index.ts"],
       "@my-codex-app/sdk": ["packages/sdk/src/index.ts"]

@@ -16,12 +16,12 @@ import {
   createRefreshToken,
   DeviceTrustStore,
   generatePairingCode
-} from "./deviceTrustStore.js";
+} from "./deviceTrustStore";
 import {
   issueAccessToken,
   verifyAccessToken,
   type AccessTokenPayload
-} from "./tokenCodec.js";
+} from "./tokenCodec";
 
 const ACCESS_TOKEN_TTL_SECONDS = 10 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;

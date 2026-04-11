@@ -9,7 +9,7 @@ import type {
   UserInput
 } from "@my-codex-app/protocol";
 
-import { BridgeClient } from "./bridgeClient.js";
+import { BridgeClient } from "./bridgeClient";
 import {
   applyThreadEvent,
   createInitialSnapshot,
@@ -20,7 +20,7 @@ import {
   type ThreadRuntimeSnapshot,
   updateThreadSummaryState,
   upsertThreadSummary
-} from "./threadState.js";
+} from "./threadState";
 
 type Listener = () => void;
 

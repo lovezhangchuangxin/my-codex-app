@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
 
-import { BridgeAuthError, type AuthenticatedBridgeSession, type BridgeAuthService } from "./authService.js";
+import { BridgeAuthError, type AuthenticatedBridgeSession, type BridgeAuthService } from "./authService";
 
 export function authenticateBridgeRequest(
   request: IncomingMessage,

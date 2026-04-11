@@ -4,7 +4,7 @@ import { dirname } from "node:path";
 
 import type { DeviceInfo, DeviceTrustRecord } from "@my-codex-app/protocol";
 
-import { createSigningSecret } from "./tokenCodec.js";
+import { createSigningSecret } from "./tokenCodec";
 
 interface StoredPairingChallenge {
   code: string;
@@ -294,7 +294,13 @@ function createInitialState(): BridgeAuthState {
 }
 
 export function generatePairingCode(): string {
-  return randomBytes(4).toString("hex").slice(0, 6).toUpperCase();
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(8);
+  let code = "";
+  for (let i = 0; i < 8; i++) {
+    code += chars[bytes[i]! % chars.length];
+  }
+  return code;
 }
 
 function nowInSeconds(): number {

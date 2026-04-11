@@ -26,8 +26,8 @@ import type {
   UserInput
 } from "@my-codex-app/protocol";
 
-import { AppServerClient } from "./appServerClient.js";
-import { PendingRequestState } from "./pendingRequestState.js";
+import { AppServerClient } from "./appServerClient";
+import { PendingRequestState } from "./pendingRequestState";
 
 interface AppServerThread {
   id: string;

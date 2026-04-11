@@ -15,11 +15,36 @@ import type {
   TurnStartRequest
 } from "@my-codex-app/protocol";
 
-import { AppServerClient } from "./appServerClient.js";
-import { authenticateBridgeRequest } from "./auth/authenticate.js";
-import { BridgeAuthError, BridgeAuthService } from "./auth/authService.js";
-import { DeviceTrustStore } from "./auth/deviceTrustStore.js";
-import { ThreadService } from "./threadService.js";
+import { AppServerClient } from "./appServerClient";
+import { authenticateBridgeRequest } from "./auth/authenticate";
+import { BridgeAuthError, BridgeAuthService } from "./auth/authService";
+import { DeviceTrustStore } from "./auth/deviceTrustStore";
+import { ThreadService } from "./threadService";
+
+class RateLimiter {
+  readonly #entries = new Map<string, { count: number; resetAt: number }>();
+  readonly #max: number;
+  readonly #windowMs: number;
+
+  constructor(max: number, windowMs: number) {
+    this.#max = max;
+    this.#windowMs = windowMs;
+  }
+
+  check(key: string): boolean {
+    const now = Date.now();
+    const entry = this.#entries.get(key);
+    if (!entry || now >= entry.resetAt) {
+      this.#entries.set(key, { count: 1, resetAt: now + this.#windowMs });
+      return true;
+    }
+    entry.count++;
+    return entry.count <= this.#max;
+  }
+}
+
+const pairingLimiter = new RateLimiter(10, 60_000);
+const refreshLimiter = new RateLimiter(30, 60_000);
 
 const port = Number.parseInt(process.env.BRIDGE_PORT ?? "8787", 10);
 const host = process.env.BRIDGE_HOST ?? "127.0.0.1";
@@ -90,6 +115,10 @@ async function main(): Promise<void> {
     }
 
     if (request.method === "POST" && url.pathname === "/api/pairing/complete") {
+      if (!pairingLimiter.check(request.socket.remoteAddress ?? "unknown")) {
+        writeJson(response, 429, { error: { message: "Too many requests" } });
+        return;
+      }
       try {
         const payload = await readJsonBody<PairingCompleteRequest>(request);
         if (!isRecord(payload) || !isRecord(payload.device) || typeof payload.code !== "string") {
@@ -107,6 +136,10 @@ async function main(): Promise<void> {
     }
 
     if (request.method === "POST" && url.pathname === "/api/session/refresh") {
+      if (!refreshLimiter.check(request.socket.remoteAddress ?? "unknown")) {
+        writeJson(response, 429, { error: { message: "Too many requests" } });
+        return;
+      }
       try {
         const payload = await readJsonBody<SessionRefreshRequest>(request);
         if (
@@ -351,6 +384,7 @@ function writeError(
   }
 
   const message = error instanceof Error ? error.message : "Unknown bridge error";
+  console.error(`[bridge] Unhandled error (${statusCode}): ${message}`);
   writeJson(response, statusCode, { error: { message } } satisfies ApiErrorPayload);
 }
 
