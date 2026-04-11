@@ -18,6 +18,7 @@ Codex itself always runs on the user's computer.
 When implementing Codex integration behavior, always reference the local Codex source repository at:
 
 - `~/Desktop/projects/sources/codex`
+- `docs/reference/2026-04-11-codex-upstream-integration-guide.md`
 
 That repository is the upstream authority for:
 
@@ -32,12 +33,13 @@ If this repository's assumptions conflict with the upstream Codex source, stop a
 ## Workflow Rules
 
 1. Read the relevant local code, docs, and existing project files before editing.
-2. Prefer the smallest coherent change that advances the current milestone.
-3. Keep browser and Tauri-mobile behavior aligned unless platform differences are explicitly required.
-4. Keep core client logic Web-first. Do not move domain logic into Tauri-specific code without a strong reason.
-5. Keep bridge-facing and relay-facing protocol definitions typed and centralized.
-6. Do not introduce private Codex desktop IPC dependencies as a core architectural requirement.
-7. Before finishing a task, review the changed files for consistency with the current spec and plan.
+2. For Codex integration tasks, read `docs/reference/2026-04-11-codex-upstream-integration-guide.md` before doing a fresh upstream repo sweep.
+3. Prefer the smallest coherent change that advances the current milestone.
+4. Keep browser and Tauri-mobile behavior aligned unless platform differences are explicitly required.
+5. Keep core client logic Web-first. Do not move domain logic into Tauri-specific code without a strong reason.
+6. Keep bridge-facing and relay-facing protocol definitions typed and centralized.
+7. Do not introduce private Codex desktop IPC dependencies as a core architectural requirement.
+8. Before finishing a task, review the changed files for consistency with the current spec and plan.
 
 ## Architecture Constraints
 

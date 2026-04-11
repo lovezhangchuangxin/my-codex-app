@@ -32,6 +32,10 @@ For upstream Codex integration behavior, this project references:
 
 - `~/Desktop/projects/sources/codex`
 
+Reference guide for this repository:
+
+- `docs/reference/2026-04-11-codex-upstream-integration-guide.md`
+
 ## Current bootstrap
 
 The current repository bootstrap implements the first local bridge/client slice from the plan:
