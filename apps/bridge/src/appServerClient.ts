@@ -205,7 +205,7 @@ export class AppServerClient extends EventEmitter {
     });
 
     this.#write({
-      method: "initialized",
+      method: "notifications/initialized",
       params: {}
     });
 
@@ -295,7 +295,8 @@ export class AppServerClient extends EventEmitter {
   }
 
   #write(payload: Record<string, unknown>): void {
-    this.#child.stdin.write(`${JSON.stringify(payload)}\n`);
+    const message = { jsonrpc: "2.0", ...payload };
+    this.#child.stdin.write(`${JSON.stringify(message)}\n`);
   }
 
   async #sendRequest<TParams, TResult>(method: string, params: TParams): Promise<TResult> {
