@@ -32,9 +32,10 @@ If this repository's assumptions conflict with the upstream Codex source, stop a
 
 ## Workflow Rules
 
-1. Read the relevant local code, docs, and existing project files before editing.
-2. For Codex integration tasks, read `docs/reference/2026-04-11-codex-upstream-integration-guide.md` before doing a fresh upstream repo sweep.
-3. Prefer the smallest coherent change that advances the current milestone.
+1. **Pre-check `CODEX_SOURCE_CODE_HOME` before any Codex-related work.** Read the project root `.env` file. If it does not exist or `CODEX_SOURCE_CODE_HOME` is empty, stop and ask the user to run `cp .env.example .env` and fill in the path. Do not proceed until this is done.
+2. Read the relevant local code, docs, and existing project files before editing.
+3. For Codex integration tasks, read `docs/reference/2026-04-11-codex-upstream-integration-guide.md` before doing a fresh upstream repo sweep.
+4. Prefer the smallest coherent change that advances the current milestone.
 4. Keep browser and Tauri-mobile behavior aligned unless platform differences are explicitly required.
 5. Keep core client logic Web-first. Do not move domain logic into Tauri-specific code without a strong reason.
 6. Keep bridge-facing and relay-facing protocol definitions typed and centralized.
