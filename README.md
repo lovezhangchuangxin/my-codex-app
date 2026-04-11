@@ -1,84 +1,129 @@
 # My Codex App
 
-My Codex App is a single-repository project for accessing Codex from:
+**[English](./README.md) | [中文](./README.zh.md)**
 
-- a browser
-- a Tauri 2 mobile app
+Access [Codex](https://github.com/openai/codex) from your browser and phone. Codex stays on your computer — this project adds a local bridge, shared web client, and (eventually) a Tauri mobile shell so you can monitor sessions, respond to approvals, and read live progress from any device on your network.
 
-## Background
+## Architecture
 
-This project exists because Codex is primarily used on a computer, while the user also wants to:
-
-- monitor Codex sessions from a phone
-- read live progress and messages away from the computer
-- respond to approvals and tool/user-input requests remotely
-- continue using the same product from both a browser and a mobile app
-
-The user's primary workflow is based on Codex CLI running on their computer, not the Codex desktop app. Because of that, this project is designed around a local desktop bridge that connects to Codex on the computer and exposes a controlled client-facing surface for Web and mobile use.
-
-The product is intended to support two access modes:
-
-- local network direct access when the phone and computer are on the same LAN
-- remote relay access when they are on different networks
-
-The product is designed around a local desktop bridge that connects to Codex running on the user's computer, with support for:
-
-- local network direct access
-- remote relay access across networks
-
-Codex execution stays on the user's computer. This repository will contain the shared client, bridge, relay, and protocol layers needed to make that work.
-
-For upstream Codex integration behavior, this project references the local Codex source repository via the `CODEX_SOURCE_CODE_HOME` environment variable:
-
-```sh
-# Copy .env.example to .env and set your local path
-cp .env.example .env
-# Edit .env: CODEX_SOURCE_CODE_HOME=/path/to/your/codex
+```
+┌──────────────┐      局域网 / Relay      ┌──────────────────┐       stdio JSON-RPC       ┌───────────────┐
+│  浏览器 /     │ ◄─────────────────────► │  Bridge (Node)   │ ◄────────────────────────► │  Codex CLI    │
+│  移动端 App   │       HTTP + SSE        │  localhost:8787  │                            │  app-server   │
+└──────────────┘                         └──────────────────┘                            └───────────────┘
 ```
 
-Reference guide for this repository:
+- **Bridge** — runs on your computer, connects to Codex via `codex app-server`, exposes HTTP APIs
+- **Client** — browser-first React app (shared with future Tauri mobile shell)
+- **Protocol** — typed contracts between bridge and client
+- **SDK** — shared transport, thread state management, and live event merge runtime
 
-- `docs/reference/2026-04-11-codex-upstream-integration-guide.md`
+## Features
 
-## Current bootstrap
+- Thread list, thread detail, and live streaming updates
+- Send messages, start threads, and interrupt in-progress turns
+- Aggregated pending-request inbox (command approvals, file-change approvals, permission requests, tool user-input)
+- Local pairing auth with revocable device trust
+- Explicit reconnect and resync recovery
+- LAN access — open the client from your phone on the same network
 
-The current repository bootstrap implements the first local bridge/client slice from the plan:
+## Quick Start
 
-- `packages/protocol`: typed bridge/client contracts for thread reads, writes, pending-request responses, and live events
-- `packages/sdk`: shared browser-first bridge transport plus thread state/live merge runtime, including pending-request state
-- `apps/bridge`: a local bridge that starts `codex app-server`, initializes it over stdio JSON-RPC, exposes `GET /api/threads`, `GET /api/threads/:threadId`, `GET /api/events`, and write-path APIs for `thread/start`, `turn/start`, `turn/interrupt`, and `request/respond`
-- `apps/client`: a browser-first React app rebuilt on a standard Vite React + TypeScript scaffold with Tailwind CSS and shadcn, including:
-  - route-based `Threads`, `Inbox`, and `Connection` surfaces
-  - desktop split-view and mobile-first thread detail navigation
-  - thread list, thread detail, composer, and interrupt flows
-  - aggregated pending-request handling for command, file-change, permission, and tool user-input prompts
-  - bridge diagnostics and health checks through the shared SDK/runtime layer
+### Prerequisites
 
-This is intentionally still a focused local-direct flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, `request/respond`, and selected-thread live events. Local pairing, revocable device trust, and explicit reconnect/resync recovery now exist for direct bridge access, while Tauri shell integration and relay support are still pending.
+- [Node.js](https://nodejs.org/) >= 20
+- [pnpm](https://pnpm.io/) >= 10
+- [Codex CLI](https://github.com/openai/codex) installed and configured
 
-## Client implementation status
+### 1. Install dependencies
 
-The current client implementation is no longer the original hand-assembled prototype. It now uses:
+```sh
+pnpm install
+```
 
-- the official Vite React + TypeScript project structure
-- route-based navigation via React Router
-- Tailwind CSS for app styling
-- shadcn CLI-generated UI primitives
+### 2. Configure environment
 
-The shared client runtime still remains in `packages/sdk`, so bridge transport and live thread state are not duplicated across UI components.
+```sh
+cp .env.example .env
+# Edit .env and set CODEX_SOURCE_CODE_HOME to your local Codex source checkout path
+```
 
-## Local pairing auth
+### 3. Start the bridge
 
-Current local bridge auth uses explicit pairing and revocable device trust.
+```sh
+pnpm dev:bridge
+```
 
-- the bridge generates a short-lived pairing code and prints it locally
-- the client completes pairing with a device identifier plus human-readable metadata
-- the bridge stores a revocable trusted-device record
-- the client uses short-lived access tokens plus refresh tokens instead of one shared static secret
+The bridge prints a **pairing code** in the terminal. You'll need this once to trust a new device.
 
-Requests authenticate with:
+### 4. Start the client
+
+```sh
+pnpm dev:client
+```
+
+Open [http://localhost:5173](http://localhost:5173) in your browser, enter the pairing code, and you're connected.
+
+### Access from your phone
+
+Both devices must be on the same Wi-Fi. With the client dev server running, find the `Network` address printed in the terminal (e.g. `http://192.168.1.2:5173`) and open it on your phone.
+
+## Project Structure
+
+```
+my-codex-app/
+├── apps/
+│   ├── bridge/          # Local bridge server (Node, connects to Codex app-server)
+│   └── client/          # Browser client (React + Vite + Tailwind + shadcn)
+├── packages/
+│   ├── protocol/        # Shared type contracts (API request/response shapes)
+│   └── sdk/             # Bridge transport, thread runtime, live event merge
+├── docs/
+│   ├── specs/           # Architecture specs
+│   ├── plans/           # Milestone plans
+│   └── reference/       # Upstream integration guides
+└── pnpm-workspace.yaml
+```
+
+## Tech Stack
+
+| Layer     | Technology                                                |
+| --------- | --------------------------------------------------------- |
+| Client    | React 19, Vite 8, TypeScript, Tailwind CSS, shadcn       |
+| Bridge    | Node.js, native `http`, stdio JSON-RPC                    |
+| Protocol  | Shared TypeScript types (no runtime dependencies)         |
+| SDK       | TypeScript, `fetch` + `EventSource` (browser-first)      |
+| Monorepo  | pnpm workspaces                                           |
+
+## Auth Model
+
+The bridge uses **local pairing** with revocable device trust — no static shared tokens.
+
+1. Bridge generates a short-lived **pairing code** (printed in terminal, valid 10 min)
+2. Client completes pairing with a device identifier and human-readable label
+3. Bridge stores a **trusted device record** and issues tokens:
+   - **Access token** — 10 min TTL, used for API calls
+   - **Refresh token** — 30 day TTL, auto-rotates to keep the session alive
+4. Devices can be revoked from the Connection page at any time
+
+Authenticating requests:
 
 - `Authorization: Bearer <access-token>` for normal HTTP APIs
-- `access_token=...` query params for browser `EventSource` subscriptions
+- `access_token=...` query parameter for `EventSource` (SSE) subscriptions
 
-The old `BRIDGE_ACCESS_TOKEN` / `VITE_BRIDGE_ACCESS_TOKEN` bootstrap is no longer the active local auth model.
+## Scripts
+
+| Command              | Description                      |
+| -------------------- | -------------------------------- |
+| `pnpm dev:bridge`    | Start bridge dev server          |
+| `pnpm dev:client`    | Start client dev server          |
+| `pnpm build`         | Build all packages               |
+| `pnpm typecheck`     | Type-check all packages          |
+
+## Roadmap
+
+See [TODO.md](./TODO.md) for milestone tracking. Upcoming:
+
+- Tauri 2 mobile shell integration
+- Remote relay for cross-network access
+- Tauri-native secure credential storage
