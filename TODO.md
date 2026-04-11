@@ -48,8 +48,7 @@ Already implemented:
 
 Known constraints of the current baseline:
 
-- [ ] pending request UX is now structured, but reconnect/resync hardening still needs polish
-- [ ] reconnect/resync behavior is still minimal
+- [ ] reconnect/resync is hardened for short local-direct disconnects, but bridge-restart recovery is still limited
 - [ ] browser credential storage is functional, but not yet polished for Tauri-native secure storage
 - [ ] Tauri mobile shell and relay are not implemented
 
@@ -124,7 +123,7 @@ Expected outcome:
 - [x] local mode aligns with spec security requirements
 - [x] auth model is documented in `docs/specs/` and `docs/plans/`
 
-### [ ] 5. Harden Reconnect And Resync
+### [x] 5. Harden Reconnect And Resync
 
 Goal:
 
@@ -139,8 +138,8 @@ Scope:
 
 Expected outcome:
 
-- reconnect is an explicit state machine instead of ad hoc reloads
-- stale local assumptions are overwritten by bridge authority
+- [x] reconnect is an explicit state machine instead of ad hoc reloads
+- [x] stale local assumptions are overwritten by bridge authority
 
 ### [ ] 6. Add Tauri Mobile Shell Integration
 

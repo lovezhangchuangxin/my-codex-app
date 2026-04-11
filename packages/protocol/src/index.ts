@@ -2,12 +2,6 @@ export type ConnectionMode = "local" | "relay";
 
 export type JsonRpcRequestId = string | number;
 
-export type ClientConnectionState =
-  | "connected"
-  | "reconnecting"
-  | "resynced"
-  | "disconnected";
-
 export type BridgeAuthErrorCode =
   | "missingCredentials"
   | "invalidAccessToken"
@@ -17,6 +11,23 @@ export type BridgeAuthErrorCode =
   | "revokedDevice"
   | "invalidPairingCode"
   | "deviceIdConflict";
+
+export type LocalConnectionStateKind =
+  | "unpaired"
+  | "refreshing"
+  | "authenticated"
+  | "reconnecting"
+  | "resyncing"
+  | "revoked"
+  | "expired"
+  | "disconnected";
+
+export interface LocalConnectionState {
+  kind: LocalConnectionStateKind;
+  message?: string;
+  authErrorCode?: BridgeAuthErrorCode;
+  lastSyncedAt?: number;
+}
 
 export interface DeviceInfo {
   deviceId: string;

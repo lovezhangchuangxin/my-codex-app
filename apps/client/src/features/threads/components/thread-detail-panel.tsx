@@ -45,6 +45,7 @@ import { cn } from "@/lib/utils";
 import type { ThreadDetailState, ThreadListState } from "@my-codex-app/sdk";
 import { findActiveTurnId } from "@my-codex-app/sdk";
 import type {
+  LocalConnectionState,
   RequestRespondRequest,
   ThreadDetail,
   ThreadItem
@@ -66,6 +67,7 @@ const LazyTerminalOutput = lazy(async () => {
 });
 
 export function ThreadDetailPanel({
+  connectionState,
   detailState,
   highlightedRequestKey,
   interruptPending,
@@ -81,6 +83,7 @@ export function ThreadDetailPanel({
   sendMessagePending,
   threadsState
 }: {
+  connectionState: LocalConnectionState;
   detailState: ThreadDetailState;
   highlightedRequestKey: string | null | undefined;
   interruptPending: boolean;
@@ -144,6 +147,7 @@ export function ThreadDetailPanel({
 
   return (
     <ReadyThreadDetail
+      connectionState={connectionState}
       key={detailState.thread.id}
       highlightedRequestKey={highlightedRequestKey}
       interruptPending={interruptPending}
@@ -164,6 +168,7 @@ export function ThreadDetailPanel({
 }
 
 function ReadyThreadDetail({
+  connectionState,
   highlightedRequestKey,
   interruptPending,
   isDesktop,
@@ -179,6 +184,7 @@ function ReadyThreadDetail({
   thread,
   threadsState
 }: {
+  connectionState: LocalConnectionState;
   highlightedRequestKey: string | null | undefined;
   interruptPending: boolean;
   isDesktop: boolean;
@@ -197,6 +203,8 @@ function ReadyThreadDetail({
   const [composerText, setComposerText] = useState("");
   const drafts = useRequestDrafts();
   const activeTurnId = findActiveTurnId(thread);
+  const actionsEnabled = connectionState.kind === "authenticated";
+  const banner = connectionBanner(connectionState);
   const pendingEntries: PendingRequestEntry[] = thread.pendingRequests.map((request) => ({
     request,
     thread
@@ -272,6 +280,15 @@ function ReadyThreadDetail({
           </span>
         </div>
       </div>
+
+      {banner ? (
+        <div className="px-4 pt-3 md:px-5">
+          <Alert className={banner.tone === "error" ? "border-destructive/20 bg-destructive/5" : "border-primary/20 bg-primary/5"}>
+            <AlertTitle>{banner.title}</AlertTitle>
+            <AlertDescription>{banner.message}</AlertDescription>
+          </Alert>
+        </div>
+      ) : null}
 
       {lastError ? (
         <div className="px-4 pt-3 md:px-5">
@@ -432,7 +449,7 @@ function ReadyThreadDetail({
             <div className="flex flex-col gap-2 sm:flex-row">
               <Button
                 className="w-full sm:flex-1"
-                disabled={sendMessagePending || composerText.trim().length === 0}
+                disabled={!actionsEnabled || sendMessagePending || composerText.trim().length === 0}
                 type="submit"
               >
               {sendMessagePending ? "Sending..." : "Send message"}
@@ -440,7 +457,7 @@ function ReadyThreadDetail({
               {activeTurnId ? (
                 <Button
                   className="w-full sm:w-auto"
-                  disabled={interruptPending}
+                  disabled={!actionsEnabled || interruptPending}
                   onClick={() => {
                     void onInterrupt(thread.id, activeTurnId);
                   }}
@@ -538,6 +555,63 @@ function EmptyDetailState({
       </CardContent>
     </Card>
   );
+}
+
+function connectionBanner(
+  connectionState: LocalConnectionState
+):
+  | {
+      message: string;
+      title: string;
+      tone: "info" | "error";
+    }
+  | null {
+  switch (connectionState.kind) {
+    case "authenticated":
+      return null;
+    case "refreshing":
+      return {
+        title: "Refreshing bridge session",
+        message: "The client is rotating credentials before continuing live updates.",
+        tone: "info"
+      };
+    case "reconnecting":
+      return {
+        title: "Reconnecting",
+        message: connectionState.message ?? "Bridge connectivity dropped and recovery is in progress.",
+        tone: "info"
+      };
+    case "resyncing":
+      return {
+        title: "Resyncing from bridge authority",
+        message: "The thread view is catching up to the bridge after reconnect or refresh.",
+        tone: "info"
+      };
+    case "disconnected":
+      return {
+        title: "Showing last known thread state",
+        message: connectionState.message ?? "Bridge is unavailable right now.",
+        tone: "error"
+      };
+    case "revoked":
+      return {
+        title: "Trusted device revoked",
+        message: connectionState.message ?? "This browser can no longer issue authenticated actions.",
+        tone: "error"
+      };
+    case "expired":
+      return {
+        title: "Session expired",
+        message: connectionState.message ?? "Re-pair this browser to restore bridge access.",
+        tone: "error"
+      };
+    case "unpaired":
+      return {
+        title: "Pairing required",
+        message: "Pair this browser from the Connection page before interacting with threads.",
+        tone: "error"
+      };
+  }
 }
 
 function ThreadItemRenderer({ item }: { item: ThreadItem }) {

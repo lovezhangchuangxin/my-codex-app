@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from "react";
 import { Activity, KeyRound, LaptopMinimal, RefreshCcw, Shield, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 
-import type { DeviceTrustRecord, PairingStatusResponse } from "@my-codex-app/protocol";
+import type {
+  DeviceTrustRecord,
+  LocalConnectionState,
+  PairingStatusResponse
+} from "@my-codex-app/protocol";
 
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -41,6 +45,7 @@ export function ConnectionRoute() {
   const [credentialsVersion, setCredentialsVersion] = useState(0);
 
   const credentials = bridgeClient.getCredentials();
+  const connectionState = snapshot.connection;
 
   const refreshView = useCallback(async () => {
     try {
@@ -114,7 +119,7 @@ export function ConnectionRoute() {
         device: deviceDraft
       });
       setPairingCode("");
-      await runtime.loadThreads();
+      await runtime.bootstrap();
       await refreshView();
       toast.success("Device paired");
     } catch (error) {
@@ -128,11 +133,14 @@ export function ConnectionRoute() {
     setSessionPending(true);
     try {
       await bridgeClient.refreshSession();
+      await runtime.resyncFromBridge();
       await refreshView();
       toast.success("Session refreshed");
     } catch (error) {
       if (!bridgeClient.hasCredentials()) {
         runtime.resetState();
+      } else {
+        void runtime.retryConnection();
       }
       await refreshView();
       toast.error(toErrorMessage(error));
@@ -213,7 +221,7 @@ export function ConnectionRoute() {
               />
               <StatusRow
                 label="Auth"
-                value={credentials ? "Paired session active" : "Pairing required"}
+                value={formatConnectionStateLabel(connectionState)}
               />
             </div>
 
@@ -228,7 +236,7 @@ export function ConnectionRoute() {
                     </p>
                   </div>
                   <Badge className="bg-primary/12 text-primary" variant="secondary">
-                    Authenticated
+                    {formatConnectionStateLabel(connectionState)}
                   </Badge>
                 </div>
                 <div className="mt-4 flex flex-wrap gap-2">
@@ -260,6 +268,23 @@ export function ConnectionRoute() {
               </div>
             )}
 
+            {connectionState.kind !== "authenticated" ? (
+              <Alert
+                className={
+                  connectionState.kind === "revoked" ||
+                  connectionState.kind === "expired" ||
+                  connectionState.kind === "disconnected"
+                    ? "border-destructive/20 bg-destructive/5"
+                    : "border-primary/15 bg-primary/5"
+                }
+              >
+                <AlertTitle>{formatConnectionStateLabel(connectionState)}</AlertTitle>
+                <AlertDescription>
+                  {connectionState.message ?? describeConnectionState(connectionState.kind)}
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
             {healthState.status === "error" ? (
               <Alert className="border-destructive/20 bg-destructive/5">
                 <AlertTitle>Bridge health failed</AlertTitle>
@@ -274,12 +299,21 @@ export function ConnectionRoute() {
             <CardTitle className="text-xl tracking-[-0.04em]">Runtime snapshot</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 rounded-[12px] border border-white/8 bg-background/42 px-3 py-3">
+            <StatusRow label="Connection" value={formatConnectionStateLabel(connectionState)} />
             <StatusRow label="Thread list" value={snapshot.threads.kind} />
             <StatusRow label="Detail state" value={snapshot.detail.kind} />
             <StatusRow label="Selected thread" value={snapshot.selectedThreadId ?? "None"} />
             <StatusRow
               label="Pending responses"
               value={String(snapshot.mutations.respondingRequestIds.length)}
+            />
+            <StatusRow
+              label="Last sync"
+              value={
+                connectionState.lastSyncedAt
+                  ? formatTimestamp(connectionState.lastSyncedAt)
+                  : "No successful resync yet"
+              }
             />
             <StatusRow
               label="Last check"
@@ -476,4 +510,46 @@ function StatusRow({ label, value }: { label: string; value: string }) {
 
 function toErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unknown bridge error";
+}
+
+function formatConnectionStateLabel(connectionState: LocalConnectionState): string {
+  switch (connectionState.kind) {
+    case "authenticated":
+      return "Authenticated";
+    case "refreshing":
+      return "Refreshing";
+    case "reconnecting":
+      return "Reconnecting";
+    case "resyncing":
+      return "Resyncing";
+    case "revoked":
+      return "Revoked";
+    case "expired":
+      return "Expired";
+    case "disconnected":
+      return "Disconnected";
+    case "unpaired":
+      return "Pairing required";
+  }
+}
+
+function describeConnectionState(kind: LocalConnectionState["kind"]): string {
+  switch (kind) {
+    case "authenticated":
+      return "The runtime is aligned with bridge authority.";
+    case "refreshing":
+      return "The client is rotating bridge credentials before continuing normal traffic.";
+    case "reconnecting":
+      return "Bridge transport was interrupted and recovery is in progress.";
+    case "resyncing":
+      return "The runtime is rebuilding thread and pending-request state from the bridge.";
+    case "revoked":
+      return "This trusted device can no longer create authenticated bridge sessions.";
+    case "expired":
+      return "The saved session is no longer valid and this browser must pair again.";
+    case "disconnected":
+      return "Bridge is currently unavailable.";
+    case "unpaired":
+      return "No usable local bridge credentials are stored for this browser.";
+  }
 }

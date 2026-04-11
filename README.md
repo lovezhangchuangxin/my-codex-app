@@ -46,7 +46,7 @@ The current repository bootstrap implements the first local bridge/client slice 
   - aggregated pending-request handling for command, file-change, permission, and tool user-input prompts
   - bridge diagnostics and health checks through the shared SDK/runtime layer
 
-This is intentionally still a thin end-to-end flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, `request/respond`, and a minimal live event bridge for the selected thread. Local pairing and revocable device trust now exist for direct bridge access, while reconnect hardening, Tauri shell integration, and relay support are still pending.
+This is intentionally still a focused local-direct flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, `request/respond`, and selected-thread live events. Local pairing, revocable device trust, and explicit reconnect/resync recovery now exist for direct bridge access, while Tauri shell integration and relay support are still pending.
 
 ## Client implementation status
 

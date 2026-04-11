@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ThreadListState } from "@my-codex-app/sdk";
+import type { LocalConnectionState } from "@my-codex-app/protocol";
 
 import {
   buildThreadTitle,
@@ -45,10 +46,12 @@ const statusFilters: Array<{ label: string; value: ThreadStatusFilter }> = [
 ];
 
 export function ThreadListPanel({
+  connectionState,
   onOpenThread,
   selectedThreadId,
   threadsState
 }: {
+  connectionState: LocalConnectionState;
   onOpenThread: (threadId: string) => void;
   selectedThreadId: string | null;
   threadsState: ThreadListState;
@@ -166,6 +169,22 @@ export function ThreadListPanel({
                 <CardContent className="space-y-2 pt-4">
                   <p className="font-medium text-destructive">Unable to load thread list</p>
                   <p className="text-sm text-muted-foreground">{threadsState.message}</p>
+                </CardContent>
+              </Card>
+            ) : null}
+
+            {threadsState.kind === "idle" ? (
+              <Card className="bg-background/45">
+                <CardContent className="space-y-3 pt-5 text-center">
+                  <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-accent text-primary">
+                    <Search className="size-5" />
+                  </div>
+                  <p className="font-heading text-xl tracking-[-0.04em]">
+                    {idleThreadListTitle(connectionState)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {idleThreadListMessage(connectionState)}
+                  </p>
                 </CardContent>
               </Card>
             ) : null}
@@ -334,4 +353,46 @@ function StatusBadge({ label }: { label: string }) {
       {label}
     </Badge>
   );
+}
+
+function idleThreadListTitle(connectionState: LocalConnectionState): string {
+  switch (connectionState.kind) {
+    case "unpaired":
+      return "Pair this browser";
+    case "revoked":
+      return "Device revoked";
+    case "expired":
+      return "Session expired";
+    case "refreshing":
+      return "Refreshing session";
+    case "reconnecting":
+      return "Reconnecting";
+    case "resyncing":
+      return "Resyncing";
+    case "disconnected":
+      return "Bridge disconnected";
+    default:
+      return "Thread list unavailable";
+  }
+}
+
+function idleThreadListMessage(connectionState: LocalConnectionState): string {
+  switch (connectionState.kind) {
+    case "unpaired":
+      return "Complete local pairing on the Connection page before loading recent threads.";
+    case "revoked":
+      return connectionState.message ?? "This trusted device can no longer access the bridge.";
+    case "expired":
+      return connectionState.message ?? "Re-pair this browser to restore local bridge access.";
+    case "refreshing":
+      return "The client is rotating bridge credentials before reloading thread state.";
+    case "reconnecting":
+      return connectionState.message ?? "The client is reconnecting to the bridge.";
+    case "resyncing":
+      return "The client is rebuilding the latest thread list from bridge authority.";
+    case "disconnected":
+      return connectionState.message ?? "Bridge is currently unavailable.";
+    default:
+      return "Thread state is not ready yet.";
+  }
 }

@@ -1,6 +1,8 @@
 import type {
+  BridgeAuthErrorCode,
   BridgeEvent,
   JsonRpcRequestId,
+  LocalConnectionState,
   RequestRespondRequest,
   ThreadDetail,
   ThreadStartRequest,
@@ -9,7 +11,7 @@ import type {
   UserInput
 } from "@my-codex-app/protocol";
 
-import { BridgeClient } from "./bridgeClient";
+import { BridgeClient, BridgeClientError } from "./bridgeClient";
 import {
   applyThreadEvent,
   createInitialSnapshot,
@@ -23,14 +25,54 @@ import {
 } from "./threadState";
 
 type Listener = () => void;
+type ResyncReason = "startup" | "manual" | "reconnect";
+type BridgeFailureClassification =
+  | LocalConnectionState
+  | {
+      kind: "requestError";
+      message: string;
+    };
 
 export class BridgeThreadRuntime {
   readonly #listeners = new Set<Listener>();
   readonly #pendingEvents = new Map<string, BridgeEvent[]>();
-  #snapshot: ThreadRuntimeSnapshot = createInitialSnapshot();
+  #disposed = false;
+  #reconnectAttempt = 0;
+  #reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  #resyncPromise: Promise<void> | null = null;
+  #snapshot: ThreadRuntimeSnapshot;
   #unsubscribeEvents: (() => void) | null = null;
+  readonly #unsubscribeSessionEvents: () => void;
 
-  constructor(private readonly client: BridgeClient) {}
+  constructor(private readonly client: BridgeClient) {
+    this.#snapshot = createInitialSnapshot(this.client.hasCredentials());
+    this.#unsubscribeSessionEvents = this.client.subscribeToSessionEvents((event) => {
+      if (this.#disposed) {
+        return;
+      }
+
+      switch (event.type) {
+        case "refreshing":
+          if (isTerminalConnectionState(this.#snapshot.connection.kind)) {
+            return;
+          }
+          this.#setConnectionState({ kind: "refreshing" });
+          return;
+        case "refreshed":
+          if (
+            this.#resyncPromise === null &&
+            !isTerminalConnectionState(this.#snapshot.connection.kind) &&
+            this.#snapshot.connection.kind !== "unpaired"
+          ) {
+            this.#markAuthenticated();
+          }
+          return;
+        case "invalidated":
+          this.#applySessionLoss(classifyTerminalSessionState(event.code, event.message));
+          return;
+      }
+    });
+  }
 
   getSnapshot = (): ThreadRuntimeSnapshot => this.#snapshot;
 
@@ -41,31 +83,50 @@ export class BridgeThreadRuntime {
     };
   };
 
-  async loadThreads(): Promise<void> {
-    this.#update((current) => ({
-      ...current,
-      threads: current.threads.kind === "ready" ? current.threads : { kind: "loading" }
-    }));
-
-    try {
-      const response = await this.client.listThreads();
-      this.#update((current) => ({
-        ...current,
-        threads: {
-          kind: "ready",
-          threads: response.data
-        }
-      }));
-    } catch (error) {
-      this.#setActionError(error);
-      this.#update((current) => ({
-        ...current,
-        threads: {
-          kind: "error",
-          message: toErrorMessage(error)
-        }
-      }));
+  async bootstrap(): Promise<void> {
+    if (!this.client.hasCredentials()) {
+      this.#applySessionLoss({ kind: "unpaired" });
+      return;
     }
+
+    await this.resyncFromBridge("startup");
+  }
+
+  async loadThreads(): Promise<void> {
+    await this.resyncFromBridge("manual");
+  }
+
+  async resyncFromBridge(reason: ResyncReason = "manual"): Promise<void> {
+    if (this.#resyncPromise) {
+      return this.#resyncPromise;
+    }
+
+    const resyncPromise = this.#performResync(reason).finally(() => {
+      if (this.#resyncPromise === resyncPromise) {
+        this.#resyncPromise = null;
+      }
+    });
+
+    this.#resyncPromise = resyncPromise;
+    return resyncPromise;
+  }
+
+  async retryConnection(): Promise<void> {
+    if (this.#resyncPromise) {
+      return;
+    }
+
+    if (!this.client.hasCredentials()) {
+      this.#applySessionLoss({ kind: "unpaired" });
+      return;
+    }
+
+    if (isTerminalConnectionState(this.#snapshot.connection.kind)) {
+      return;
+    }
+
+    this.#setConnectionState({ kind: "reconnecting" });
+    await this.resyncFromBridge("reconnect");
   }
 
   async selectThread(threadId: string | null): Promise<void> {
@@ -91,54 +152,12 @@ export class BridgeThreadRuntime {
       selectedThreadId: threadId,
       detail: { kind: "loading", threadId }
     }));
-    this.#connectEvents(threadId);
 
-    try {
-      const response = await this.client.readThread(threadId);
-      if (this.#snapshot.selectedThreadId !== threadId) {
-        return;
-      }
-
-      const thread = this.#drainPendingEvents(threadId, response.thread);
-      this.#update((current) => ({
-        ...current,
-        threads: current.threads.kind === "ready"
-          ? {
-              kind: "ready",
-              threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
-            }
-          : current.threads,
-        detail: { kind: "ready", thread }
-      }));
-    } catch (error) {
-      if (this.#snapshot.selectedThreadId !== threadId) {
-        return;
-      }
-
-      const message = toErrorMessage(error);
-      if (message.includes("includeTurns is unavailable before first user message")) {
-        const thread = await this.#resolveThreadSummary(threadId);
-        if (thread) {
-          this.#update((current) => ({
-            ...current,
-            threads: current.threads.kind === "ready"
-              ? {
-                  kind: "ready",
-                  threads: upsertThreadSummary(current.threads.threads, thread)
-                }
-              : current.threads,
-            detail: { kind: "ready", thread: this.#drainPendingEvents(threadId, toThreadDetail(thread)) }
-          }));
-          return;
-        }
-      }
-
-      this.#setActionError(error);
-      this.#update((current) => ({
-        ...current,
-        detail: { kind: "error", threadId, message }
-      }));
+    if (this.#snapshot.connection.kind !== "authenticated") {
+      return;
     }
+
+    await this.#loadSelectedThread(threadId);
   }
 
   async startThread(request: ThreadStartRequest = {}): Promise<string> {
@@ -149,15 +168,16 @@ export class BridgeThreadRuntime {
       const thread = response.thread;
       this.#update((current) => ({
         ...current,
-        threads: current.threads.kind === "ready"
-          ? {
-              kind: "ready",
-              threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
-            }
-          : {
-              kind: "ready",
-              threads: [toThreadSummary(thread)]
-            }
+        threads:
+          current.threads.kind === "ready"
+            ? {
+                kind: "ready",
+                threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
+              }
+            : {
+                kind: "ready",
+                threads: [toThreadSummary(thread)]
+              }
       }));
 
       this.#showSelectedThread(thread);
@@ -184,12 +204,13 @@ export class BridgeThreadRuntime {
 
       this.#update((current) => ({
         ...current,
-        threads: current.threads.kind === "ready"
-          ? {
-              kind: "ready",
-              threads: setThreadMessagePending(current.threads.threads, threadId, input)
-            }
-          : current.threads
+        threads:
+          current.threads.kind === "ready"
+            ? {
+                kind: "ready",
+                threads: setThreadMessagePending(current.threads.threads, threadId, input)
+              }
+            : current.threads
       }));
 
       this.#applyStartedTurn(threadId, response.turn);
@@ -229,16 +250,262 @@ export class BridgeThreadRuntime {
   }
 
   dispose(): void {
+    this.#disposed = true;
+    this.#clearReconnectTimer();
     this.#disconnectEvents();
+    this.#unsubscribeSessionEvents();
     this.#pendingEvents.clear();
   }
 
   resetState(): void {
+    this.#clearReconnectTimer();
     this.#disconnectEvents();
     this.#pendingEvents.clear();
-    this.#snapshot = createInitialSnapshot();
+    this.#snapshot = createInitialSnapshot(this.client.hasCredentials());
     for (const listener of this.#listeners) {
       listener();
+    }
+  }
+
+  async #performResync(reason: ResyncReason): Promise<void> {
+    this.#clearReconnectTimer();
+
+    if (!this.client.hasCredentials()) {
+      this.#applySessionLoss({ kind: "unpaired" });
+      return;
+    }
+
+    try {
+      if (this.#credentialsNeedRefresh()) {
+        this.#setConnectionState({ kind: "refreshing" });
+        await this.client.refreshSession();
+      }
+
+      this.#setConnectionState({ kind: "resyncing" });
+      this.#update((current) => ({
+        ...current,
+        threads: current.threads.kind === "ready" ? current.threads : { kind: "loading" },
+        detail:
+          current.selectedThreadId && current.detail.kind !== "ready"
+            ? { kind: "loading", threadId: current.selectedThreadId }
+            : current.detail
+      }));
+
+      const response = await this.client.listThreads();
+      const selectedThreadId = this.#snapshot.selectedThreadId;
+
+      this.#update((current) => ({
+        ...current,
+        threads: {
+          kind: "ready",
+          threads: response.data
+        }
+      }));
+
+      if (!selectedThreadId) {
+        this.#disconnectEvents();
+        this.#update((current) => ({
+          ...current,
+          detail: { kind: "idle" }
+        }));
+        this.#markAuthenticated();
+        return;
+      }
+
+      this.#update((current) => ({
+        ...current,
+        detail:
+          current.detail.kind === "ready" && current.detail.thread.id === selectedThreadId
+            ? current.detail
+            : { kind: "loading", threadId: selectedThreadId }
+      }));
+
+      const thread = await this.#readThreadDetail(selectedThreadId, response.data);
+      if (this.#snapshot.selectedThreadId !== selectedThreadId) {
+        return;
+      }
+
+      this.#update((current) => ({
+        ...current,
+        threads:
+          current.threads.kind === "ready"
+            ? {
+                kind: "ready",
+                threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
+              }
+            : current.threads,
+        detail: { kind: "ready", thread }
+      }));
+      this.#connectEvents(selectedThreadId);
+      this.#markAuthenticated();
+    } catch (error) {
+      const classification = classifyBridgeFailure(error);
+      if (classification.kind === "requestError") {
+        if (this.#snapshot.threads.kind !== "ready") {
+          this.#update((current) => ({
+            ...current,
+            threads: {
+              kind: "error",
+              message: classification.message
+            }
+          }));
+        }
+
+        if (this.#snapshot.selectedThreadId) {
+          this.#update((current) => ({
+            ...current,
+            detail: {
+              kind: "error",
+              threadId: current.selectedThreadId ?? "unknown",
+              message: classification.message
+            }
+          }));
+        }
+
+        this.#markAuthenticated();
+        if (reason === "manual") {
+          throw error;
+        }
+        return;
+      }
+
+      if (classification.kind === "unpaired") {
+        this.#applySessionLoss(
+          withOptionalMessage({ kind: "unpaired" }, classification.message)
+        );
+        return;
+      }
+
+      if (classification.kind === "revoked" || classification.kind === "expired") {
+        this.#applySessionLoss({
+          kind: classification.kind,
+          ...(classification.message ? { message: classification.message } : {}),
+          ...(classification.authErrorCode
+            ? { authErrorCode: classification.authErrorCode }
+            : {})
+        });
+        return;
+      }
+
+      this.#disconnectEvents();
+      this.#setConnectionState({
+        kind: "disconnected",
+        ...(classification.message ? { message: classification.message } : {})
+      });
+      this.#scheduleReconnect(classification.message ?? "Bridge is disconnected");
+
+      if (this.#snapshot.threads.kind !== "ready") {
+        this.#update((current) => ({
+          ...current,
+          threads: {
+            kind: "error",
+            message: classification.message ?? "Bridge is disconnected"
+          }
+        }));
+      }
+
+      if (this.#snapshot.detail.kind !== "ready" && this.#snapshot.selectedThreadId) {
+        this.#update((current) => ({
+          ...current,
+          detail: {
+            kind: "error",
+            threadId: current.selectedThreadId ?? "unknown",
+            message: classification.message ?? "Bridge is disconnected"
+          }
+        }));
+      }
+
+      if (reason === "manual") {
+        throw error;
+      }
+    }
+  }
+
+  async #loadSelectedThread(threadId: string): Promise<void> {
+    this.#pendingEvents.set(threadId, []);
+    this.#connectEvents(threadId);
+
+    try {
+      const thread = await this.#readThreadDetail(threadId);
+      if (this.#snapshot.selectedThreadId !== threadId) {
+        return;
+      }
+
+      this.#update((current) => ({
+        ...current,
+        threads:
+          current.threads.kind === "ready"
+            ? {
+                kind: "ready",
+                threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
+              }
+            : current.threads,
+        detail: { kind: "ready", thread }
+      }));
+    } catch (error) {
+      if (this.#snapshot.selectedThreadId !== threadId) {
+        return;
+      }
+
+      const classification = classifyBridgeFailure(error);
+      if (classification.kind === "requestError") {
+        this.#setActionError(error);
+        this.#update((current) => ({
+          ...current,
+          detail: {
+            kind: "error",
+            threadId,
+            message: classification.message
+          }
+        }));
+        return;
+      }
+
+      if (classification.kind === "revoked" || classification.kind === "expired") {
+        this.#applySessionLoss({
+          kind: classification.kind,
+          ...(classification.message ? { message: classification.message } : {}),
+          ...(classification.authErrorCode
+            ? { authErrorCode: classification.authErrorCode }
+            : {})
+        });
+        return;
+      }
+
+      if (classification.kind === "unpaired") {
+        this.#applySessionLoss(
+          withOptionalMessage({ kind: "unpaired" }, classification.message)
+        );
+        return;
+      }
+
+      this.#setConnectionState({
+        kind: "reconnecting",
+        ...(classification.message ? { message: classification.message } : {})
+      });
+      this.#scheduleReconnect(classification.message ?? "Bridge event stream disconnected");
+    }
+  }
+
+  async #readThreadDetail(
+    threadId: string,
+    fallbackThreads?: ThreadSummary[]
+  ): Promise<ThreadDetail> {
+    try {
+      const response = await this.client.readThread(threadId);
+      return this.#drainPendingEvents(threadId, response.thread);
+    } catch (error) {
+      const message = toErrorMessage(error);
+      if (message.includes("includeTurns is unavailable before first user message")) {
+        const thread =
+          fallbackThreads?.find((entry) => entry.id === threadId) ??
+          (await this.#resolveThreadSummary(threadId));
+        if (thread) {
+          return this.#drainPendingEvents(threadId, toThreadDetail(thread));
+        }
+      }
+
+      throw error;
     }
   }
 
@@ -282,6 +549,7 @@ export class BridgeThreadRuntime {
   }
 
   #connectEvents(threadId: string): void {
+    this.#disconnectEvents();
     this.#unsubscribeEvents = this.client.subscribeToThreadEvents(threadId, {
       onEvent: (event) => {
         this.#update((current) => ({
@@ -290,20 +558,36 @@ export class BridgeThreadRuntime {
           detail: this.#applyEventToDetail(current.detail, current.selectedThreadId, event)
         }));
       },
-      onError: (message) => {
+      onDisconnect: (error) => {
         if (this.#snapshot.selectedThreadId !== threadId) {
           return;
         }
 
-        const detail = this.#snapshot.detail;
-        if (detail.kind === "ready") {
+        const classification = classifyBridgeFailure(error);
+        if (classification.kind === "revoked" || classification.kind === "expired") {
+          this.#applySessionLoss({
+            kind: classification.kind,
+            ...(classification.message ? { message: classification.message } : {}),
+            ...(classification.authErrorCode
+              ? { authErrorCode: classification.authErrorCode }
+              : {})
+          });
           return;
         }
 
-        this.#update((current) => ({
-          ...current,
-          detail: { kind: "error", threadId, message }
-        }));
+        if (classification.kind === "unpaired") {
+          this.#applySessionLoss(
+            withOptionalMessage({ kind: "unpaired" }, classification.message)
+          );
+          return;
+        }
+
+        this.#disconnectEvents();
+        this.#setConnectionState({
+          kind: "reconnecting",
+          ...(classification.message ? { message: classification.message } : {})
+        });
+        this.#scheduleReconnect(classification.message ?? "Bridge event stream disconnected");
       }
     });
   }
@@ -351,7 +635,10 @@ export class BridgeThreadRuntime {
   #drainPendingEvents(threadId: string, thread: ThreadDetail): ThreadDetail {
     const queuedEvents = this.#pendingEvents.get(threadId) ?? [];
     this.#pendingEvents.delete(threadId);
-    return queuedEvents.reduce((currentThread, event) => applyThreadEvent(currentThread, event), thread);
+    return queuedEvents.reduce(
+      (currentThread, event) => applyThreadEvent(currentThread, event),
+      thread
+    );
   }
 
   #findThreadSummary(threadId: string): ThreadSummary | null {
@@ -372,18 +659,85 @@ export class BridgeThreadRuntime {
     let matchedThread: ThreadSummary | null = null;
 
     this.#update((current) => {
-      const nextThreads = response.data;
-      matchedThread = nextThreads.find((thread) => thread.id === threadId) ?? null;
+      matchedThread = response.data.find((thread) => thread.id === threadId) ?? null;
       return {
         ...current,
         threads: {
           kind: "ready",
-          threads: nextThreads
+          threads: response.data
         }
       };
     });
 
     return matchedThread;
+  }
+
+  #applySessionLoss(nextConnection: LocalConnectionState): void {
+    const nextSnapshot = createInitialSnapshot(this.client.hasCredentials());
+    this.#clearReconnectTimer();
+    this.#disconnectEvents();
+    this.#pendingEvents.clear();
+    this.#snapshot = {
+      ...nextSnapshot,
+      connection: withLastSyncedAt(nextConnection, this.#snapshot.connection.lastSyncedAt)
+    };
+    for (const listener of this.#listeners) {
+      listener();
+    }
+  }
+
+  #credentialsNeedRefresh(): boolean {
+    const credentials = this.client.getCredentials();
+    if (!credentials) {
+      return false;
+    }
+
+    const nowInSeconds = Math.floor(Date.now() / 1000);
+    return credentials.accessTokenExpiresAt <= nowInSeconds + 15;
+  }
+
+  #markAuthenticated(): void {
+    this.#reconnectAttempt = 0;
+    this.#setConnectionState({
+      kind: "authenticated",
+      lastSyncedAt: Math.floor(Date.now() / 1000)
+    });
+  }
+
+  #scheduleReconnect(message: string): void {
+    if (this.#reconnectTimer || this.#disposed || !this.client.hasCredentials()) {
+      return;
+    }
+
+    const delay =
+      Math.min(1000 * 2 ** this.#reconnectAttempt, 30_000) + Math.floor(Math.random() * 1000);
+    this.#reconnectAttempt++;
+    this.#reconnectTimer = setTimeout(() => {
+      this.#reconnectTimer = null;
+      if (this.#disposed || !this.client.hasCredentials()) {
+        return;
+      }
+
+      this.#setConnectionState({
+        kind: "reconnecting",
+        message
+      });
+      void this.resyncFromBridge("reconnect");
+    }, delay);
+  }
+
+  #clearReconnectTimer(): void {
+    if (this.#reconnectTimer) {
+      clearTimeout(this.#reconnectTimer);
+      this.#reconnectTimer = null;
+    }
+  }
+
+  #setConnectionState(nextConnection: LocalConnectionState): void {
+    this.#update((current) => ({
+      ...current,
+      connection: withLastSyncedAt(nextConnection, current.connection.lastSyncedAt)
+    }));
   }
 
   #setActionError(error: unknown): void {
@@ -427,7 +781,124 @@ export class BridgeThreadRuntime {
   }
 }
 
+function classifyBridgeFailure(error: unknown): BridgeFailureClassification {
+  if (error instanceof BridgeClientError) {
+    if (error.kind === "stream") {
+      return {
+        kind: "requestError",
+        message: error.message
+      };
+    }
+
+    if (
+      error.kind === "http" &&
+      error.status !== 401 &&
+      error.code === undefined
+    ) {
+      return {
+        kind: "requestError",
+        message: error.message
+      };
+    }
+
+    if (error.code === "missingCredentials" || error.kind === "sessionUnavailable") {
+      return {
+        kind: "unpaired",
+        message: error.message,
+        ...(error.code ? { authErrorCode: error.code } : {})
+      };
+    }
+
+    if (error.code === "revokedDevice") {
+      return {
+        kind: "revoked",
+        message: error.message,
+        authErrorCode: error.code
+      };
+    }
+
+    if (
+      error.code === "invalidRefreshToken" ||
+      error.code === "expiredRefreshToken"
+    ) {
+      return {
+        kind: "expired",
+        message: error.message,
+        authErrorCode: error.code
+      };
+    }
+  }
+
+  return {
+    kind: "disconnected",
+    message: toErrorMessage(error)
+  };
+}
+
+function classifyTerminalSessionState(
+  code: BridgeAuthErrorCode | undefined,
+  message: string
+): LocalConnectionState {
+  if (code === "revokedDevice") {
+    return {
+      kind: "revoked",
+      message,
+      authErrorCode: code
+    };
+  }
+
+  if (code === "invalidRefreshToken" || code === "expiredRefreshToken") {
+    return {
+      kind: "expired",
+      message,
+      authErrorCode: code
+    };
+  }
+
+  return {
+    kind: "unpaired",
+    message,
+    ...(code ? { authErrorCode: code } : {})
+  };
+}
+
+function isTerminalConnectionState(kind: LocalConnectionState["kind"]): boolean {
+  return kind === "revoked" || kind === "expired";
+}
+
+function withLastSyncedAt(
+  nextConnection: LocalConnectionState,
+  lastSyncedAt: number | undefined
+): LocalConnectionState {
+  if (nextConnection.lastSyncedAt !== undefined || lastSyncedAt === undefined) {
+    return nextConnection;
+  }
+
+  return {
+    ...nextConnection,
+    lastSyncedAt
+  };
+}
+
+function withOptionalMessage<T extends { kind: LocalConnectionState["kind"] }>(
+  nextConnection: T,
+  message: string | undefined
+): T | (T & { message: string }) {
+  if (!message) {
+    return nextConnection;
+  }
+
+  return {
+    ...nextConnection,
+    message
+  };
+}
+
 function toErrorMessage(error: unknown): string {
+  if (error instanceof BridgeClientError) {
+    return error.message;
+  }
+
   return error instanceof Error ? error.message : "Unknown client error";
 }
 

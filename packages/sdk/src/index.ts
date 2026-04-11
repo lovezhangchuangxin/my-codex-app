@@ -1,7 +1,9 @@
 export {
   BridgeClient,
+  BridgeClientError,
   type BridgeClientConfig,
   type BridgeCredentialStore,
+  type BridgeSessionEvent,
   type BridgeSessionCredentials
 } from "./bridgeClient";
 export { BridgeThreadRuntime } from "./threadRuntime";

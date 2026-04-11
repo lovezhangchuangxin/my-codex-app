@@ -1,6 +1,7 @@
 import type {
   BridgeEvent,
   JsonRpcRequestId,
+  LocalConnectionState,
   PendingRequest,
   ThreadDetail,
   ThreadItem,
@@ -11,6 +12,7 @@ import type {
 } from "@my-codex-app/protocol";
 
 export type ThreadListState =
+  | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "ready"; threads: ThreadSummary[] }
   | { kind: "error"; message: string };
@@ -30,15 +32,17 @@ export interface ThreadMutationState {
 }
 
 export interface ThreadRuntimeSnapshot {
+  connection: LocalConnectionState;
   threads: ThreadListState;
   detail: ThreadDetailState;
   selectedThreadId: string | null;
   mutations: ThreadMutationState;
 }
 
-export function createInitialSnapshot(): ThreadRuntimeSnapshot {
+export function createInitialSnapshot(hasCredentials = false): ThreadRuntimeSnapshot {
   return {
-    threads: { kind: "loading" },
+    connection: hasCredentials ? { kind: "disconnected" } : { kind: "unpaired" },
+    threads: hasCredentials ? { kind: "loading" } : { kind: "idle" },
     detail: { kind: "idle" },
     selectedThreadId: null,
     mutations: {

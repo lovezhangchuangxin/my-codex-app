@@ -49,6 +49,10 @@ const refreshLimiter = new RateLimiter(30, 60_000);
 const port = Number.parseInt(process.env.BRIDGE_PORT ?? "8787", 10);
 const host = process.env.BRIDGE_HOST ?? "127.0.0.1";
 const bridgeOrigin = process.env.BRIDGE_ORIGIN ?? "*";
+const threadUnsubscribeGraceMs = Number.parseInt(
+  process.env.BRIDGE_THREAD_UNSUBSCRIBE_GRACE_MS ?? "5000",
+  10
+);
 const bridgeStatePath =
   process.env.BRIDGE_STATE_PATH ?? join(process.cwd(), ".local", "bridge-auth-state.json");
 
@@ -64,6 +68,7 @@ async function main(): Promise<void> {
   const threadService = new ThreadService(appServerClient);
   const eventClients = new Set<EventClient>();
   const threadSubscriberCounts = new Map<string, number>();
+  const threadUnsubscribeTimers = new Map<string, ReturnType<typeof setTimeout>>();
   const unsubscribeEvents = threadService.onBridgeEvent((event) => {
     const frame = `data: ${JSON.stringify(event)}\n\n`;
     for (const client of eventClients) {
@@ -244,8 +249,12 @@ async function main(): Promise<void> {
 
       try {
         const subscriberCount = threadSubscriberCounts.get(threadId) ?? 0;
+        const hadPendingUnsubscribe = cancelScheduledThreadUnsubscribe(
+          threadId,
+          threadUnsubscribeTimers
+        );
         threadSubscriberCounts.set(threadId, subscriberCount + 1);
-        if (subscriberCount === 0) {
+        if (subscriberCount === 0 && !hadPendingUnsubscribe) {
           await threadService.resumeThread(threadId);
         }
       } catch (error) {
@@ -257,12 +266,14 @@ async function main(): Promise<void> {
         eventClients.delete(client);
         const currentCount = threadSubscriberCounts.get(threadId) ?? 0;
         if (currentCount <= 1) {
-          threadSubscriberCounts.delete(threadId);
-          try {
-            await threadService.unsubscribeThread(threadId);
-          } catch {
-            // Ignore cleanup errors; the bridge remains authoritative on reconnect.
-          }
+          threadSubscriberCounts.set(threadId, 0);
+          scheduleThreadUnsubscribe(
+            threadId,
+            threadUnsubscribeGraceMs,
+            threadSubscriberCounts,
+            threadUnsubscribeTimers,
+            threadService
+          );
           return;
         }
 
@@ -335,6 +346,10 @@ async function main(): Promise<void> {
 
   const shutdown = async (): Promise<void> => {
     unsubscribeEvents();
+    for (const timer of threadUnsubscribeTimers.values()) {
+      clearTimeout(timer);
+    }
+    threadUnsubscribeTimers.clear();
     server.close();
     await appServerClient.close();
     process.exit(0);
@@ -357,6 +372,42 @@ function parseOptionalInt(value: string | null): number | undefined {
 
   const parsed = Number.parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function cancelScheduledThreadUnsubscribe(
+  threadId: string,
+  threadUnsubscribeTimers: Map<string, ReturnType<typeof setTimeout>>
+): boolean {
+  const timer = threadUnsubscribeTimers.get(threadId);
+  if (!timer) {
+    return false;
+  }
+
+  clearTimeout(timer);
+  threadUnsubscribeTimers.delete(threadId);
+  return true;
+}
+
+function scheduleThreadUnsubscribe(
+  threadId: string,
+  graceMs: number,
+  threadSubscriberCounts: Map<string, number>,
+  threadUnsubscribeTimers: Map<string, ReturnType<typeof setTimeout>>,
+  threadService: ThreadService
+): void {
+  cancelScheduledThreadUnsubscribe(threadId, threadUnsubscribeTimers);
+  const timer = setTimeout(() => {
+    threadUnsubscribeTimers.delete(threadId);
+    if ((threadSubscriberCounts.get(threadId) ?? 0) > 0) {
+      return;
+    }
+
+    threadSubscriberCounts.delete(threadId);
+    void threadService.unsubscribeThread(threadId).catch(() => {
+      // Ignore delayed cleanup errors; the bridge remains authoritative on reconnect.
+    });
+  }, Math.max(graceMs, 0));
+  threadUnsubscribeTimers.set(threadId, timer);
 }
 
 function writeJson(

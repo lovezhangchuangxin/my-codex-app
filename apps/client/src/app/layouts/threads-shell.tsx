@@ -12,6 +12,7 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 import type { ThreadDetailState } from "@my-codex-app/sdk";
+import type { LocalConnectionState } from "@my-codex-app/protocol";
 
 export function ThreadsShell() {
   const runtime = useRuntime();
@@ -27,7 +28,7 @@ export function ThreadsShell() {
       ? { kind: "idle" }
       : snapshot.selectedThreadId === routeThreadId
         ? snapshot.detail
-        : { kind: "loading", threadId: routeThreadId };
+        : unresolvedRouteDetailState(routeThreadId, snapshot.connection);
 
   useEffect(() => {
     void runtime.selectThread(routeThreadId);
@@ -84,6 +85,7 @@ export function ThreadsShell() {
   if (!isDesktop && routeThreadId) {
     return (
       <ThreadDetailPanel
+        connectionState={snapshot.connection}
         detailState={displayedDetailState}
         highlightedRequestKey={highlightedRequestKey}
         interruptPending={snapshot.mutations.interruptPending}
@@ -118,7 +120,10 @@ export function ThreadsShell() {
       <PageHeader
         actions={
           <Button
-            disabled={snapshot.mutations.startThreadPending}
+            disabled={
+              snapshot.mutations.startThreadPending ||
+              snapshot.connection.kind !== "authenticated"
+            }
             onClick={() => {
               void handleCreateThread();
             }}
@@ -134,6 +139,7 @@ export function ThreadsShell() {
 
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <ThreadListPanel
+          connectionState={snapshot.connection}
           onOpenThread={handleOpenThread}
           selectedThreadId={routeThreadId}
           threadsState={snapshot.threads}
@@ -148,6 +154,7 @@ export function ThreadsShell() {
             titleClassName="max-w-full truncate whitespace-nowrap text-[1.15rem] leading-tight md:text-[1.45rem] lg:text-[1.7rem]"
           />
           <ThreadDetailPanel
+            connectionState={snapshot.connection}
             detailState={displayedDetailState}
             highlightedRequestKey={highlightedRequestKey}
             interruptPending={snapshot.mutations.interruptPending}
@@ -175,4 +182,38 @@ export function ThreadsShell() {
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown client error";
+}
+
+function unresolvedRouteDetailState(
+  routeThreadId: string,
+  connectionState: LocalConnectionState
+): ThreadDetailState {
+  switch (connectionState.kind) {
+    case "unpaired":
+      return {
+        kind: "error",
+        threadId: routeThreadId,
+        message: "Pair this browser before loading thread detail."
+      };
+    case "revoked":
+      return {
+        kind: "error",
+        threadId: routeThreadId,
+        message: connectionState.message ?? "This trusted device was revoked."
+      };
+    case "expired":
+      return {
+        kind: "error",
+        threadId: routeThreadId,
+        message: connectionState.message ?? "The bridge session expired."
+      };
+    case "disconnected":
+      return {
+        kind: "error",
+        threadId: routeThreadId,
+        message: connectionState.message ?? "Bridge is disconnected."
+      };
+    default:
+      return { kind: "loading", threadId: routeThreadId };
+  }
 }

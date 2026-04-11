@@ -24,12 +24,29 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
   const [runtime] = useState(() => new BridgeThreadRuntime(bridgeClient));
 
   useEffect(() => {
-    void runtime.loadThreads();
+    void runtime.bootstrap();
+
+    const retryConnection = () => {
+      void runtime.retryConnection();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        retryConnection();
+      }
+    };
+
+    window.addEventListener("focus", retryConnection);
+    window.addEventListener("online", retryConnection);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      window.removeEventListener("focus", retryConnection);
+      window.removeEventListener("online", retryConnection);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       runtime.dispose();
     };
-  }, [bridgeClient, runtime]);
+  }, [runtime]);
 
   return (
     <BridgeClientContext.Provider value={bridgeClient}>

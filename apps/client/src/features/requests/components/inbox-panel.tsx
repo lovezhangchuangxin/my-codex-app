@@ -15,6 +15,7 @@ import {
 import { useRequestDrafts } from "@/features/requests/lib/use-request-drafts";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
+import type { LocalConnectionState } from "@my-codex-app/protocol";
 
 export function InboxPanel() {
   const runtime = useRuntime();
@@ -137,6 +138,24 @@ export function InboxPanel() {
               </Card>
             ) : null}
 
+            {snapshot.threads.kind === "idle" ? (
+              <Card className="bg-background/45">
+                <CardContent className="space-y-3 pt-5 text-center">
+                  <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
+                    <ShieldCheck className="size-6" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="font-heading text-2xl tracking-[-0.04em]">
+                      {idleInboxTitle(snapshot.connection)}
+                    </p>
+                    <p className="text-sm leading-6 text-muted-foreground">
+                      {idleInboxMessage(snapshot.connection)}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : null}
+
             {snapshot.threads.kind === "ready" && entries.length === 0 ? (
               <Card className="bg-background/45">
                 <CardContent className="space-y-3 pt-5 text-center">
@@ -226,4 +245,46 @@ export function InboxPanel() {
 
 function toErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Unknown client error";
+}
+
+function idleInboxTitle(connectionState: LocalConnectionState): string {
+  switch (connectionState.kind) {
+    case "unpaired":
+      return "Pair first";
+    case "revoked":
+      return "Device revoked";
+    case "expired":
+      return "Session expired";
+    case "refreshing":
+      return "Refreshing session";
+    case "reconnecting":
+      return "Reconnecting";
+    case "resyncing":
+      return "Resyncing";
+    case "disconnected":
+      return "Bridge disconnected";
+    default:
+      return "Inbox unavailable";
+  }
+}
+
+function idleInboxMessage(connectionState: LocalConnectionState): string {
+  switch (connectionState.kind) {
+    case "unpaired":
+      return "Pair this browser from the Connection page before reviewing pending approvals or user input.";
+    case "revoked":
+      return connectionState.message ?? "This browser can no longer load bridge-backed pending requests.";
+    case "expired":
+      return connectionState.message ?? "Re-pair to load the current pending request queue.";
+    case "refreshing":
+      return "The client is rotating bridge credentials before rebuilding the inbox.";
+    case "reconnecting":
+      return connectionState.message ?? "Reconnect is in progress.";
+    case "resyncing":
+      return "The inbox is catching up to bridge authority.";
+    case "disconnected":
+      return connectionState.message ?? "Bridge is currently unavailable.";
+    default:
+      return "Pending request state is not ready yet.";
+  }
 }
