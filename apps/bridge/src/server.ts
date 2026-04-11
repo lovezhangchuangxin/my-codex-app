@@ -47,7 +47,8 @@ const pairingLimiter = new RateLimiter(10, 60_000);
 const refreshLimiter = new RateLimiter(30, 60_000);
 
 const port = Number.parseInt(process.env.BRIDGE_PORT ?? "8787", 10);
-const host = process.env.BRIDGE_HOST ?? "127.0.0.1";
+// 监听 0.0.0.0 允许局域网设备访问（手机等），仅本机访问时可设 BRIDGE_HOST=127.0.0.1
+const host = process.env.BRIDGE_HOST ?? "0.0.0.0";
 const bridgeOrigin = process.env.BRIDGE_ORIGIN ?? "*";
 const threadUnsubscribeGraceMs = Number.parseInt(
   process.env.BRIDGE_THREAD_UNSUBSCRIBE_GRACE_MS ?? "5000",
