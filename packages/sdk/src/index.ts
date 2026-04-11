@@ -1,4 +1,9 @@
-export { BridgeClient, type BridgeClientConfig } from "./bridgeClient.js";
+export {
+  BridgeClient,
+  type BridgeClientConfig,
+  type BridgeCredentialStore,
+  type BridgeSessionCredentials
+} from "./bridgeClient.js";
 export { BridgeThreadRuntime } from "./threadRuntime.js";
 export {
   createInitialSnapshot,

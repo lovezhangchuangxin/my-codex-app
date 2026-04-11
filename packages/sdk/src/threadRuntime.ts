@@ -233,6 +233,15 @@ export class BridgeThreadRuntime {
     this.#pendingEvents.clear();
   }
 
+  resetState(): void {
+    this.#disconnectEvents();
+    this.#pendingEvents.clear();
+    this.#snapshot = createInitialSnapshot();
+    for (const listener of this.#listeners) {
+      listener();
+    }
+  }
+
   #applyStartedTurn(threadId: string, turn: TurnDetail): void {
     if (this.#snapshot.selectedThreadId !== threadId) {
       return;

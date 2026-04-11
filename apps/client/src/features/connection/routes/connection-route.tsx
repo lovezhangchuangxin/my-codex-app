@@ -1,18 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
-import { Activity, Cable, KeyRound, RadioTower, RefreshCcw, Shield } from "lucide-react";
+import { Activity, KeyRound, LaptopMinimal, RefreshCcw, Shield, Smartphone } from "lucide-react";
+import { toast } from "sonner";
+
+import type { DeviceTrustRecord, PairingStatusResponse } from "@my-codex-app/protocol";
 
 import { PageHeader } from "@/components/common/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { bridgeBaseUrl, bridgeHealthUrl, connectionModeLabel } from "@/lib/env";
 import {
-  bridgeAccessToken,
-  bridgeBaseUrl,
-  bridgeHealthUrl,
-  connectionModeLabel
-} from "@/lib/env";
-import { useRuntime } from "@/lib/runtime/runtime-provider";
+  createDefaultDeviceDraft
+} from "@/lib/runtime/bridge-credential-store";
+import { useBridgeClient, useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 import { formatTimestamp } from "@/features/threads/lib/thread-utils";
 
@@ -21,16 +24,49 @@ type HealthState =
   | { checkedAt: number; status: "ok" }
   | { checkedAt: number; message: string; status: "error" };
 
+type DeviceDraft = ReturnType<typeof createDefaultDeviceDraft>;
+
 export function ConnectionRoute() {
+  const bridgeClient = useBridgeClient();
   const runtime = useRuntime();
   const snapshot = useRuntimeSnapshot();
   const [healthState, setHealthState] = useState<HealthState>({ status: "checking" });
-  const diagnosticFeed = buildDiagnosticFeed({
-    healthState,
-    lastError: snapshot.mutations.lastError,
-    selectedThreadId: snapshot.selectedThreadId,
-    snapshot
-  });
+  const [pairingStatus, setPairingStatus] = useState<PairingStatusResponse | null>(null);
+  const [pairingCode, setPairingCode] = useState("");
+  const [pairingPending, setPairingPending] = useState(false);
+  const [sessionPending, setSessionPending] = useState(false);
+  const [devicesPending, setDevicesPending] = useState(false);
+  const [devices, setDevices] = useState<DeviceTrustRecord[]>([]);
+  const [deviceDraft, setDeviceDraft] = useState<DeviceDraft>(() => createDefaultDeviceDraft());
+  const [credentialsVersion, setCredentialsVersion] = useState(0);
+
+  const credentials = bridgeClient.getCredentials();
+
+  const refreshView = useCallback(async () => {
+    try {
+      const nextPairingStatus = await bridgeClient.getPairingStatus();
+      setPairingStatus(nextPairingStatus);
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    }
+
+    if (!bridgeClient.hasCredentials()) {
+      setDevices([]);
+      setCredentialsVersion((current) => current + 1);
+      return;
+    }
+
+    setDevicesPending(true);
+    try {
+      const response = await bridgeClient.listDevices();
+      setDevices(response.devices);
+      setCredentialsVersion((current) => current + 1);
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    } finally {
+      setDevicesPending(false);
+    }
+  }, [bridgeClient]);
 
   const checkHealth = useCallback(async () => {
     setHealthState((current) => ({
@@ -51,7 +87,7 @@ export function ConnectionRoute() {
     } catch (error) {
       setHealthState({
         checkedAt: Math.floor(Date.now() / 1000),
-        message: error instanceof Error ? error.message : "Unknown bridge error",
+        message: toErrorMessage(error),
         status: "error"
       });
     }
@@ -59,6 +95,7 @@ export function ConnectionRoute() {
 
   useEffect(() => {
     void checkHealth();
+    void refreshView();
 
     const intervalId = window.setInterval(() => {
       void checkHealth();
@@ -67,7 +104,66 @@ export function ConnectionRoute() {
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [checkHealth]);
+  }, [checkHealth, refreshView]);
+
+  async function handlePairDevice() {
+    setPairingPending(true);
+    try {
+      await bridgeClient.completePairing({
+        code: pairingCode,
+        device: deviceDraft
+      });
+      setPairingCode("");
+      await runtime.loadThreads();
+      await refreshView();
+      toast.success("Device paired");
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    } finally {
+      setPairingPending(false);
+    }
+  }
+
+  async function handleRefreshSession() {
+    setSessionPending(true);
+    try {
+      await bridgeClient.refreshSession();
+      await refreshView();
+      toast.success("Session refreshed");
+    } catch (error) {
+      if (!bridgeClient.hasCredentials()) {
+        runtime.resetState();
+      }
+      await refreshView();
+      toast.error(toErrorMessage(error));
+    } finally {
+      setSessionPending(false);
+    }
+  }
+
+  async function handleRevokeDevice(deviceId: string) {
+    setDevicesPending(true);
+    try {
+      await bridgeClient.revokeDevice({ deviceId });
+      if (credentials?.device.deviceId === deviceId) {
+        bridgeClient.clearCredentials();
+        runtime.resetState();
+      }
+      await refreshView();
+      toast.success("Device revoked");
+    } catch (error) {
+      toast.error(toErrorMessage(error));
+    } finally {
+      setDevicesPending(false);
+    }
+  }
+
+  function handleDisconnectLocal() {
+    bridgeClient.clearCredentials();
+    runtime.resetState();
+    setDeviceDraft(createDefaultDeviceDraft());
+    void refreshView();
+  }
 
   return (
     <div className="space-y-5">
@@ -85,393 +181,299 @@ export function ConnectionRoute() {
             </Button>
             <Button
               onClick={() => {
-                void runtime.loadThreads();
+                void refreshView();
               }}
               variant="outline"
             >
               <RefreshCcw className="size-4" />
-              Refresh threads
+              Refresh auth
             </Button>
           </div>
         }
-        description="Inspect bridge reachability, bootstrap auth state, and the live runtime signals exposed by the existing local bridge implementation."
-        eyebrow="Current state"
+        description="Pair this browser explicitly, inspect trusted devices, and keep the bridge session healthy without relying on a shared bootstrap token."
+        eyebrow="Local auth"
         title="Connection"
       />
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <Card className="overflow-hidden bg-card/72 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-          <CardContent className="flex flex-col gap-5 px-5 py-5 md:flex-row md:items-end md:justify-between">
-            <div className="space-y-3">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-[0.68rem] tracking-[0.26em] text-primary uppercase">
-                  Runtime status
-                </span>
-                <div className="h-px w-16 bg-linear-to-r from-primary/45 to-transparent" />
-              </div>
-              <div className="flex items-center gap-3">
-                <h2 className="font-heading text-4xl tracking-[-0.06em] text-foreground">
-                  {healthState.status === "ok"
-                    ? "Connected"
-                    : healthState.status === "error"
-                      ? "Degraded"
-                      : "Checking"}
-                </h2>
-                <Badge
-                  className={
-                    healthState.status === "ok"
-                      ? "bg-primary/12 text-primary"
-                      : healthState.status === "error"
-                        ? "bg-destructive/12 text-destructive"
-                        : "bg-secondary/16 text-secondary pulse-secondary"
-                  }
-                  variant="secondary"
-                >
-                  {healthState.status}
-                </Badge>
-              </div>
-              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                The browser client stays bridge-first. This view reports only the runtime
-                and HTTP health signals that exist today.
-              </p>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <Card className="bg-card/72 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <Shield className="size-5 text-primary" />
+              Bridge session
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <StatusRow label="Mode" value={connectionModeLabel} />
+              <StatusRow label="Endpoint" value={bridgeBaseUrl} />
+              <StatusRow
+                label="Health"
+                value={healthState.status === "ok" ? "Reachable" : healthState.status}
+              />
+              <StatusRow
+                label="Auth"
+                value={credentials ? "Paired session active" : "Pairing required"}
+              />
             </div>
 
-            <div className="rounded-[12px] border border-white/8 bg-background/48 px-4 py-2.5">
-              <p className="font-mono text-[0.68rem] tracking-[0.24em] text-muted-foreground uppercase">
-                Latest check
-              </p>
-              <p className="mt-2 font-mono text-sm text-foreground">
-                {"checkedAt" in healthState && healthState.checkedAt
+            {credentials ? (
+              <div className="rounded-[14px] border border-white/8 bg-background/42 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">{credentials.device.label}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {credentials.device.platform} · access expires{" "}
+                      {formatTimestamp(credentials.accessTokenExpiresAt)}
+                    </p>
+                  </div>
+                  <Badge className="bg-primary/12 text-primary" variant="secondary">
+                    Authenticated
+                  </Badge>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button
+                    disabled={sessionPending}
+                    onClick={() => {
+                      void handleRefreshSession();
+                    }}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    Refresh session
+                  </Button>
+                  <Button
+                    onClick={handleDisconnectLocal}
+                    size="sm"
+                    variant="outline"
+                  >
+                    Clear local credentials
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[14px] border border-white/8 bg-background/42 p-4">
+                <p className="text-sm leading-6 text-muted-foreground">
+                  Pairing uses a short-lived code shown in the bridge terminal. Enter that code
+                  below to create a revocable trusted device record for this browser.
+                </p>
+              </div>
+            )}
+
+            {healthState.status === "error" ? (
+              <Alert className="border-destructive/20 bg-destructive/5">
+                <AlertTitle>Bridge health failed</AlertTitle>
+                <AlertDescription>{healthState.message}</AlertDescription>
+              </Alert>
+            ) : null}
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+          <CardHeader>
+            <CardTitle className="text-xl tracking-[-0.04em]">Runtime snapshot</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 rounded-[12px] border border-white/8 bg-background/42 px-3 py-3">
+            <StatusRow label="Thread list" value={snapshot.threads.kind} />
+            <StatusRow label="Detail state" value={snapshot.detail.kind} />
+            <StatusRow label="Selected thread" value={snapshot.selectedThreadId ?? "None"} />
+            <StatusRow
+              label="Pending responses"
+              value={String(snapshot.mutations.respondingRequestIds.length)}
+            />
+            <StatusRow
+              label="Last check"
+              value={
+                "checkedAt" in healthState && healthState.checkedAt
                   ? formatTimestamp(healthState.checkedAt)
-                  : "Awaiting first probe"}
-              </p>
+                  : "Awaiting first probe"
+              }
+            />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-xl">
+              <KeyRound className="size-5 text-primary" />
+              Pair this browser
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {pairingStatus ? (
+              <Alert className="border-primary/15 bg-primary/5">
+                <AlertTitle>Pairing challenge active</AlertTitle>
+                <AlertDescription>
+                  {pairingStatus.instructions} Code expires{" "}
+                  {formatTimestamp(pairingStatus.expiresAt)}.
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field
+                label="Pairing code"
+                onChange={setPairingCode}
+                placeholder="Enter code from bridge terminal"
+                value={pairingCode}
+              />
+              <Field
+                label="Device label"
+                onChange={(value) => {
+                  setDeviceDraft((current) => ({ ...current, label: value }));
+                }}
+                placeholder="Browser"
+                value={deviceDraft.label}
+              />
+              <Field
+                label="Platform"
+                onChange={(value) => {
+                  setDeviceDraft((current) => ({ ...current, platform: value }));
+                }}
+                placeholder="browser"
+                value={deviceDraft.platform}
+              />
+              <Field
+                label="Device id"
+                onChange={(value) => {
+                  setDeviceDraft((current) => ({ ...current, deviceId: value }));
+                }}
+                value={deviceDraft.deviceId}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button
+                disabled={pairingPending || pairingCode.trim().length === 0}
+                onClick={() => {
+                  void handlePairDevice();
+                }}
+              >
+                Pair device
+              </Button>
+              <Button
+                onClick={() => {
+                  setDeviceDraft(createDefaultDeviceDraft());
+                }}
+                variant="outline"
+              >
+                Regenerate draft device
+              </Button>
             </div>
           </CardContent>
         </Card>
 
         <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
           <CardHeader>
-            <CardTitle className="text-xl tracking-[-0.04em]">Mode snapshot</CardTitle>
+            <CardTitle className="text-xl">Trusted devices</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-2 rounded-[12px] border border-white/8 bg-background/42 px-3 py-2.5">
-              <StatusLine label="Mode" value={connectionModeLabel} />
-              <StatusLine label="Endpoint" value={bridgeBaseUrl} />
-              <StatusLine
-                label="Auth"
-                value={bridgeAccessToken ? "Bootstrap token present" : "Bootstrap token missing"}
-              />
-            </div>
+          <CardContent className="space-y-3">
+            {!credentials ? (
+              <p className="text-sm leading-6 text-muted-foreground">
+                Pair first to inspect and revoke trusted devices.
+              </p>
+            ) : null}
+
+            {credentials && devices.length === 0 && !devicesPending ? (
+              <p className="text-sm leading-6 text-muted-foreground">No trusted devices found.</p>
+            ) : null}
+
+            {devices.map((device) => {
+              const isCurrent = device.deviceId === credentials?.device.deviceId;
+              const isRevoked = device.revokedAt !== undefined;
+              return (
+                <div
+                  className="rounded-[12px] border border-white/8 bg-background/42 p-3"
+                  key={`${device.deviceId}-${credentialsVersion}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        {device.platform.toLowerCase().includes("iphone") ||
+                        device.platform.toLowerCase().includes("android") ? (
+                          <Smartphone className="size-4 text-primary" />
+                        ) : (
+                          <LaptopMinimal className="size-4 text-primary" />
+                        )}
+                        <p className="font-medium text-foreground">{device.label}</p>
+                        {isCurrent ? (
+                          <Badge className="bg-primary/12 text-primary" variant="secondary">
+                            Current
+                          </Badge>
+                        ) : null}
+                        {isRevoked ? (
+                          <Badge className="bg-destructive/12 text-destructive" variant="secondary">
+                            Revoked
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-muted-foreground">{device.platform}</p>
+                      <p className="font-mono text-[0.68rem] text-muted-foreground">
+                        Last seen {formatTimestamp(device.lastSeenAt)}
+                      </p>
+                    </div>
+
+                    {!isRevoked ? (
+                      <Button
+                        disabled={devicesPending}
+                        onClick={() => {
+                          void handleRevokeDevice(device.deviceId);
+                        }}
+                        size="sm"
+                        variant="outline"
+                      >
+                        Revoke
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
           </CardContent>
         </Card>
       </section>
-
-      <div className="grid gap-4 xl:grid-cols-3">
-        <FactCard
-          description={bridgeBaseUrl}
-          icon={<Cable className="size-5 text-primary" />}
-          title="Bridge endpoint"
-          value={connectionModeLabel}
-        />
-        <FactCard
-          description={bridgeHealthUrl}
-          icon={<RadioTower className="size-5 text-primary" />}
-          title="Health check"
-          value={healthState.status === "ok" ? "Reachable" : healthState.status === "error" ? "Unavailable" : "Checking"}
-        />
-        <FactCard
-          description={bridgeAccessToken ? "Bootstrap token configured" : "Bootstrap token missing"}
-          icon={<KeyRound className="size-5 text-primary" />}
-          title="Bootstrap auth"
-          value={bridgeAccessToken ? "Configured" : "Not configured"}
-        />
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-          <CardHeader className="border-b border-white/6 bg-background/35">
-            <CardTitle className="text-xl tracking-[-0.04em]">Runtime snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 pt-4 sm:grid-cols-2">
-            <StatusFact label="Thread list state" value={snapshot.threads.kind} />
-            <StatusFact label="Detail state" value={snapshot.detail.kind} />
-            <StatusFact
-              label="Selected thread"
-              value={snapshot.selectedThreadId ?? "None"}
-            />
-            <StatusFact
-              label="Pending request mutations"
-              value={String(snapshot.mutations.respondingRequestIds.length)}
-            />
-            <StatusFact
-              label="Send message pending"
-              value={snapshot.mutations.sendMessagePending ? "Yes" : "No"}
-            />
-            <StatusFact
-              label="Interrupt pending"
-              value={snapshot.mutations.interruptPending ? "Yes" : "No"}
-            />
-          </CardContent>
-        </Card>
-
-        <div className="space-y-4">
-          <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-xl">
-                <Shield className="size-5 text-primary" />
-                Bridge health
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Badge
-                  className={
-                    healthState.status === "ok"
-                      ? "bg-primary/12 text-primary"
-                      : healthState.status === "error"
-                        ? "bg-destructive/12 text-destructive"
-                        : "bg-secondary/16 text-secondary pulse-secondary"
-                  }
-                  variant="secondary"
-                >
-                  {healthState.status}
-                </Badge>
-                {"checkedAt" in healthState && healthState.checkedAt ? (
-                  <span className="text-xs text-muted-foreground">
-                    Last check {formatTimestamp(healthState.checkedAt)}
-                  </span>
-                ) : null}
-              </div>
-              {healthState.status === "error" ? (
-                <Alert className="border-destructive/20 bg-destructive/5">
-                  <AlertTitle>Bridge health failed</AlertTitle>
-                  <AlertDescription>{healthState.message}</AlertDescription>
-                </Alert>
-              ) : (
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Health checks only verify the bridge HTTP surface. Thread list and event
-                  sync are still validated separately by the client runtime.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {snapshot.mutations.lastError ? (
-            <Alert className="border-destructive/20 bg-destructive/5">
-              <AlertTitle>Latest client mutation error</AlertTitle>
-              <AlertDescription>{snapshot.mutations.lastError}</AlertDescription>
-            </Alert>
-          ) : (
-            <Alert className="border-primary/15 bg-primary/5">
-              <AlertTitle>Current limitation</AlertTitle>
-              <AlertDescription>
-                This page reflects the bridge APIs available today. Pairing, relay, and
-                device trust are intentionally out of scope until those bridge endpoints
-                exist.
-              </AlertDescription>
-            </Alert>
-          )}
-        </div>
-      </div>
-
-        <Card className="overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-        <CardHeader className="border-b border-white/6 bg-background/35">
-          <CardTitle className="text-xl tracking-[-0.04em]">Diagnostic runtime feed</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 pt-4">
-          {diagnosticFeed.map((entry) => (
-            <div
-              className="flex items-start gap-3 rounded-[12px] border border-white/8 bg-background/42 px-3 py-3"
-              key={`${entry.label}-${entry.timestamp}`}
-            >
-              <div className="min-w-[3.25rem]">
-                <p className="font-mono text-[0.68rem] text-muted-foreground">
-                  {entry.timestamp}
-                </p>
-                <p className={entry.toneClass}>{entry.state}</p>
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-mono text-[0.68rem] uppercase tracking-[0.16em] text-foreground">
-                    {entry.label}
-                  </p>
-                  {entry.badge ? (
-                    <Badge className={entry.badgeClass} variant="secondary">
-                      {entry.badge}
-                    </Badge>
-                  ) : null}
-                </div>
-                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
-                  {entry.message}
-                </p>
-              </div>
-            </div>
-          ))}
-        </CardContent>
-      </Card>
     </div>
   );
 }
 
-function buildDiagnosticFeed({
-  healthState,
-  lastError,
-  selectedThreadId,
-  snapshot
-}: {
-  healthState: HealthState;
-  lastError: string | null;
-  selectedThreadId: string | null;
-  snapshot: ReturnType<typeof useRuntimeSnapshot>;
-}) {
-  const timestamp =
-    "checkedAt" in healthState && healthState.checkedAt
-      ? formatTimestamp(healthState.checkedAt)
-      : "Pending";
-
-  return [
-    {
-      badge:
-        healthState.status === "ok"
-          ? "reachable"
-          : healthState.status === "error"
-            ? "unavailable"
-            : "probing",
-      badgeClass:
-        healthState.status === "ok"
-          ? "bg-primary/12 text-primary"
-          : healthState.status === "error"
-            ? "bg-destructive/12 text-destructive"
-            : "bg-secondary/16 text-secondary pulse-secondary",
-      label: "Bridge health",
-      message:
-        healthState.status === "checking"
-          ? `Health probe for ${bridgeHealthUrl} is still in progress.`
-          : healthState.status === "error"
-          ? healthState.message
-          : `Health endpoint ${bridgeHealthUrl} responded through the current local bridge route.`,
-      state:
-        healthState.status === "ok"
-          ? "READY"
-          : healthState.status === "error"
-            ? "ERROR"
-            : "CHECK",
-      timestamp,
-      toneClass:
-        healthState.status === "ok"
-          ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
-          : healthState.status === "error"
-            ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-destructive"
-            : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-secondary"
-    },
-    {
-      badge: snapshot.threads.kind,
-      badgeClass: "bg-background/70 text-muted-foreground",
-      label: "Thread snapshot",
-      message:
-        snapshot.threads.kind === "ready"
-          ? `Loaded ${snapshot.threads.threads.length} thread summaries from bridge authority.`
-          : snapshot.threads.kind === "error"
-            ? snapshot.threads.message
-            : "Thread list is still being fetched from the bridge.",
-      state:
-        snapshot.threads.kind === "ready"
-          ? "SYNCED"
-          : snapshot.threads.kind === "error"
-            ? "FAULT"
-            : "LOAD",
-      timestamp,
-      toneClass:
-        snapshot.threads.kind === "ready"
-          ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
-          : snapshot.threads.kind === "error"
-            ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-destructive"
-            : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-secondary"
-    },
-    {
-      badge: selectedThreadId ? "selected" : "idle",
-      badgeClass: selectedThreadId
-        ? "bg-primary/12 text-primary"
-        : "bg-background/70 text-muted-foreground",
-      label: "Focused thread",
-      message: selectedThreadId
-        ? `Runtime is tracking thread ${selectedThreadId}.`
-        : "No thread is currently selected in the route shell.",
-      state: selectedThreadId ? "FOCUS" : "IDLE",
-      timestamp,
-      toneClass: selectedThreadId
-        ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
-        : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground"
-    },
-    {
-      badge: lastError ? "attention" : "clear",
-      badgeClass: lastError
-        ? "bg-destructive/12 text-destructive"
-        : "bg-primary/12 text-primary",
-      label: "Mutation channel",
-      message: lastError
-        ? lastError
-        : "No recent client mutation errors have been recorded.",
-      state: lastError ? "WARN" : "CLEAR",
-      timestamp,
-      toneClass: lastError
-        ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-destructive"
-        : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
-    }
-  ];
-}
-
-function FactCard({
-  description,
-  icon,
-  title,
+function Field({
+  label,
+  onChange,
+  placeholder,
   value
 }: {
-  description: string;
-  icon: import("react").ReactNode;
-  title: string;
+  label: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
   value: string;
 }) {
   return (
-    <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-      <CardHeader className="gap-2.5">
-        <div className="flex size-9 items-center justify-center rounded-[10px] bg-primary/12">
-          {icon}
-        </div>
-        <div className="space-y-1">
-          <p className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
-            {title}
-          </p>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="font-heading text-[1.7rem] tracking-[-0.04em]">{value}</p>
-      </CardContent>
-    </Card>
+    <div className="space-y-2">
+      <Label>{label}</Label>
+      <Input
+        onChange={(event) => {
+          onChange(event.target.value);
+        }}
+        placeholder={placeholder}
+        value={value}
+      />
+    </div>
   );
 }
 
-function StatusFact({ label, value }: { label: string; value: string }) {
+function StatusRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[12px] border border-white/8 bg-background/50 px-3 py-2.5">
-      <p className="font-mono text-[0.68rem] tracking-[0.24em] text-muted-foreground uppercase">
+    <div className="space-y-1">
+      <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1.5 font-mono text-sm text-foreground">{value}</p>
+      <p className="text-sm text-foreground">{value}</p>
     </div>
   );
 }
 
-function StatusLine({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex min-w-0 items-start justify-between gap-3">
-      <span className="shrink-0 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
-        {label}
-      </span>
-      <span className="min-w-0 break-all text-right font-mono text-sm text-foreground">
-        {value}
-      </span>
-    </div>
-  );
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : "Unknown bridge error";
 }

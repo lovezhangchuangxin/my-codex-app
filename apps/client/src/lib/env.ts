@@ -11,6 +11,5 @@ function resolveBridgeBaseUrl(): string {
 }
 
 export const bridgeBaseUrl = resolveBridgeBaseUrl();
-export const bridgeAccessToken = import.meta.env.VITE_BRIDGE_ACCESS_TOKEN?.trim() || "";
 export const bridgeHealthUrl = new URL("/healthz", bridgeBaseUrl).toString();
 export const connectionModeLabel = "Local";

@@ -1,8 +1,14 @@
 import { createServer } from "node:http";
+import { join } from "node:path";
 
 import type {
   ApiErrorPayload,
+  DeviceListResponse,
+  DeviceRevokeRequest,
+  PairingCompleteRequest,
+  PairingStatusResponse,
   RequestRespondRequest,
+  SessionRefreshRequest,
   ThreadListRequest,
   ThreadStartRequest,
   TurnInterruptRequest,
@@ -10,16 +16,16 @@ import type {
 } from "@my-codex-app/protocol";
 
 import { AppServerClient } from "./appServerClient.js";
+import { authenticateBridgeRequest } from "./auth/authenticate.js";
+import { BridgeAuthError, BridgeAuthService } from "./auth/authService.js";
+import { DeviceTrustStore } from "./auth/deviceTrustStore.js";
 import { ThreadService } from "./threadService.js";
 
 const port = Number.parseInt(process.env.BRIDGE_PORT ?? "8787", 10);
 const host = process.env.BRIDGE_HOST ?? "127.0.0.1";
 const bridgeOrigin = process.env.BRIDGE_ORIGIN ?? "*";
-const bridgeAccessToken = process.env.BRIDGE_ACCESS_TOKEN;
-
-if (!bridgeAccessToken) {
-  throw new Error("BRIDGE_ACCESS_TOKEN is required");
-}
+const bridgeStatePath =
+  process.env.BRIDGE_STATE_PATH ?? join(process.cwd(), ".local", "bridge-auth-state.json");
 
 type EventClient = {
   response: import("node:http").ServerResponse;
@@ -29,6 +35,7 @@ type EventClient = {
 async function main(): Promise<void> {
   const appServerClient = new AppServerClient();
   await appServerClient.initialize();
+  const authService = new BridgeAuthService(new DeviceTrustStore(bridgeStatePath));
   const threadService = new ThreadService(appServerClient);
   const eventClients = new Set<EventClient>();
   const threadSubscriberCounts = new Map<string, number>();
@@ -58,15 +65,73 @@ async function main(): Promise<void> {
     }
 
     const url = new URL(request.url, `http://${request.headers.host ?? "127.0.0.1"}`);
-    const isAuthorized = hasValidAccessToken(request, url);
 
     if (request.method === "GET" && url.pathname === "/healthz") {
       writeJson(response, 200, { status: "ok" });
       return;
     }
 
-    if (!isAuthorized) {
-      writeJson(response, 401, { error: { message: "Unauthorized bridge request" } });
+    if (request.method === "GET" && url.pathname === "/api/pairing") {
+      try {
+        const status = authService.getPairingStatus();
+        if (status.regenerated) {
+          logPairingStatus(status);
+        }
+        const payload: PairingStatusResponse = {
+          pairingRequired: status.pairingRequired,
+          instructions: status.instructions,
+          expiresAt: status.expiresAt
+        };
+        writeJson(response, 200, payload);
+      } catch (error) {
+        writeError(response, error, 500);
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/pairing/complete") {
+      try {
+        const payload = await readJsonBody<PairingCompleteRequest>(request);
+        if (!isRecord(payload) || !isRecord(payload.device) || typeof payload.code !== "string") {
+          writeJson(response, 400, { error: { message: "Invalid pairing payload" } });
+          return;
+        }
+
+        const result = authService.completePairing(payload);
+        logPairingStatus(authService.getPairingStatus());
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, 400);
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/session/refresh") {
+      try {
+        const payload = await readJsonBody<SessionRefreshRequest>(request);
+        if (
+          !isRecord(payload) ||
+          typeof payload.deviceId !== "string" ||
+          typeof payload.refreshToken !== "string"
+        ) {
+          writeJson(response, 400, { error: { message: "Invalid session/refresh payload" } });
+          return;
+        }
+
+        const result = authService.refreshSession(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, 401);
+      }
+      return;
+    }
+
+    try {
+      authenticateBridgeRequest(request, url, authService, {
+        allowQueryToken: request.method === "GET" && url.pathname === "/api/events"
+      });
+    } catch (error) {
+      writeError(response, error, 401);
       return;
     }
 
@@ -97,6 +162,32 @@ async function main(): Promise<void> {
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/devices") {
+      try {
+        const result: DeviceListResponse = authService.listDevices();
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, 500);
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/devices/revoke") {
+      try {
+        const payload = await readJsonBody<DeviceRevokeRequest>(request);
+        if (!isRecord(payload) || typeof payload.deviceId !== "string") {
+          writeJson(response, 400, { error: { message: "Invalid device/revoke payload" } });
+          return;
+        }
+
+        const result = authService.revokeDevice(payload.deviceId);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, 404);
       }
       return;
     }
@@ -219,8 +310,10 @@ async function main(): Promise<void> {
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 
+  logPairingStatus(authService.getPairingStatus());
   server.listen(port, host, () => {
     console.log(`Bridge listening on http://${host}:${port}`);
+    console.log(`Bridge auth state path: ${bridgeStatePath}`);
   });
 }
 
@@ -247,6 +340,16 @@ function writeError(
   error: unknown,
   statusCode: number
 ): void {
+  if (error instanceof BridgeAuthError) {
+    writeJson(response, error.statusCode, {
+      error: {
+        code: error.code,
+        message: error.message
+      }
+    } satisfies ApiErrorPayload);
+    return;
+  }
+
   const message = error instanceof Error ? error.message : "Unknown bridge error";
   writeJson(response, statusCode, { error: { message } } satisfies ApiErrorPayload);
 }
@@ -304,16 +407,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function hasValidAccessToken(
-  request: import("node:http").IncomingMessage,
-  url: URL
-): boolean {
-  const authorizationHeader = request.headers.authorization;
-  if (authorizationHeader?.startsWith("Bearer ")) {
-    return authorizationHeader.slice("Bearer ".length) === bridgeAccessToken;
+function logPairingStatus(status: PairingStatusResponse & { pairingCode: string; regenerated?: boolean }): void {
+  if (status.regenerated) {
+    console.log("Pairing code rotated.");
   }
-
-  return url.searchParams.get("access_token") === bridgeAccessToken;
+  console.log(`Pairing code: ${status.pairingCode} (expires at ${new Date(status.expiresAt * 1000).toISOString()})`);
 }
 
 void main().catch((error: unknown) => {

@@ -8,6 +8,71 @@ export type ClientConnectionState =
   | "resynced"
   | "disconnected";
 
+export type BridgeAuthErrorCode =
+  | "missingCredentials"
+  | "invalidAccessToken"
+  | "expiredAccessToken"
+  | "invalidRefreshToken"
+  | "expiredRefreshToken"
+  | "revokedDevice"
+  | "invalidPairingCode"
+  | "deviceIdConflict";
+
+export interface DeviceInfo {
+  deviceId: string;
+  label: string;
+  platform: string;
+}
+
+export interface DeviceTrustRecord extends DeviceInfo {
+  createdAt: number;
+  updatedAt: number;
+  lastSeenAt: number;
+  revokedAt?: number;
+}
+
+export interface BridgeSessionTokens {
+  accessToken: string;
+  accessTokenExpiresAt: number;
+  refreshToken: string;
+}
+
+export interface PairingStatusResponse {
+  pairingRequired: boolean;
+  instructions: string;
+  expiresAt: number;
+}
+
+export interface PairingCompleteRequest {
+  code: string;
+  device: DeviceInfo;
+}
+
+export interface PairingCompleteResponse {
+  device: DeviceTrustRecord;
+  session: BridgeSessionTokens;
+}
+
+export interface SessionRefreshRequest {
+  deviceId: string;
+  refreshToken: string;
+}
+
+export interface SessionRefreshResponse {
+  device: DeviceTrustRecord;
+  session: BridgeSessionTokens;
+}
+
+export interface DeviceListResponse {
+  devices: DeviceTrustRecord[];
+}
+
+export interface DeviceRevokeRequest {
+  deviceId: string;
+}
+
+export interface DeviceRevokeResponse {}
+
 export type ThreadRuntimeStatus =
   | { type: "notLoaded" }
   | { type: "idle" }
@@ -289,6 +354,7 @@ export type BridgeEvent =
 
 export interface ApiErrorPayload {
   error: {
+    code?: BridgeAuthErrorCode;
     message: string;
   };
 }

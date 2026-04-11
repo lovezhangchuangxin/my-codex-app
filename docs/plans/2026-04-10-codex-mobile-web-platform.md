@@ -224,6 +224,11 @@ Recommended flow:
 
 Protocol should be defined at the bridge layer rather than exposing app-server directly.
 
+Implementation note:
+
+- the logical request groups below do not require a custom transport rewrite for MVP
+- the current local implementation may map these capabilities onto HTTP routes plus SSE
+
 ### Request groups
 
 - session
@@ -332,6 +337,7 @@ Each client device receives:
 Recommended MVP:
 
 - one-time code or QR pairing
+- manual code entry is acceptable for the first local-only implementation
 - bridge signs or stores device trust locally
 - later sessions use renewable tokens
 

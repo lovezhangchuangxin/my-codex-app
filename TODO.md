@@ -41,15 +41,16 @@ Already implemented:
   - file-change approvals
   - permission requests
   - tool user-input requests
-- [x] temporary bootstrap auth using:
-  - `BRIDGE_ACCESS_TOKEN`
-  - `VITE_BRIDGE_ACCESS_TOKEN`
+- [x] explicit local pairing with:
+  - bridge-generated pairing code
+  - revocable device trust records
+  - short-lived access token + refresh token auth
 
 Known constraints of the current baseline:
 
-- [ ] auth is only a temporary local bootstrap token, not the final pairing model
 - [ ] pending request UX is now structured, but reconnect/resync hardening still needs polish
 - [ ] reconnect/resync behavior is still minimal
+- [ ] browser credential storage is functional, but not yet polished for Tauri-native secure storage
 - [ ] Tauri mobile shell and relay are not implemented
 
 ## Next Major Goals
@@ -105,7 +106,7 @@ Expected outcome:
 - [x] client can render pending requests at thread level and detail level
 - [x] bridge persists enough pending state to survive reconnect
 
-### [ ] 4. Replace Bootstrap Token Auth With Pairing
+### [x] 4. Replace Bootstrap Token Auth With Pairing
 
 Goal:
 
@@ -119,9 +120,9 @@ Scope:
 
 Expected outcome:
 
-- bridge no longer depends on one static shared token
-- local mode aligns with spec security requirements
-- auth model is documented in `docs/specs/` and `docs/plans/`
+- [x] bridge no longer depends on one static shared token
+- [x] local mode aligns with spec security requirements
+- [x] auth model is documented in `docs/specs/` and `docs/plans/`
 
 ### [ ] 5. Harden Reconnect And Resync
 

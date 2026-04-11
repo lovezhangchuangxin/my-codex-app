@@ -46,7 +46,7 @@ The current repository bootstrap implements the first local bridge/client slice 
   - aggregated pending-request handling for command, file-change, permission, and tool user-input prompts
   - bridge diagnostics and health checks through the shared SDK/runtime layer
 
-This is intentionally still a thin end-to-end flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, `request/respond`, and a minimal live event bridge for the selected thread. Pairing, reconnect hardening, Tauri shell integration, and relay support are still pending.
+This is intentionally still a thin end-to-end flow centered on `thread/list`, `thread/read`, `thread/start`, `turn/start`, `turn/interrupt`, `request/respond`, and a minimal live event bridge for the selected thread. Local pairing and revocable device trust now exist for direct bridge access, while reconnect hardening, Tauri shell integration, and relay support are still pending.
 
 ## Client implementation status
 
@@ -59,16 +59,18 @@ The current client implementation is no longer the original hand-assembled proto
 
 The shared client runtime still remains in `packages/sdk`, so bridge transport and live thread state are not duplicated across UI components.
 
-## Local bootstrap auth
+## Local pairing auth
 
-Current bridge bootstrap requires an explicit shared access token on every client-to-bridge request.
+Current local bridge auth uses explicit pairing and revocable device trust.
 
-- bridge env: `BRIDGE_ACCESS_TOKEN`
-- client env: `VITE_BRIDGE_ACCESS_TOKEN`
+- the bridge generates a short-lived pairing code and prints it locally
+- the client completes pairing with a device identifier plus human-readable metadata
+- the bridge stores a revocable trusted-device record
+- the client uses short-lived access tokens plus refresh tokens instead of one shared static secret
 
-Requests can authenticate with:
+Requests authenticate with:
 
-- `Authorization: Bearer <token>`
-- or `access_token=...` query params for browser/EventSource bootstrap
+- `Authorization: Bearer <access-token>` for normal HTTP APIs
+- `access_token=...` query params for browser `EventSource` subscriptions
 
-This is a temporary bootstrap mechanism for local development until explicit pairing and revocable device trust are implemented.
+The old `BRIDGE_ACCESS_TOKEN` / `VITE_BRIDGE_ACCESS_TOKEN` bootstrap is no longer the active local auth model.

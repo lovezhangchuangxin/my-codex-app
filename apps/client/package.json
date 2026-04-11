@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "prebuild": "pnpm --filter @my-codex-app/sdk build",
     "dev": "vite",
+    "pretypecheck": "pnpm --filter @my-codex-app/sdk build",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
