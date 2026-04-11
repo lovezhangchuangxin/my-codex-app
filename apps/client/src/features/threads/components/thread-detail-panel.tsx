@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import {
   ArrowLeft,
   Bot,
@@ -38,7 +38,6 @@ import {
   formatRelativeTime,
   formatStatusLabel,
   formatTimestamp,
-  formatUserInput,
   getWorkspaceLabel
 } from "@/features/threads/lib/thread-utils";
 import { cn } from "@/lib/utils";
@@ -49,6 +48,21 @@ import type {
   ThreadDetail,
   ThreadItem
 } from "@my-codex-app/protocol";
+
+const LazyMarkdownContent = lazy(async () => {
+  const module = await import("@/components/common/markdown-content");
+  return { default: module.MarkdownContent };
+});
+
+const LazyCodeBlock = lazy(async () => {
+  const module = await import("@/components/common/code-block");
+  return { default: module.CodeBlock };
+});
+
+const LazyTerminalOutput = lazy(async () => {
+  const module = await import("@/components/common/terminal-output");
+  return { default: module.TerminalOutput };
+});
 
 export function ThreadDetailPanel({
   detailState,
@@ -204,11 +218,13 @@ function ReadyThreadDetail({
               </Button>
             ) : null}
             <div className="min-w-0 space-y-1.5">
-              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                <h2 className="min-w-0 truncate font-heading text-[1.45rem] tracking-[-0.05em] md:text-[1.85rem]">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <h2 className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-heading text-[1.1rem] tracking-[-0.04em] md:max-w-[34rem] md:text-[1.32rem] lg:max-w-[42rem] xl:max-w-[48rem]">
                   {buildThreadTitle(thread)}
                 </h2>
-                <StatusBadge label={formatStatusLabel(thread.status)} />
+                <div className="shrink-0">
+                  <StatusBadge label={formatStatusLabel(thread.status)} />
+                </div>
               </div>
               <p className="truncate font-mono text-xs text-muted-foreground md:text-sm">
                 {thread.cwd}
@@ -532,9 +548,9 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
           tone="user"
           title="User message"
         >
-          <div className="space-y-1.5 text-sm leading-6 text-foreground">
+          <div className="space-y-3">
             {item.content.map((input, index) => (
-              <p key={`${item.id}-${index}`}>{formatUserInput(input)}</p>
+              <UserInputRenderer input={input} key={`${item.id}-${index}`} />
             ))}
           </div>
         </TimelineItem>
@@ -546,9 +562,11 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
           title="Assistant"
           tone="assistant"
         >
-          <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
-            {item.text || "No text returned."}
-          </div>
+          {item.text ? (
+            <RichMarkdown content={item.text} />
+          ) : (
+            <p className="text-sm leading-6 text-muted-foreground">No text returned.</p>
+          )}
         </TimelineItem>
       );
     case "reasoning":
@@ -560,9 +578,14 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
         >
           <div className="space-y-2.5">
             {item.summary.length > 0 ? (
-              <ul className="space-y-1.5 text-sm leading-6 text-foreground">
+              <ul className="space-y-2 text-sm leading-6 text-foreground">
                 {item.summary.map((summary, index) => (
-                  <li key={`${item.id}-summary-${index}`}>{summary}</li>
+                  <li
+                    className="rounded-xl border border-white/8 bg-background/35 px-3 py-2"
+                    key={`${item.id}-summary-${index}`}
+                  >
+                    {summary}
+                  </li>
                 ))}
               </ul>
             ) : null}
@@ -574,11 +597,18 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
-                  <div className="space-y-3 rounded-xl bg-background/70 p-4 font-mono text-xs leading-6 text-muted-foreground">
+                  <div className="space-y-3 rounded-xl bg-background/70 p-4">
                     {item.content.map((content, index) => (
-                      <pre className="whitespace-pre-wrap" key={`${item.id}-content-${index}`}>
-                        {content}
-                      </pre>
+                      <div
+                        className="rounded-xl border border-white/8 bg-background/45 px-4 py-3"
+                        key={`${item.id}-content-${index}`}
+                      >
+                        {looksLikeMarkdownContent(content) ? (
+                          <RichMarkdown className="text-sm text-muted-foreground" content={content} />
+                        ) : (
+                          <ReasoningPreformatted content={content} />
+                        )}
+                      </div>
                     ))}
                   </div>
                 </CollapsibleContent>
@@ -595,26 +625,36 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
           tone="command"
         >
           <div className="space-y-2.5">
-            <div className="overflow-hidden rounded-xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
-              <div className="flex items-center justify-between bg-black/80 px-4 py-2">
-                <div className="flex gap-1.5">
-                  <span className="size-2.5 rounded-full bg-destructive/45" />
-                  <span className="size-2.5 rounded-full bg-secondary/55" />
-                  <span className="size-2.5 rounded-full bg-primary/55" />
+            <div className="overflow-hidden rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.08))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]">
+              <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-[linear-gradient(90deg,rgba(78,222,163,0.08),rgba(255,255,255,0.02))] px-4 py-2.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-primary/85">
+                    Shell execution
+                  </span>
+                  <span className="text-xs text-muted-foreground">Selected workspace</span>
                 </div>
-                <p className="font-mono text-[0.64rem] uppercase tracking-[0.12em] text-muted-foreground">
-                  terminal
-                </p>
+                <StatusBadge label={item.status} />
               </div>
-              <div className="space-y-2 bg-black/55 p-4 font-mono text-xs leading-6 text-foreground">
-                <div className="flex gap-2">
-                  <span className="text-primary">$</span>
-                  <p className="min-w-0 break-words">{item.command}</p>
+              <div className="space-y-3 bg-[linear-gradient(180deg,rgba(8,10,12,0.82),rgba(14,16,18,0.95))] p-4">
+                <RichCodeBlock
+                  chrome={false}
+                  className="rounded-xl border border-white/6 bg-black/18"
+                  language="bash"
+                  shellPrompt
+                >
+                  {item.command}
+                </RichCodeBlock>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/6 bg-white/3 px-3 py-2">
+                  <span className="font-mono text-[0.64rem] uppercase tracking-[0.16em] text-muted-foreground">
+                    cwd
+                  </span>
+                  <p className="min-w-0 break-words font-mono text-xs leading-6 text-foreground/88">
+                    {item.cwd}
+                  </p>
                 </div>
-                <p className="text-muted-foreground">{item.cwd}</p>
               </div>
             </div>
-            <div className="font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/6 bg-background/35 px-3 py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
               <span>{item.status}</span>
               {item.exitCode !== undefined ? <span> / exit {item.exitCode}</span> : null}
               {item.durationMs ? (
@@ -629,9 +669,7 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
-                  <pre className="overflow-x-auto rounded-xl bg-black/60 p-4 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
-                    {item.aggregatedOutput}
-                  </pre>
+                  <RichTerminalOutput className="bg-black/60" content={item.aggregatedOutput} />
                 </CollapsibleContent>
               </Collapsible>
             ) : null}
@@ -674,9 +712,9 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
                           </Button>
                         </CollapsibleTrigger>
                         <CollapsibleContent className="pt-3">
-                          <pre className="overflow-x-auto rounded-xl bg-black/45 p-3 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground">
+                          <RichCodeBlock className="bg-black/45" language="diff">
                             {change.diff}
-                          </pre>
+                          </RichCodeBlock>
                         </CollapsibleContent>
                       </Collapsible>
                     ) : null}
@@ -721,14 +759,177 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
-              <pre className="overflow-x-auto rounded-xl bg-black/35 p-4 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground">
+              <RichCodeBlock className="bg-black/35" language="json">
                 {JSON.stringify(item.raw, null, 2)}
-              </pre>
+              </RichCodeBlock>
             </CollapsibleContent>
           </Collapsible>
         </TimelineItem>
       );
   }
+}
+
+function UserInputRenderer({
+  input
+}: {
+  input: Extract<ThreadItem, { type: "userMessage" }>["content"][number];
+}) {
+  switch (input.type) {
+    case "text":
+      return <RichMarkdown content={input.text} />;
+    case "image":
+      return <StructuredUserInput label="Image" value={input.url} />;
+    case "localImage":
+      return <StructuredUserInput label="Local image" value={input.path} />;
+    case "skill":
+      return <StructuredUserInput label="Skill" value={`${input.name} (${input.path})`} />;
+    case "mention":
+      return <StructuredUserInput label="Mention" value={`${input.name} (${input.path})`} />;
+  }
+}
+
+function RichMarkdown({
+  className,
+  content
+}: {
+  className?: string | undefined;
+  content: string;
+}) {
+  return (
+    <Suspense fallback={<PlainTextFallback className={className} content={content} />}>
+      <LazyMarkdownContent {...(className ? { className } : {})} content={content} />
+    </Suspense>
+  );
+}
+
+function RichCodeBlock({
+  children,
+  chrome = true,
+  className,
+  language,
+  shellPrompt = false
+}: {
+  children: string;
+  chrome?: boolean;
+  className?: string | undefined;
+  language?: string | undefined;
+  shellPrompt?: boolean;
+}) {
+  return (
+    <Suspense
+      fallback={
+        <PlainCodeFallback className={className} content={children} shellPrompt={shellPrompt} />
+      }
+    >
+      <LazyCodeBlock
+        chrome={chrome}
+        {...(className ? { className } : {})}
+        {...(language ? { language } : {})}
+        shellPrompt={shellPrompt}
+      >
+        {children}
+      </LazyCodeBlock>
+    </Suspense>
+  );
+}
+
+function RichTerminalOutput({
+  className,
+  content
+}: {
+  className?: string | undefined;
+  content: string;
+}) {
+  return (
+    <Suspense fallback={<PlainCodeFallback className={className} content={content} />}>
+      <LazyTerminalOutput {...(className ? { className } : {})} content={content} />
+    </Suspense>
+  );
+}
+
+function PlainTextFallback({
+  className,
+  content
+}: {
+  className?: string | undefined;
+  content: string;
+}) {
+  return (
+    <div className={cn("whitespace-pre-wrap break-words text-sm leading-6 text-foreground", className)}>
+      {content}
+    </div>
+  );
+}
+
+function PlainCodeFallback({
+  className,
+  content,
+  shellPrompt = false
+}: {
+  className?: string | undefined;
+  content: string;
+  shellPrompt?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border border-white/8 bg-[#111317] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
+        className
+      )}
+    >
+      <pre
+        className={cn(
+          "m-0 overflow-x-auto whitespace-pre-wrap break-words p-4 font-mono text-[0.8rem] leading-[1.65] text-foreground",
+          shellPrompt && "pl-8"
+        )}
+      >
+        {shellPrompt ? `$ ${content}` : content}
+      </pre>
+    </div>
+  );
+}
+
+function ReasoningPreformatted({ content }: { content: string }) {
+  return (
+    <pre className="m-0 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-muted-foreground">
+      {content}
+    </pre>
+  );
+}
+
+function looksLikeMarkdownContent(content: string) {
+  const trimmed = content.trim();
+
+  if (trimmed.length === 0) {
+    return false;
+  }
+
+  return (
+    /^#{1,6}\s/m.test(trimmed) ||
+    /^>\s/m.test(trimmed) ||
+    /^```/m.test(trimmed) ||
+    /^\s*[-*+]\s/m.test(trimmed) ||
+    /^\s*\d+\.\s/m.test(trimmed) ||
+    /\[[^\]]+\]\([^)]+\)/.test(trimmed) ||
+    /\|.+\|/.test(trimmed)
+  );
+}
+
+function StructuredUserInput({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-background/45 px-3 py-2.5">
+      <p className="font-mono text-[0.64rem] uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 break-words font-mono text-sm leading-6 text-foreground">{value}</p>
+    </div>
+  );
 }
 
 function TimelineItem({

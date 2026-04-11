@@ -145,6 +145,7 @@ export function ThreadsShell() {
             description="Open a thread to inspect turns, stream output, resolve prompts, and keep control of the current run."
             eyebrow="Thread detail"
             title={detailTitle}
+            titleClassName="max-w-full truncate whitespace-nowrap text-[1.15rem] leading-tight md:text-[1.45rem] lg:text-[1.7rem]"
           />
           <ThreadDetailPanel
             detailState={displayedDetailState}

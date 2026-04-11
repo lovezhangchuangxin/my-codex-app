@@ -142,6 +142,114 @@
   .pulse-secondary {
     animation: pulse-secondary 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+
+  .markdown-content {
+    color: var(--color-foreground);
+    font-size: 0.925rem;
+    line-height: 1.75;
+    overflow-wrap: anywhere;
+  }
+
+  .markdown-content > :first-child {
+    margin-top: 0;
+  }
+
+  .markdown-content > :last-child {
+    margin-bottom: 0;
+  }
+
+  .markdown-content h1,
+  .markdown-content h2,
+  .markdown-content h3,
+  .markdown-content h4 {
+    color: var(--color-foreground);
+    font-family: var(--font-heading);
+    letter-spacing: -0.04em;
+    line-height: 1.2;
+    margin: 1rem 0 0.55rem;
+  }
+
+  .markdown-content h1 {
+    font-size: 1.35rem;
+  }
+
+  .markdown-content h2 {
+    font-size: 1.18rem;
+  }
+
+  .markdown-content h3,
+  .markdown-content h4 {
+    font-size: 1rem;
+  }
+
+  .markdown-content p,
+  .markdown-content ul,
+  .markdown-content ol,
+  .markdown-content blockquote,
+  .markdown-content pre {
+    margin: 0.75rem 0;
+  }
+
+  .markdown-content ul,
+  .markdown-content ol {
+    padding-left: 1.3rem;
+  }
+
+  .markdown-content ul {
+    list-style: disc;
+  }
+
+  .markdown-content ol {
+    list-style: decimal;
+  }
+
+  .markdown-content li + li {
+    margin-top: 0.35rem;
+  }
+
+  .markdown-content blockquote {
+    border-left: 3px solid color-mix(in srgb, var(--color-primary) 45%, transparent);
+    color: color-mix(in srgb, var(--color-foreground) 82%, var(--color-muted-foreground));
+    padding-left: 0.95rem;
+  }
+
+  .markdown-content hr {
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-border) 85%, transparent);
+    margin: 1rem 0;
+  }
+
+  .markdown-content table {
+    border-collapse: collapse;
+    min-width: 100%;
+    overflow: hidden;
+    border-radius: 0.9rem;
+  }
+
+  .markdown-content thead {
+    background: color-mix(in srgb, var(--color-card) 72%, black);
+  }
+
+  .markdown-content th,
+  .markdown-content td {
+    border: 1px solid color-mix(in srgb, var(--color-border) 82%, transparent);
+    padding: 0.6rem 0.8rem;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .markdown-content th {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+  }
+
+  .markdown-content input[type="checkbox"] {
+    accent-color: var(--color-primary);
+    margin-right: 0.5rem;
+  }
 }
 
 @keyframes pulse-secondary {
