@@ -18,12 +18,12 @@ export function PageHeader({
   return (
     <section
       className={cn(
-        "rounded-[28px] bg-card/65 p-5 shadow-[0_16px_48px_rgba(0,0,0,0.18)] backdrop-blur-xl md:p-7",
+        "rounded-[22px] bg-card/65 p-4 shadow-[0_16px_48px_rgba(0,0,0,0.18)] backdrop-blur-xl md:p-5",
         className
       )}
     >
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="max-w-3xl space-y-3">
+      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-4">
+        <div className="max-w-3xl space-y-2">
           {eyebrow ? (
             <div className="flex items-center gap-3">
               <p className="font-mono text-[0.68rem] tracking-[0.28em] text-primary/90 uppercase">
@@ -32,7 +32,7 @@ export function PageHeader({
               <div className="h-px w-14 bg-linear-to-r from-primary/45 to-transparent" />
             </div>
           ) : null}
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <h1 className="font-heading text-3xl leading-none tracking-[-0.04em] text-foreground md:text-5xl">
               {title}
             </h1>

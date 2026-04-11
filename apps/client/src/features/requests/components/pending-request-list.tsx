@@ -143,7 +143,7 @@ function PendingRequestCard({
       <CardContent className="space-y-4">
         <RequestBody request={request} />
         <Separator className="bg-white/6" />
-        <div className="flex items-center gap-2 rounded-2xl bg-background/45 px-3 py-2">
+        <div className="flex items-center gap-2 rounded-xl bg-background/45 px-3 py-2">
           <OctagonAlert className="size-4 text-secondary" />
           <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
             Explicit confirmation required
@@ -167,7 +167,7 @@ function RequestBody({ request }: { request: PendingRequest }) {
       return (
         <div className="space-y-3">
           {request.command ? (
-            <div className="rounded-2xl bg-black/45 p-4 font-mono text-xs leading-6">
+            <div className="rounded-xl bg-black/45 p-4 font-mono text-xs leading-6">
               {request.command}
             </div>
           ) : null}

@@ -70,7 +70,7 @@ export function ConnectionRoute() {
   }, [checkHealth]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         actions={
           <div className="flex flex-wrap gap-2">
@@ -101,7 +101,7 @@ export function ConnectionRoute() {
 
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
         <Card className="overflow-hidden bg-card/72 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-          <CardContent className="flex flex-col gap-6 px-6 py-6 md:flex-row md:items-end md:justify-between">
+          <CardContent className="flex flex-col gap-5 px-5 py-5 md:flex-row md:items-end md:justify-between">
             <div className="space-y-3">
               <div className="flex items-center gap-3">
                 <span className="font-mono text-[0.68rem] tracking-[0.26em] text-primary uppercase">
@@ -136,7 +136,7 @@ export function ConnectionRoute() {
               </p>
             </div>
 
-            <div className="rounded-[24px] bg-background/55 px-4 py-4">
+            <div className="rounded-[12px] border border-white/8 bg-background/48 px-4 py-2.5">
               <p className="font-mono text-[0.68rem] tracking-[0.24em] text-muted-foreground uppercase">
                 Latest check
               </p>
@@ -153,13 +153,15 @@ export function ConnectionRoute() {
           <CardHeader>
             <CardTitle className="text-xl tracking-[-0.04em]">Mode snapshot</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <StatusFact label="Mode" value={connectionModeLabel} />
-            <StatusFact label="Endpoint" value={bridgeBaseUrl} />
-            <StatusFact
-              label="Auth"
-              value={bridgeAccessToken ? "Bootstrap token present" : "Bootstrap token missing"}
-            />
+          <CardContent>
+            <div className="space-y-2 rounded-[12px] border border-white/8 bg-background/42 px-3 py-2.5">
+              <StatusLine label="Mode" value={connectionModeLabel} />
+              <StatusLine label="Endpoint" value={bridgeBaseUrl} />
+              <StatusLine
+                label="Auth"
+                value={bridgeAccessToken ? "Bootstrap token present" : "Bootstrap token missing"}
+              />
+            </div>
           </CardContent>
         </Card>
       </section>
@@ -272,17 +274,17 @@ export function ConnectionRoute() {
         </div>
       </div>
 
-      <Card className="overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+        <Card className="overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
         <CardHeader className="border-b border-white/6 bg-background/35">
           <CardTitle className="text-xl tracking-[-0.04em]">Diagnostic runtime feed</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 pt-4">
           {diagnosticFeed.map((entry) => (
             <div
-              className="flex items-start gap-4 rounded-2xl bg-background/45 px-4 py-4"
+              className="flex items-start gap-3 rounded-[12px] border border-white/8 bg-background/42 px-3 py-3"
               key={`${entry.label}-${entry.timestamp}`}
             >
-              <div className="min-w-[3.75rem]">
+              <div className="min-w-[3.25rem]">
                 <p className="font-mono text-[0.68rem] text-muted-foreground">
                   {entry.timestamp}
                 </p>
@@ -290,7 +292,7 @@ export function ConnectionRoute() {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-mono text-[0.72rem] uppercase tracking-[0.18em] text-foreground">
+                  <p className="font-mono text-[0.68rem] uppercase tracking-[0.16em] text-foreground">
                     {entry.label}
                   </p>
                   {entry.badge ? (
@@ -299,7 +301,7 @@ export function ConnectionRoute() {
                     </Badge>
                   ) : null}
                 </div>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                <p className="mt-1.5 text-sm leading-6 text-muted-foreground">
                   {entry.message}
                 </p>
               </div>
@@ -432,8 +434,8 @@ function FactCard({
 }) {
   return (
     <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-      <CardHeader className="gap-3">
-        <div className="flex size-11 items-center justify-center rounded-full bg-primary/12">
+      <CardHeader className="gap-2.5">
+        <div className="flex size-9 items-center justify-center rounded-[10px] bg-primary/12">
           {icon}
         </div>
         <div className="space-y-1">
@@ -444,7 +446,7 @@ function FactCard({
         </div>
       </CardHeader>
       <CardContent>
-        <p className="font-heading text-3xl tracking-[-0.04em]">{value}</p>
+        <p className="font-heading text-[1.7rem] tracking-[-0.04em]">{value}</p>
       </CardContent>
     </Card>
   );
@@ -452,11 +454,24 @@ function FactCard({
 
 function StatusFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl bg-background/55 px-4 py-3">
+    <div className="rounded-[12px] border border-white/8 bg-background/50 px-3 py-2.5">
       <p className="font-mono text-[0.68rem] tracking-[0.24em] text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="mt-2 font-mono text-sm text-foreground">{value}</p>
+      <p className="mt-1.5 font-mono text-sm text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function StatusLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <span className="shrink-0 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </span>
+      <span className="min-w-0 break-all text-right font-mono text-sm text-foreground">
+        {value}
+      </span>
     </div>
   );
 }

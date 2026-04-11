@@ -61,7 +61,7 @@ export function InboxPanel() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         actions={
           <Button
@@ -80,22 +80,22 @@ export function InboxPanel() {
       />
 
       {snapshot.threads.kind === "ready" ? (
-        <div className="flex flex-wrap gap-2">
-          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
-            {entries.length} pending total
-          </Badge>
-          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
-            {counts.command} command
-          </Badge>
-          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
-            {counts.fileChange} file change
-          </Badge>
-          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
-            {counts.permissions} permissions
-          </Badge>
-          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
-            {counts.userInput} input
-          </Badge>
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/38 px-3 py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+          <span>
+            Pending <span className="ml-1 text-foreground">{entries.length}</span>
+          </span>
+          <span>
+            Command <span className="ml-1 text-foreground">{counts.command}</span>
+          </span>
+          <span>
+            File <span className="ml-1 text-foreground">{counts.fileChange}</span>
+          </span>
+          <span>
+            Perm <span className="ml-1 text-foreground">{counts.permissions}</span>
+          </span>
+          <span>
+            Input <span className="ml-1 text-foreground">{counts.userInput}</span>
+          </span>
         </div>
       ) : null}
 
@@ -114,7 +114,7 @@ export function InboxPanel() {
             {snapshot.threads.kind === "loading" ? (
               <div className="grid gap-3">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div className="rounded-[24px] bg-accent/72 p-4" key={index}>
+                  <div className="rounded-[18px] bg-accent/72 p-4" key={index}>
                     <div className="space-y-3">
                       <div className="flex items-center gap-2">
                         <div className="h-6 w-28 rounded-full bg-background/55" />
@@ -139,7 +139,7 @@ export function InboxPanel() {
 
             {snapshot.threads.kind === "ready" && entries.length === 0 ? (
               <Card className="bg-background/45">
-                <CardContent className="space-y-3 pt-6 text-center">
+                <CardContent className="space-y-3 pt-5 text-center">
                   <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
                     <ShieldCheck className="size-6" />
                   </div>
@@ -177,11 +177,21 @@ export function InboxPanel() {
                 Queue summary
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <SummaryRow label="Command approvals" value={counts.command} />
-              <SummaryRow label="File changes" value={counts.fileChange} />
-              <SummaryRow label="Permission requests" value={counts.permissions} />
-              <SummaryRow label="User input prompts" value={counts.userInput} />
+            <CardContent>
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/42 px-3 py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+                <span>
+                  Command <span className="ml-1 text-foreground">{counts.command}</span>
+                </span>
+                <span>
+                  File <span className="ml-1 text-foreground">{counts.fileChange}</span>
+                </span>
+                <span>
+                  Perm <span className="ml-1 text-foreground">{counts.permissions}</span>
+                </span>
+                <span>
+                  Input <span className="ml-1 text-foreground">{counts.userInput}</span>
+                </span>
+              </div>
             </CardContent>
           </Card>
 
@@ -189,18 +199,16 @@ export function InboxPanel() {
             <CardHeader>
               <CardTitle className="text-xl">How to use this view</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
-              <p>Open the related thread when you need more context around a request.</p>
+            <CardContent className="space-y-2.5 text-sm leading-6 text-muted-foreground">
+              <p>Open a thread only when the request needs surrounding context.</p>
               <p>
-                For structured user input, you can answer directly here or jump into the
-                thread and keep reading the timeline.
+                Structured user input can be answered here or inside the thread timeline.
               </p>
               <p>
-                The bridge remains authoritative, so resolved requests disappear as soon as
-                live state catches up.
+                Resolved items disappear as soon as bridge state catches up.
               </p>
               {entries.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-1.5">
                   {entries.slice(0, 3).map((entry) => (
                     <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" key={toRequestKey(entry.request.requestId)} variant="outline">
                       {(entry.thread.name ?? entry.thread.preview) || entry.thread.id}
@@ -212,15 +220,6 @@ export function InboxPanel() {
           </Card>
         </div>
       </div>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="flex items-center justify-between rounded-2xl bg-background/55 px-4 py-3">
-      <span className="font-mono text-[0.72rem] uppercase text-muted-foreground">{label}</span>
-      <span className="font-heading text-xl tracking-[-0.04em] text-foreground">{value}</span>
     </div>
   );
 }

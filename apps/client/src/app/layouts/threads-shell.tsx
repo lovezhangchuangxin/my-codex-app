@@ -114,7 +114,7 @@ export function ThreadsShell() {
         : "Thread detail";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PageHeader
         actions={
           <Button
@@ -134,16 +134,14 @@ export function ThreadsShell() {
 
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <ThreadListPanel
-          onCreateThread={handleCreateThread}
           onOpenThread={handleOpenThread}
           selectedThreadId={routeThreadId}
-          startThreadPending={snapshot.mutations.startThreadPending}
           threadsState={snapshot.threads}
         />
 
         <div className="hidden lg:block">
           <PageHeader
-            className="mb-4"
+            className="mb-3"
             description="Open a thread to inspect turns, stream output, resolve prompts, and keep control of the current run."
             eyebrow="Thread detail"
             title={detailTitle}
