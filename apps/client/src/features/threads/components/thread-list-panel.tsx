@@ -72,15 +72,25 @@ export function ThreadListPanel({
           matchesThreadFilter(thread, deferredSearch, statusFilter)
         )
       : [];
+  const totalThreads = threadsState.kind === "ready" ? threadsState.threads.length : 0;
+  const filterCount =
+    threadsState.kind === "ready"
+      ? threadsState.threads.filter((thread) =>
+          matchesThreadFilter(thread, deferredSearch, statusFilter)
+        ).length
+      : 0;
 
   const groupedThreads = groupThreadsByWorkspace(visibleThreads);
 
   return (
-    <Card className="min-h-[68svh] border border-border/70 bg-card/85 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
-      <CardHeader className="gap-4 border-b border-border/70">
+    <Card className="min-h-[68svh] overflow-hidden bg-card/65 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+      <CardHeader className="gap-4 border-b border-white/6 bg-background/35">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <CardTitle className="text-xl">Recent threads</CardTitle>
+            <p className="font-mono text-[0.68rem] tracking-[0.26em] text-primary/85 uppercase">
+              Active sessions
+            </p>
+            <CardTitle className="text-xl tracking-[-0.04em]">Recent threads</CardTitle>
             <CardDescription>
               Browse active Codex work by workspace, status, and last activity.
             </CardDescription>
@@ -98,14 +108,28 @@ export function ThreadListPanel({
         </div>
 
         <div className="space-y-3">
+          {threadsState.kind === "ready" ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+                {visibleThreads.length} visible
+              </Badge>
+              <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+                {filterCount} in filter
+              </Badge>
+              <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+                {totalThreads} loaded
+              </Badge>
+            </div>
+          ) : null}
+
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="pl-9"
+              className="border-0 bg-accent pl-9 font-mono text-sm tracking-[0.02em] placeholder:text-muted-foreground/55"
               onChange={(event) => {
                 setSearch(event.target.value);
               }}
-              placeholder="Search by thread name, preview, cwd, or provider"
+              placeholder="Query threads or metadata"
               value={search}
             />
           </div>
@@ -116,10 +140,10 @@ export function ThreadListPanel({
             }}
             value={statusFilter}
           >
-            <TabsList className="h-auto w-full justify-start overflow-x-auto bg-transparent p-0" variant="line">
+            <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-xl bg-background/35 p-1" variant="line">
               {statusFilters.map((filter) => (
                 <TabsTrigger
-                  className="rounded-full border border-border/70 bg-background/70 px-3 py-1.5 data-active:border-primary/30 data-active:bg-primary/10 data-active:text-primary"
+                  className="rounded-lg border-0 px-3 py-1.5 font-mono text-[0.68rem] uppercase tracking-[0.16em] text-muted-foreground data-active:bg-accent data-active:text-primary"
                   key={filter.value}
                   value={filter.value}
                 >
@@ -137,16 +161,23 @@ export function ThreadListPanel({
             {threadsState.kind === "loading" ? (
               <div className="grid gap-3">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div
-                    className="h-32 rounded-[24px] border border-border/60 bg-muted/60"
-                    key={index}
-                  />
+                  <div className="rounded-[24px] bg-accent/70 p-4" key={index}>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-20 rounded-full bg-background/55" />
+                        <div className="h-6 w-16 rounded-full bg-background/40" />
+                      </div>
+                      <div className="h-5 w-3/4 rounded-full bg-background/55" />
+                      <div className="h-4 w-full rounded-full bg-background/40" />
+                      <div className="h-4 w-2/3 rounded-full bg-background/35" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : null}
 
             {threadsState.kind === "error" ? (
-              <Card className="border border-destructive/20 bg-destructive/5">
+              <Card className="bg-destructive/8">
                 <CardContent className="space-y-2 pt-4">
                   <p className="font-medium text-destructive">Unable to load thread list</p>
                   <p className="text-sm text-muted-foreground">{threadsState.message}</p>
@@ -155,9 +186,12 @@ export function ThreadListPanel({
             ) : null}
 
             {threadsState.kind === "ready" && groupedThreads.length === 0 ? (
-              <Card className="border border-dashed border-border/70 bg-background/70">
-                <CardContent className="space-y-2 pt-4">
-                  <p className="font-medium">No matching threads</p>
+              <Card className="bg-background/45">
+                <CardContent className="space-y-3 pt-5 text-center">
+                  <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-accent text-primary">
+                    <Search className="size-5" />
+                  </div>
+                  <p className="font-heading text-xl tracking-[-0.04em]">No matching threads</p>
                   <p className="text-sm text-muted-foreground">
                     Adjust the search or status filter, or start a fresh thread from this
                     panel.
@@ -170,11 +204,15 @@ export function ThreadListPanel({
               ? groupedThreads.map((group) => (
                   <section className="space-y-3" key={group.workspace}>
                     <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="font-heading text-lg tracking-tight">
+                      <div className="min-w-0">
+                        <div className="mb-2 flex items-center gap-3">
+                          <span className="font-mono text-xs text-primary/70">~/</span>
+                          <div className="h-px flex-1 bg-linear-to-r from-white/10 to-transparent" />
+                        </div>
+                        <h3 className="truncate font-mono text-[0.78rem] tracking-[0.18em] text-muted-foreground uppercase">
                           {group.workspace}
                         </h3>
-                        <p className="text-xs text-muted-foreground uppercase">
+                        <p className="mt-1 font-mono text-[0.68rem] text-muted-foreground uppercase">
                           {group.items.length} thread{group.items.length === 1 ? "" : "s"}
                         </p>
                       </div>
@@ -184,9 +222,9 @@ export function ThreadListPanel({
                       {group.items.map((thread) => (
                         <Card
                           className={cn(
-                            "border border-border/70 bg-background/80 transition hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(65,46,23,0.10)]",
+                            "border-0 bg-accent/72 transition hover:-translate-y-0.5 hover:bg-accent hover:shadow-[0_18px_40px_rgba(0,0,0,0.16)]",
                             selectedThreadId === thread.id &&
-                              "border-primary/35 bg-primary/8 shadow-[0_18px_44px_rgba(149,83,22,0.16)]"
+                              "bg-card shadow-[inset_0_0_0_1px_rgba(78,222,163,0.24),0_22px_44px_rgba(0,0,0,0.22)]"
                           )}
                           key={thread.id}
                         >
@@ -200,7 +238,7 @@ export function ThreadListPanel({
                                 type="button"
                               >
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <p className="truncate font-heading text-lg tracking-tight">
+                                  <p className="truncate font-heading text-lg tracking-[-0.04em]">
                                     {buildThreadTitle(thread)}
                                   </p>
                                   <StatusBadge label={formatStatusLabel(thread.status)} />
@@ -240,10 +278,14 @@ export function ThreadListPanel({
                             </div>
 
                             <div className="flex flex-wrap gap-2">
-                              <Badge variant="outline">{getWorkspaceLabel(thread.cwd)}</Badge>
-                              <Badge variant="outline">{thread.modelProvider}</Badge>
+                              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                                {getWorkspaceLabel(thread.cwd)}
+                              </Badge>
+                              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                                {thread.modelProvider}
+                              </Badge>
                               {thread.pendingRequests.length > 0 ? (
-                                <Badge className="bg-primary/10 text-primary" variant="secondary">
+                                <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
                                   {thread.pendingRequests.length} pending
                                 </Badge>
                               ) : null}
@@ -252,7 +294,11 @@ export function ThreadListPanel({
                             {thread.pendingRequests.length > 0 ? (
                               <div className="flex flex-wrap gap-2">
                                 {summarizePendingKinds(thread.pendingRequests).map((kind) => (
-                                  <Badge key={kind} variant="secondary">
+                                  <Badge
+                                    className="bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground"
+                                    key={kind}
+                                    variant="secondary"
+                                  >
                                     {kind}
                                   </Badge>
                                 ))}
@@ -261,7 +307,7 @@ export function ThreadListPanel({
 
                             <div className="grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
                               <div>
-                                <p className="uppercase">Updated</p>
+                                <p className="font-mono uppercase">Updated</p>
                                 <p className="mt-1 text-sm text-foreground">
                                   {formatRelativeTime(thread.updatedAt)}
                                 </p>
@@ -269,8 +315,8 @@ export function ThreadListPanel({
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="min-w-0">
-                                    <p className="uppercase">cwd</p>
-                                    <p className="mt-1 truncate text-sm text-foreground">
+                                    <p className="font-mono uppercase">cwd</p>
+                                    <p className="mt-1 truncate font-mono text-sm text-foreground">
                                       {thread.cwd}
                                     </p>
                                   </div>
@@ -281,7 +327,7 @@ export function ThreadListPanel({
                               </Tooltip>
                             </div>
 
-                            <div className="rounded-2xl border border-border/60 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                            <div className="rounded-2xl bg-background/55 px-3 py-2 font-mono text-xs text-muted-foreground">
                               Last sync: {formatTimestamp(thread.updatedAt)}
                             </div>
                           </CardContent>
@@ -310,17 +356,17 @@ async function copyThreadId(threadId: string) {
 function StatusBadge({ label }: { label: string }) {
   const classes =
     label === "Waiting approval"
-      ? "bg-amber-500/12 text-amber-700"
+      ? "bg-secondary/16 text-secondary pulse-secondary"
       : label === "Waiting input"
-        ? "bg-sky-500/12 text-sky-700"
+        ? "bg-primary/12 text-primary"
         : label === "Active"
-          ? "bg-emerald-500/12 text-emerald-700"
+          ? "bg-primary/12 text-primary"
           : label === "System error"
             ? "bg-destructive/12 text-destructive"
-            : "bg-muted text-muted-foreground";
+            : "bg-background/70 text-muted-foreground";
 
   return (
-    <Badge className={classes} variant="secondary">
+    <Badge className={cn("border-0 font-mono text-[0.68rem] uppercase", classes)} variant="secondary">
       {label}
     </Badge>
   );

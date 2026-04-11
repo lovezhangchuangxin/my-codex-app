@@ -33,7 +33,7 @@ function LegacyEntryRedirect() {
 
 function RouteFallback() {
   return (
-    <div className="rounded-[28px] border border-border/70 bg-card/80 p-6 shadow-[0_24px_60px_rgba(65,46,23,0.08)] backdrop-blur">
+    <div className="rounded-[28px] bg-card/70 p-6 shadow-[0_20px_56px_rgba(0,0,0,0.3)] backdrop-blur-xl">
       <div className="space-y-3">
         <div className="h-4 w-28 rounded-full bg-muted/70" />
         <div className="h-10 w-56 rounded-full bg-muted/70" />

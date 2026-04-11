@@ -74,15 +74,38 @@ export function InboxPanel() {
             Refresh
           </Button>
         }
-        description="Resolve approvals and user-input prompts across workspaces without hunting through each thread one by one."
-        eyebrow="Global queue"
+        description="Resolve approvals and user-input prompts across workspaces without digging through each thread one by one."
+        eyebrow="Pending actions"
         title="Inbox"
       />
 
+      {snapshot.threads.kind === "ready" ? (
+        <div className="flex flex-wrap gap-2">
+          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+            {entries.length} pending total
+          </Badge>
+          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+            {counts.command} command
+          </Badge>
+          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+            {counts.fileChange} file change
+          </Badge>
+          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+            {counts.permissions} permissions
+          </Badge>
+          <Badge className="bg-background/55 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="secondary">
+            {counts.userInput} input
+          </Badge>
+        </div>
+      ) : null}
+
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
-          <CardHeader className="gap-2 border-b border-border/70">
-            <CardTitle className="text-xl">Pending work</CardTitle>
+        <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+          <CardHeader className="gap-2 border-b border-white/6 bg-background/35">
+            <p className="font-mono text-[0.68rem] tracking-[0.26em] text-secondary uppercase">
+              Review queue
+            </p>
+            <CardTitle className="text-xl tracking-[-0.04em]">Pending work</CardTitle>
             <p className="text-sm text-muted-foreground">
               Requests stay here until the bridge resolves them or the thread state changes.
             </p>
@@ -91,13 +114,22 @@ export function InboxPanel() {
             {snapshot.threads.kind === "loading" ? (
               <div className="grid gap-3">
                 {Array.from({ length: 4 }).map((_, index) => (
-                  <div className="h-28 rounded-[24px] border border-border/60 bg-muted/60" key={index} />
+                  <div className="rounded-[24px] bg-accent/72 p-4" key={index}>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-28 rounded-full bg-background/55" />
+                        <div className="h-6 w-20 rounded-full bg-background/40" />
+                      </div>
+                      <div className="h-5 w-4/5 rounded-full bg-background/50" />
+                      <div className="h-4 w-full rounded-full bg-background/35" />
+                    </div>
+                  </div>
                 ))}
               </div>
             ) : null}
 
             {snapshot.threads.kind === "error" ? (
-              <Card className="border border-destructive/20 bg-destructive/5">
+              <Card className="bg-destructive/6">
                 <CardContent className="space-y-2 pt-4">
                   <p className="font-medium text-destructive">Unable to build inbox</p>
                   <p className="text-sm text-muted-foreground">{snapshot.threads.message}</p>
@@ -106,13 +138,13 @@ export function InboxPanel() {
             ) : null}
 
             {snapshot.threads.kind === "ready" && entries.length === 0 ? (
-              <Card className="border border-dashed border-border/70 bg-background/70">
+              <Card className="bg-background/45">
                 <CardContent className="space-y-3 pt-6 text-center">
-                  <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-700">
+                  <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
                     <ShieldCheck className="size-6" />
                   </div>
                   <div className="space-y-1">
-                    <p className="font-heading text-2xl tracking-tight">Inbox is clear</p>
+                    <p className="font-heading text-2xl tracking-[-0.04em]">Inbox is clear</p>
                     <p className="text-sm leading-6 text-muted-foreground">
                       New command approvals, patch requests, permission prompts, and
                       structured questions will surface here.
@@ -138,7 +170,7 @@ export function InboxPanel() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
+          <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Inbox className="size-5 text-primary" />
@@ -153,7 +185,7 @@ export function InboxPanel() {
             </CardContent>
           </Card>
 
-          <Card className="border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
+          <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
             <CardHeader>
               <CardTitle className="text-xl">How to use this view</CardTitle>
             </CardHeader>
@@ -170,7 +202,7 @@ export function InboxPanel() {
               {entries.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
                   {entries.slice(0, 3).map((entry) => (
-                    <Badge key={toRequestKey(entry.request.requestId)} variant="outline">
+                    <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" key={toRequestKey(entry.request.requestId)} variant="outline">
                       {(entry.thread.name ?? entry.thread.preview) || entry.thread.id}
                     </Badge>
                   ))}
@@ -186,9 +218,9 @@ export function InboxPanel() {
 
 function SummaryRow({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-background/70 px-4 py-3">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="font-medium text-foreground">{value}</span>
+    <div className="flex items-center justify-between rounded-2xl bg-background/55 px-4 py-3">
+      <span className="font-mono text-[0.72rem] uppercase text-muted-foreground">{label}</span>
+      <span className="font-heading text-xl tracking-[-0.04em] text-foreground">{value}</span>
     </div>
   );
 }

@@ -127,8 +127,8 @@ export function ThreadsShell() {
             {snapshot.mutations.startThreadPending ? "Creating..." : "New thread"}
           </Button>
         }
-        description="Keep recent Codex conversations, active turns, and pending approvals in one route model across desktop and mobile."
-        eyebrow="Primary workspace"
+        description="Scan active work fast, filter by signal, and drop into the exact thread that needs steering or approval."
+        eyebrow="Active neural sessions"
         title={isDesktop ? "Threads" : "Thread monitor"}
       />
 
@@ -144,8 +144,8 @@ export function ThreadsShell() {
         <div className="hidden lg:block">
           <PageHeader
             className="mb-4"
-            description="Open a thread to inspect turns, stream output, answer prompts, and interrupt active work."
-            eyebrow="Selected thread"
+            description="Open a thread to inspect turns, stream output, resolve prompts, and keep control of the current run."
+            eyebrow="Thread detail"
             title={detailTitle}
           />
           <ThreadDetailPanel

@@ -25,6 +25,12 @@ export function ConnectionRoute() {
   const runtime = useRuntime();
   const snapshot = useRuntimeSnapshot();
   const [healthState, setHealthState] = useState<HealthState>({ status: "checking" });
+  const diagnosticFeed = buildDiagnosticFeed({
+    healthState,
+    lastError: snapshot.mutations.lastError,
+    selectedThreadId: snapshot.selectedThreadId,
+    snapshot
+  });
 
   const checkHealth = useCallback(async () => {
     setHealthState((current) => ({
@@ -88,10 +94,75 @@ export function ConnectionRoute() {
             </Button>
           </div>
         }
-        description="Inspect the current bridge endpoint, bootstrap auth state, and the live client runtime signals exposed by the existing local bridge implementation."
-        eyebrow="Diagnostics"
+        description="Inspect bridge reachability, bootstrap auth state, and the live runtime signals exposed by the existing local bridge implementation."
+        eyebrow="Current state"
         title="Connection"
       />
+
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+        <Card className="overflow-hidden bg-card/72 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+          <CardContent className="flex flex-col gap-6 px-6 py-6 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <span className="font-mono text-[0.68rem] tracking-[0.26em] text-primary uppercase">
+                  Runtime status
+                </span>
+                <div className="h-px w-16 bg-linear-to-r from-primary/45 to-transparent" />
+              </div>
+              <div className="flex items-center gap-3">
+                <h2 className="font-heading text-4xl tracking-[-0.06em] text-foreground">
+                  {healthState.status === "ok"
+                    ? "Connected"
+                    : healthState.status === "error"
+                      ? "Degraded"
+                      : "Checking"}
+                </h2>
+                <Badge
+                  className={
+                    healthState.status === "ok"
+                      ? "bg-primary/12 text-primary"
+                      : healthState.status === "error"
+                        ? "bg-destructive/12 text-destructive"
+                        : "bg-secondary/16 text-secondary pulse-secondary"
+                  }
+                  variant="secondary"
+                >
+                  {healthState.status}
+                </Badge>
+              </div>
+              <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
+                The browser client stays bridge-first. This view reports only the runtime
+                and HTTP health signals that exist today.
+              </p>
+            </div>
+
+            <div className="rounded-[24px] bg-background/55 px-4 py-4">
+              <p className="font-mono text-[0.68rem] tracking-[0.24em] text-muted-foreground uppercase">
+                Latest check
+              </p>
+              <p className="mt-2 font-mono text-sm text-foreground">
+                {"checkedAt" in healthState && healthState.checkedAt
+                  ? formatTimestamp(healthState.checkedAt)
+                  : "Awaiting first probe"}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+          <CardHeader>
+            <CardTitle className="text-xl tracking-[-0.04em]">Mode snapshot</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <StatusFact label="Mode" value={connectionModeLabel} />
+            <StatusFact label="Endpoint" value={bridgeBaseUrl} />
+            <StatusFact
+              label="Auth"
+              value={bridgeAccessToken ? "Bootstrap token present" : "Bootstrap token missing"}
+            />
+          </CardContent>
+        </Card>
+      </section>
 
       <div className="grid gap-4 xl:grid-cols-3">
         <FactCard
@@ -115,9 +186,9 @@ export function ConnectionRoute() {
       </div>
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <Card className="border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
-          <CardHeader className="border-b border-border/70">
-            <CardTitle className="text-xl">Runtime snapshot</CardTitle>
+        <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+          <CardHeader className="border-b border-white/6 bg-background/35">
+            <CardTitle className="text-xl tracking-[-0.04em]">Runtime snapshot</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3 pt-4 sm:grid-cols-2">
             <StatusFact label="Thread list state" value={snapshot.threads.kind} />
@@ -142,7 +213,7 @@ export function ConnectionRoute() {
         </Card>
 
         <div className="space-y-4">
-          <Card className="border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
+          <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-xl">
                 <Shield className="size-5 text-primary" />
@@ -154,10 +225,10 @@ export function ConnectionRoute() {
                 <Badge
                   className={
                     healthState.status === "ok"
-                      ? "bg-emerald-500/12 text-emerald-700"
+                      ? "bg-primary/12 text-primary"
                       : healthState.status === "error"
                         ? "bg-destructive/12 text-destructive"
-                        : "bg-primary/12 text-primary"
+                        : "bg-secondary/16 text-secondary pulse-secondary"
                   }
                   variant="secondary"
                 >
@@ -200,8 +271,152 @@ export function ConnectionRoute() {
           )}
         </div>
       </div>
+
+      <Card className="overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+        <CardHeader className="border-b border-white/6 bg-background/35">
+          <CardTitle className="text-xl tracking-[-0.04em]">Diagnostic runtime feed</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 pt-4">
+          {diagnosticFeed.map((entry) => (
+            <div
+              className="flex items-start gap-4 rounded-2xl bg-background/45 px-4 py-4"
+              key={`${entry.label}-${entry.timestamp}`}
+            >
+              <div className="min-w-[3.75rem]">
+                <p className="font-mono text-[0.68rem] text-muted-foreground">
+                  {entry.timestamp}
+                </p>
+                <p className={entry.toneClass}>{entry.state}</p>
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-mono text-[0.72rem] uppercase tracking-[0.18em] text-foreground">
+                    {entry.label}
+                  </p>
+                  {entry.badge ? (
+                    <Badge className={entry.badgeClass} variant="secondary">
+                      {entry.badge}
+                    </Badge>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  {entry.message}
+                </p>
+              </div>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
     </div>
   );
+}
+
+function buildDiagnosticFeed({
+  healthState,
+  lastError,
+  selectedThreadId,
+  snapshot
+}: {
+  healthState: HealthState;
+  lastError: string | null;
+  selectedThreadId: string | null;
+  snapshot: ReturnType<typeof useRuntimeSnapshot>;
+}) {
+  const timestamp =
+    "checkedAt" in healthState && healthState.checkedAt
+      ? formatTimestamp(healthState.checkedAt)
+      : "Pending";
+
+  return [
+    {
+      badge:
+        healthState.status === "ok"
+          ? "reachable"
+          : healthState.status === "error"
+            ? "unavailable"
+            : "probing",
+      badgeClass:
+        healthState.status === "ok"
+          ? "bg-primary/12 text-primary"
+          : healthState.status === "error"
+            ? "bg-destructive/12 text-destructive"
+            : "bg-secondary/16 text-secondary pulse-secondary",
+      label: "Bridge health",
+      message:
+        healthState.status === "checking"
+          ? `Health probe for ${bridgeHealthUrl} is still in progress.`
+          : healthState.status === "error"
+          ? healthState.message
+          : `Health endpoint ${bridgeHealthUrl} responded through the current local bridge route.`,
+      state:
+        healthState.status === "ok"
+          ? "READY"
+          : healthState.status === "error"
+            ? "ERROR"
+            : "CHECK",
+      timestamp,
+      toneClass:
+        healthState.status === "ok"
+          ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
+          : healthState.status === "error"
+            ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-destructive"
+            : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-secondary"
+    },
+    {
+      badge: snapshot.threads.kind,
+      badgeClass: "bg-background/70 text-muted-foreground",
+      label: "Thread snapshot",
+      message:
+        snapshot.threads.kind === "ready"
+          ? `Loaded ${snapshot.threads.threads.length} thread summaries from bridge authority.`
+          : snapshot.threads.kind === "error"
+            ? snapshot.threads.message
+            : "Thread list is still being fetched from the bridge.",
+      state:
+        snapshot.threads.kind === "ready"
+          ? "SYNCED"
+          : snapshot.threads.kind === "error"
+            ? "FAULT"
+            : "LOAD",
+      timestamp,
+      toneClass:
+        snapshot.threads.kind === "ready"
+          ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
+          : snapshot.threads.kind === "error"
+            ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-destructive"
+            : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-secondary"
+    },
+    {
+      badge: selectedThreadId ? "selected" : "idle",
+      badgeClass: selectedThreadId
+        ? "bg-primary/12 text-primary"
+        : "bg-background/70 text-muted-foreground",
+      label: "Focused thread",
+      message: selectedThreadId
+        ? `Runtime is tracking thread ${selectedThreadId}.`
+        : "No thread is currently selected in the route shell.",
+      state: selectedThreadId ? "FOCUS" : "IDLE",
+      timestamp,
+      toneClass: selectedThreadId
+        ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
+        : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground"
+    },
+    {
+      badge: lastError ? "attention" : "clear",
+      badgeClass: lastError
+        ? "bg-destructive/12 text-destructive"
+        : "bg-primary/12 text-primary",
+      label: "Mutation channel",
+      message: lastError
+        ? lastError
+        : "No recent client mutation errors have been recorded.",
+      state: lastError ? "WARN" : "CLEAR",
+      timestamp,
+      toneClass: lastError
+        ? "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-destructive"
+        : "font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary"
+    }
+  ];
 }
 
 function FactCard({
@@ -216,18 +431,20 @@ function FactCard({
   value: string;
 }) {
   return (
-    <Card className="border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
+    <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
       <CardHeader className="gap-3">
-        <div className="flex size-11 items-center justify-center rounded-full bg-primary/10">
+        <div className="flex size-11 items-center justify-center rounded-full bg-primary/12">
           {icon}
         </div>
         <div className="space-y-1">
-          <CardTitle className="text-xl">{title}</CardTitle>
+          <p className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
+            {title}
+          </p>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
       </CardHeader>
       <CardContent>
-        <p className="font-heading text-3xl tracking-tight">{value}</p>
+        <p className="font-heading text-3xl tracking-[-0.04em]">{value}</p>
       </CardContent>
     </Card>
   );
@@ -235,11 +452,11 @@ function FactCard({
 
 function StatusFact({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-border/70 bg-background/70 px-4 py-3">
-      <p className="text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
+    <div className="rounded-2xl bg-background/55 px-4 py-3">
+      <p className="font-mono text-[0.68rem] tracking-[0.24em] text-muted-foreground uppercase">
         {label}
       </p>
-      <p className="mt-2 text-sm text-foreground">{value}</p>
+      <p className="mt-2 font-mono text-sm text-foreground">{value}</p>
     </div>
   );
 }

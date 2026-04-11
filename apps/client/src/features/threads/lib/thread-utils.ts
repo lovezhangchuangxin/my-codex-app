@@ -94,6 +94,10 @@ export function summarizePendingKinds(pendingRequests: PendingRequest[]) {
   return [...new Set(pendingRequests.map((request) => request.kind))];
 }
 
+export function countThreadsByFilter(threads: ThreadSummary[], statusFilter: ThreadStatusFilter) {
+  return threads.filter((thread) => matchesThreadFilter(thread, "", statusFilter)).length;
+}
+
 export function matchesThreadFilter(
   thread: ThreadSummary,
   searchTerm: string,

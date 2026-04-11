@@ -93,7 +93,7 @@ export function ThreadDetailPanel({
 
   if (detailState.kind === "loading") {
     return (
-      <Card className="min-h-[68svh] border border-border/70 bg-card/85 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
+      <Card className="min-h-[68svh] bg-card/65 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
         <CardContent className="space-y-4 pt-6">
           <div className="h-10 w-48 rounded-full bg-muted/70" />
           <div className="h-5 w-full rounded-full bg-muted/70" />
@@ -110,7 +110,7 @@ export function ThreadDetailPanel({
 
   if (detailState.kind === "error") {
     return (
-      <Card className="min-h-[68svh] border border-destructive/20 bg-destructive/5 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
+      <Card className="min-h-[68svh] bg-destructive/6 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
         <CardContent className="space-y-4 pt-6">
           {!isDesktop ? (
             <Button onClick={onBack} size="sm" variant="ghost">
@@ -193,8 +193,8 @@ function ReadyThreadDetail({
     : {};
 
   return (
-    <Card className="min-h-[68svh] border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
-      <div className="border-b border-border/70 px-4 py-4 md:px-6">
+    <Card className="min-h-[68svh] overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.3)]">
+      <div className="border-b border-white/6 bg-background/35 px-4 py-4 md:px-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-start gap-2">
             {!isDesktop ? (
@@ -205,12 +205,12 @@ function ReadyThreadDetail({
             ) : null}
             <div className="min-w-0 space-y-2">
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="truncate font-heading text-2xl tracking-tight md:text-3xl">
+                <h2 className="truncate font-heading text-2xl tracking-[-0.05em] md:text-3xl">
                   {buildThreadTitle(thread)}
                 </h2>
                 <StatusBadge label={formatStatusLabel(thread.status)} />
               </div>
-              <p className="truncate text-sm text-muted-foreground">{thread.cwd}</p>
+              <p className="truncate font-mono text-sm text-muted-foreground">{thread.cwd}</p>
             </div>
           </div>
 
@@ -222,18 +222,33 @@ function ReadyThreadDetail({
                 threadsState={threadsState}
               />
             ) : null}
-            <Badge variant="outline">{thread.modelProvider}</Badge>
+            <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+              {thread.modelProvider}
+            </Badge>
           </div>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <Badge variant="outline">{getWorkspaceLabel(thread.cwd)}</Badge>
-          <Badge variant="outline">Updated {formatRelativeTime(thread.updatedAt)}</Badge>
+          <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+            {getWorkspaceLabel(thread.cwd)}
+          </Badge>
+          <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+            Updated {formatRelativeTime(thread.updatedAt)}
+          </Badge>
           {thread.pendingRequests.length > 0 ? (
-            <Badge className="bg-primary/10 text-primary" variant="secondary">
+            <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
               {thread.pendingRequests.length} pending
             </Badge>
           ) : null}
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <HeaderMetric label="Turns" value={String(thread.turns.length)} />
+          <HeaderMetric
+            label="Requests"
+            value={String(thread.pendingRequests.length)}
+          />
+          <HeaderMetric label="Last update" value={formatRelativeTime(thread.updatedAt)} />
         </div>
       </div>
 
@@ -251,10 +266,10 @@ function ReadyThreadDetail({
           {pendingEntries.length > 0 ? (
             <section className="space-y-3">
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
+                <p className="font-mono text-[0.68rem] tracking-[0.28em] text-secondary uppercase">
                   Attention required
                 </p>
-                <h3 className="font-heading text-xl tracking-tight">Pending requests</h3>
+                <h3 className="font-heading text-xl tracking-[-0.04em]">Pending requests</h3>
               </div>
               <PendingRequestList
                 entries={pendingEntries}
@@ -284,10 +299,10 @@ function ReadyThreadDetail({
           ) : (
             <section className="space-y-3">
               <div className="space-y-1">
-                <p className="text-xs font-medium tracking-[0.2em] text-muted-foreground uppercase">
+                <p className="font-mono text-[0.68rem] tracking-[0.28em] text-primary/85 uppercase">
                   Timeline
                 </p>
-                <h3 className="font-heading text-xl tracking-tight">Turn activity</h3>
+                <h3 className="font-heading text-xl tracking-[-0.04em]">Turn activity</h3>
               </div>
 
               <Accordion
@@ -299,19 +314,19 @@ function ReadyThreadDetail({
               >
                 {orderedTurns.map((turn) => (
                   <AccordionItem
-                    className="overflow-hidden rounded-[24px] border border-border/70 bg-background/75 px-4 shadow-sm"
+                    className="overflow-hidden rounded-[24px] bg-accent/72 px-4 shadow-[0_14px_36px_rgba(0,0,0,0.18)]"
                     key={turn.id}
                     value={turn.id}
                   >
                     <AccordionTrigger className="py-4 hover:no-underline">
                       <div className="flex min-w-0 flex-1 flex-col gap-3 pr-4 text-left">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-heading text-lg tracking-tight">
+                          <span className="font-heading text-lg tracking-[-0.04em]">
                             {turn.id}
                           </span>
                           <StatusBadge label={turn.status} />
                         </div>
-                        <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                        <div className="flex flex-wrap gap-x-4 gap-y-2 font-mono text-xs text-muted-foreground">
                           <span>Started {formatTimestamp(turn.startedAt)}</span>
                           <span>Completed {formatTimestamp(turn.completedAt)}</span>
                           {turn.durationMs ? (
@@ -342,7 +357,7 @@ function ReadyThreadDetail({
         </div>
       </ScrollArea>
 
-      <div className="border-t border-border/70 bg-background/55 px-4 py-4 backdrop-blur md:px-6">
+      <div className="sticky bottom-0 z-10 border-t border-white/6 bg-background/78 px-4 py-4 backdrop-blur-xl md:px-6">
         <form
           className="space-y-3"
           onSubmit={(event) => {
@@ -359,8 +374,18 @@ function ReadyThreadDetail({
             })();
           }}
         >
-          <Label htmlFor="thread-composer">Send a message</Label>
+          <div className="flex items-center justify-between gap-3">
+            <Label className="font-mono text-[0.72rem] uppercase tracking-[0.22em] text-muted-foreground" htmlFor="thread-composer">
+              Send a message
+            </Label>
+            {activeTurnId ? (
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary">
+                Live thread
+              </p>
+            ) : null}
+          </div>
           <Textarea
+            className="border-0 bg-accent font-mono text-sm leading-6 placeholder:text-muted-foreground/45"
             id="thread-composer"
             onChange={(event) => {
               setComposerText(event.target.value);
@@ -369,22 +394,37 @@ function ReadyThreadDetail({
             rows={4}
             value={composerText}
           />
-          <div className="flex flex-wrap gap-2">
-            <Button disabled={sendMessagePending || composerText.trim().length === 0} type="submit">
-              {sendMessagePending ? "Sending..." : "Send message"}
-            </Button>
-            {activeTurnId ? (
+          <div className="rounded-2xl bg-card/55 p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
+                Composer ready
+              </p>
+              <p className="font-mono text-[0.68rem] text-muted-foreground">
+                {composerText.trim().length} chars
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Button
-                disabled={interruptPending}
-                onClick={() => {
-                  void onInterrupt(thread.id, activeTurnId);
-                }}
-                type="button"
-                variant="outline"
+                className="w-full sm:flex-1"
+                disabled={sendMessagePending || composerText.trim().length === 0}
+                type="submit"
               >
-                {interruptPending ? "Interrupting..." : "Interrupt turn"}
+              {sendMessagePending ? "Sending..." : "Send message"}
               </Button>
-            ) : null}
+              {activeTurnId ? (
+                <Button
+                  className="w-full sm:w-auto"
+                  disabled={interruptPending}
+                  onClick={() => {
+                    void onInterrupt(thread.id, activeTurnId);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  {interruptPending ? "Interrupting..." : "Interrupt turn"}
+                </Button>
+              ) : null}
+            </div>
           </div>
         </form>
       </div>
@@ -413,19 +453,19 @@ function MobileThreadSwitcher({
           <span className="sr-only">Open thread switcher</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="max-w-sm border-l border-border/70 bg-card/95" side="right">
+      <SheetContent className="max-w-sm border-l border-white/6 bg-card/95" side="right">
         <SheetHeader>
           <SheetTitle>Switch thread</SheetTitle>
           <SheetDescription>
             Jump straight into another workspace without losing your current route.
           </SheetDescription>
         </SheetHeader>
-        <div className="space-y-2 px-4 pb-6">
+        <div className="max-h-[calc(100svh-7rem)] space-y-2 overflow-y-auto px-4 pb-6">
           {threadsState.threads.map((thread) => (
             <Button
               className={cn(
-                "h-auto w-full justify-start rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-left",
-                selectedThreadId === thread.id && "border-primary/30 bg-primary/10"
+                "h-auto w-full justify-start rounded-2xl border-0 bg-accent/75 px-4 py-3 text-left",
+                selectedThreadId === thread.id && "bg-card shadow-[inset_0_0_0_1px_rgba(78,222,163,0.24)]"
               )}
               key={thread.id}
               onClick={() => {
@@ -434,10 +474,10 @@ function MobileThreadSwitcher({
               variant="ghost"
             >
               <span className="min-w-0">
-                <span className="block truncate font-medium">
+                <span className="block truncate font-medium text-foreground">
                   {buildThreadTitle(thread)}
                 </span>
-                <span className="block truncate text-xs text-muted-foreground">
+                <span className="block truncate font-mono text-xs text-muted-foreground">
                   {thread.cwd}
                 </span>
               </span>
@@ -459,13 +499,13 @@ function EmptyDetailState({
   title: string;
 }) {
   return (
-    <Card className="min-h-[68svh] border border-border/70 bg-card/88 shadow-[0_24px_64px_rgba(65,46,23,0.08)]">
+    <Card className="min-h-[68svh] bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
       <CardContent className={cn("grid min-h-[68svh] place-items-center p-6", !isDesktop && "min-h-[60svh]")}>
         <div className="max-w-md space-y-3 text-center">
-          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
             <Sparkles className="size-6" />
           </div>
-          <h2 className="font-heading text-2xl tracking-tight">{title}</h2>
+          <h2 className="font-heading text-2xl tracking-[-0.04em]">{title}</h2>
           <p className="text-sm leading-6 text-muted-foreground">{message}</p>
         </div>
       </CardContent>
@@ -479,6 +519,7 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
       return (
         <TimelineItem
           icon={<UserRound className="size-4 text-primary" />}
+          tone="user"
           title="User message"
         >
           <div className="space-y-2 text-sm leading-6 text-foreground">
@@ -490,7 +531,11 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
       );
     case "agentMessage":
       return (
-        <TimelineItem icon={<Bot className="size-4 text-primary" />} title="Assistant">
+        <TimelineItem
+          icon={<Bot className="size-4 text-primary" />}
+          title="Assistant"
+          tone="assistant"
+        >
           <div className="whitespace-pre-wrap text-sm leading-6 text-foreground">
             {item.text || "No text returned."}
           </div>
@@ -498,7 +543,11 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
       );
     case "reasoning":
       return (
-        <TimelineItem icon={<Brain className="size-4 text-primary" />} title="Reasoning">
+        <TimelineItem
+          icon={<Brain className="size-4 text-primary" />}
+          title="Reasoning"
+          tone="reasoning"
+        >
           <div className="space-y-3">
             {item.summary.length > 0 ? (
               <ul className="space-y-2 text-sm leading-6 text-foreground">
@@ -515,7 +564,7 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
-                  <div className="space-y-3 rounded-2xl border border-border/70 bg-background/70 p-4 font-mono text-xs leading-6 text-muted-foreground">
+                  <div className="space-y-3 rounded-2xl bg-background/70 p-4 font-mono text-xs leading-6 text-muted-foreground">
                     {item.content.map((content, index) => (
                       <pre className="whitespace-pre-wrap" key={`${item.id}-content-${index}`}>
                         {content}
@@ -530,17 +579,44 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
       );
     case "commandExecution":
       return (
-        <TimelineItem icon={<SquareTerminal className="size-4 text-primary" />} title="Command">
+        <TimelineItem
+          icon={<SquareTerminal className="size-4 text-primary" />}
+          title="Command"
+          tone="command"
+        >
           <div className="space-y-3">
-            <div className="rounded-2xl border border-border/70 bg-background/70 p-4 font-mono text-xs leading-6 text-foreground">
-              <p>{item.command}</p>
-              <p className="text-muted-foreground">{item.cwd}</p>
+            <div className="overflow-hidden rounded-2xl shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
+              <div className="flex items-center justify-between bg-black/80 px-4 py-2">
+                <div className="flex gap-1.5">
+                  <span className="size-2.5 rounded-full bg-destructive/45" />
+                  <span className="size-2.5 rounded-full bg-secondary/55" />
+                  <span className="size-2.5 rounded-full bg-primary/55" />
+                </div>
+                <p className="font-mono text-[0.68rem] uppercase tracking-[0.16em] text-muted-foreground">
+                  terminal
+                </p>
+              </div>
+              <div className="space-y-2 bg-black/55 p-4 font-mono text-xs leading-6 text-foreground">
+                <div className="flex gap-2">
+                  <span className="text-primary">$</span>
+                  <p className="min-w-0 break-words">{item.command}</p>
+                </div>
+                <p className="text-muted-foreground">{item.cwd}</p>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{item.status}</Badge>
-              {item.exitCode !== undefined ? <Badge variant="outline">Exit {item.exitCode}</Badge> : null}
+              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                {item.status}
+              </Badge>
+              {item.exitCode !== undefined ? (
+                <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                  Exit {item.exitCode}
+                </Badge>
+              ) : null}
               {item.durationMs ? (
-                <Badge variant="outline">{Math.round(item.durationMs / 1000)}s</Badge>
+                <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                  {Math.round(item.durationMs / 1000)}s
+                </Badge>
               ) : null}
             </div>
             {item.aggregatedOutput ? (
@@ -551,7 +627,7 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
-                  <pre className="overflow-x-auto rounded-2xl border border-border/70 bg-background/70 p-4 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground">
+                  <pre className="overflow-x-auto rounded-2xl bg-black/60 p-4 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]">
                     {item.aggregatedOutput}
                   </pre>
                 </CollapsibleContent>
@@ -562,33 +638,58 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
       );
     case "fileChange":
       return (
-        <TimelineItem icon={<FileCode2 className="size-4 text-primary" />} title="File change">
+        <TimelineItem
+          icon={<FileCode2 className="size-4 text-primary" />}
+          title="File change"
+          tone="file"
+        >
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{item.status}</Badge>
-              <Badge variant="outline">{item.changes.length} file(s)</Badge>
+              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                {item.status}
+              </Badge>
+              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                {item.changes.length} file(s)
+              </Badge>
             </div>
             <div className="space-y-2">
               {item.changes.map((change, index) => (
-                <div className="rounded-2xl border border-border/70 bg-background/70 p-3" key={`${item.id}-${index}`}>
-                  <p className="font-mono text-xs text-foreground">{change.path}</p>
+                <div
+                  className="overflow-hidden rounded-2xl bg-background/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                  key={`${item.id}-${index}`}
+                >
+                  <div className="flex items-center justify-between gap-3 bg-background/85 px-3 py-2">
+                    <p className="min-w-0 truncate font-mono text-xs text-foreground">
+                      {change.path}
+                    </p>
+                    {change.kind ? (
+                      <Badge
+                        className="bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground"
+                        variant="secondary"
+                      >
+                        {change.kind}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="p-3">
                   {change.kind ? (
-                    <p className="mt-1 text-xs text-muted-foreground">{change.kind}</p>
+                    <p className="text-xs text-muted-foreground">{change.kind}</p>
                   ) : null}
-                  {change.diff ? (
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <Button className="mt-3" size="sm" variant="outline">
-                          Show diff
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-3">
-                        <pre className="overflow-x-auto rounded-2xl border border-border/70 bg-muted/50 p-3 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground">
-                          {change.diff}
-                        </pre>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  ) : null}
+                    {change.diff ? (
+                      <Collapsible>
+                        <CollapsibleTrigger asChild>
+                          <Button className="mt-3" size="sm" variant="outline">
+                            Show diff
+                          </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="pt-3">
+                          <pre className="overflow-x-auto rounded-2xl bg-black/45 p-3 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground">
+                            {change.diff}
+                          </pre>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ) : null}
+                  </div>
                 </div>
               ))}
             </div>
@@ -597,19 +698,31 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
       );
     case "webSearch":
       return (
-        <TimelineItem icon={<Search className="size-4 text-primary" />} title="Web search">
+        <TimelineItem
+          icon={<Search className="size-4 text-primary" />}
+          title="Web search"
+          tone="auxiliary"
+        >
           <p className="text-sm text-foreground">{item.query}</p>
         </TimelineItem>
       );
     case "imageView":
       return (
-        <TimelineItem icon={<GalleryHorizontal className="size-4 text-primary" />} title="Image view">
+        <TimelineItem
+          icon={<GalleryHorizontal className="size-4 text-primary" />}
+          title="Image view"
+          tone="auxiliary"
+        >
           <p className="text-sm text-foreground">{item.path}</p>
         </TimelineItem>
       );
     case "unknown":
       return (
-        <TimelineItem icon={<ExternalLink className="size-4 text-primary" />} title={item.title}>
+        <TimelineItem
+          icon={<ExternalLink className="size-4 text-primary" />}
+          title={item.title}
+          tone="auxiliary"
+        >
           <Collapsible>
             <CollapsibleTrigger asChild>
               <Button size="sm" variant="outline">
@@ -617,7 +730,7 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-3">
-              <pre className="overflow-x-auto rounded-2xl border border-border/70 bg-background/70 p-4 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground">
+              <pre className="overflow-x-auto rounded-2xl bg-black/35 p-4 font-mono text-xs leading-6 whitespace-pre-wrap text-muted-foreground">
                 {JSON.stringify(item.raw, null, 2)}
               </pre>
             </CollapsibleContent>
@@ -630,21 +743,52 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
 function TimelineItem({
   children,
   icon,
-  title
+  title,
+  tone
 }: {
   children: import("react").ReactNode;
   icon: import("react").ReactNode;
   title: string;
+  tone: "assistant" | "auxiliary" | "command" | "file" | "reasoning" | "user";
 }) {
+  const toneClasses =
+    tone === "user"
+      ? "bg-primary/8 shadow-[inset_0_0_0_1px_rgba(78,222,163,0.14),0_14px_36px_rgba(0,0,0,0.18)]"
+      : tone === "assistant"
+        ? "bg-accent/82 shadow-[0_14px_36px_rgba(0,0,0,0.18)]"
+        : tone === "reasoning"
+          ? "bg-secondary/8 shadow-[inset_0_0_0_1px_rgba(245,158,10,0.12),0_14px_36px_rgba(0,0,0,0.18)]"
+          : tone === "command"
+            ? "bg-background/72 shadow-[inset_0_0_0_1px_rgba(78,222,163,0.08),0_14px_36px_rgba(0,0,0,0.2)]"
+            : tone === "file"
+              ? "bg-background/68 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05),0_14px_36px_rgba(0,0,0,0.2)]"
+              : "bg-accent/64 shadow-[0_14px_36px_rgba(0,0,0,0.16)]";
+
   return (
-    <div className="rounded-[22px] border border-border/70 bg-card/75 p-4 shadow-sm">
+    <div className={cn("rounded-[22px] p-4", toneClasses)}>
       <div className="mb-3 flex items-center gap-2">
-        <span className="flex size-8 items-center justify-center rounded-full bg-primary/10">
+        <span className="flex size-8 items-center justify-center rounded-full bg-primary/12">
           {icon}
         </span>
-        <p className="font-medium text-foreground">{title}</p>
+        <div className="min-w-0">
+          <p className="font-medium text-foreground">{title}</p>
+          <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
+            {tone}
+          </p>
+        </div>
       </div>
       {children}
+    </div>
+  );
+}
+
+function HeaderMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-background/45 px-3 py-3">
+      <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-2 font-mono text-sm text-foreground">{value}</p>
     </div>
   );
 }
@@ -652,19 +796,19 @@ function TimelineItem({
 function StatusBadge({ label }: { label: string }) {
   const classes =
     label === "Waiting approval"
-      ? "bg-amber-500/12 text-amber-700"
+      ? "bg-secondary/16 text-secondary pulse-secondary"
       : label === "Waiting input"
-        ? "bg-sky-500/12 text-sky-700"
+        ? "bg-primary/12 text-primary"
         : label === "Active" || label === "completed"
-          ? "bg-emerald-500/12 text-emerald-700"
+          ? "bg-primary/12 text-primary"
           : label === "inProgress"
             ? "bg-primary/12 text-primary"
             : label === "failed" || label === "System error"
               ? "bg-destructive/12 text-destructive"
-              : "bg-muted text-muted-foreground";
+              : "bg-background/70 text-muted-foreground";
 
   return (
-    <Badge className={classes} variant="secondary">
+    <Badge className={cn("border-0 font-mono text-[0.68rem] uppercase", classes)} variant="secondary">
       {label}
     </Badge>
   );

@@ -5,6 +5,7 @@ import type {
 } from "@my-codex-app/protocol";
 import {
   FolderPen,
+  OctagonAlert,
   MessageSquareText,
   Shield,
   TerminalSquare
@@ -95,24 +96,26 @@ function PendingRequestCard({
   return (
     <Card
       className={cn(
-        "border border-border/70 bg-card/90 shadow-[0_14px_36px_rgba(65,46,23,0.06)]",
-        highlighted && "border-primary/40 shadow-[0_18px_44px_rgba(149,83,22,0.16)]"
+        "border-0 bg-accent/72 shadow-[0_14px_36px_rgba(0,0,0,0.18)]",
+        highlighted && "bg-card shadow-[inset_0_0_0_1px_rgba(245,158,10,0.3),0_18px_44px_rgba(0,0,0,0.24)]"
       )}
     >
-      <CardHeader className="gap-3">
+      <CardHeader className="gap-3 border-b border-white/6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-primary/10 text-primary" variant="secondary">
+              <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
                 {getRequestKindLabel(request)}
               </Badge>
-              <Badge variant="outline">
+              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
                 {getWorkspaceLabel(thread.cwd)}
               </Badge>
-              <Badge variant="outline">{formatTimestamp(request.requestedAt)}</Badge>
+              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+                {formatTimestamp(request.requestedAt)}
+              </Badge>
             </div>
             <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2 text-lg">
+              <CardTitle className="flex items-center gap-2 text-lg tracking-[-0.04em]">
                 {getRequestIcon(request)}
                 {getRequestDescription(request)}
               </CardTitle>
@@ -139,7 +142,13 @@ function PendingRequestCard({
 
       <CardContent className="space-y-4">
         <RequestBody request={request} />
-        <Separator />
+        <Separator className="bg-white/6" />
+        <div className="flex items-center gap-2 rounded-2xl bg-background/45 px-3 py-2">
+          <OctagonAlert className="size-4 text-secondary" />
+          <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
+            Explicit confirmation required
+          </p>
+        </div>
         <RequestActions
           getDraft={getDraft}
           onRespondToRequest={onRespondToRequest}
@@ -158,7 +167,7 @@ function RequestBody({ request }: { request: PendingRequest }) {
       return (
         <div className="space-y-3">
           {request.command ? (
-            <div className="rounded-2xl border border-border/70 bg-background/70 p-4 font-mono text-xs leading-6">
+            <div className="rounded-2xl bg-black/45 p-4 font-mono text-xs leading-6">
               {request.command}
             </div>
           ) : null}
@@ -171,7 +180,7 @@ function RequestBody({ request }: { request: PendingRequest }) {
       return (
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>Codex is waiting for confirmation before applying a patch.</p>
-          {request.grantRoot ? <p>Grant root: {request.grantRoot}</p> : null}
+          {request.grantRoot ? <p className="font-mono">Grant root: {request.grantRoot}</p> : null}
         </div>
       );
     case "permissions":
@@ -186,9 +195,13 @@ function RequestBody({ request }: { request: PendingRequest }) {
       return (
         <div className="space-y-2 text-sm text-muted-foreground">
           <p>{request.questions.length} question(s) are waiting for an answer.</p>
-          <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2">
             {request.questions.map((question) => (
-              <Badge key={question.id} variant="outline">
+              <Badge
+                className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground"
+                key={question.id}
+                variant="outline"
+              >
                 {question.header}
               </Badge>
             ))}
@@ -249,7 +262,7 @@ function RequestActions({
               });
             }}
             size="sm"
-            variant="outline"
+            variant="destructive"
           >
             Deny
           </Button>
@@ -292,7 +305,7 @@ function RequestActions({
               });
             }}
             size="sm"
-            variant="outline"
+            variant="destructive"
           >
             Deny
           </Button>
@@ -347,7 +360,7 @@ function RequestActions({
               });
             }}
             size="sm"
-            variant="outline"
+            variant="destructive"
           >
             Deny
           </Button>
@@ -390,7 +403,7 @@ function UserInputActions({
 
         return (
           <div className="space-y-2" key={question.id}>
-            <Label htmlFor={`${String(request.requestId)}-${question.id}`}>
+            <Label className="font-mono text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground" htmlFor={`${String(request.requestId)}-${question.id}`}>
               {question.header}
             </Label>
             <p className="text-sm text-muted-foreground">{question.question}</p>
@@ -398,6 +411,7 @@ function UserInputActions({
               <div className="flex flex-wrap gap-2">
                 {question.options.map((option) => (
                   <Button
+                    disabled={responding}
                     key={option.label}
                     onClick={() => {
                       setDraft(request.requestId, question.id, option.label);
@@ -414,6 +428,8 @@ function UserInputActions({
             {question.isSecret ? (
               <Input
                 autoComplete="off"
+                className="border-0 bg-background/70 font-mono"
+                disabled={responding}
                 id={`${String(request.requestId)}-${question.id}`}
                 onChange={(event) => {
                   setDraft(request.requestId, question.id, event.target.value);
@@ -424,6 +440,8 @@ function UserInputActions({
               />
             ) : (
               <Textarea
+                className="border-0 bg-background/70 font-mono"
+                disabled={responding}
                 id={`${String(request.requestId)}-${question.id}`}
                 onChange={(event) => {
                   setDraft(request.requestId, question.id, event.target.value);
@@ -465,12 +483,12 @@ function UserInputActions({
 function getRequestIcon(request: PendingRequest) {
   switch (request.kind) {
     case "command":
-      return <TerminalSquare className="size-4 text-primary" />;
+      return <TerminalSquare className="size-4 text-secondary" />;
     case "fileChange":
-      return <FolderPen className="size-4 text-primary" />;
+      return <FolderPen className="size-4 text-secondary" />;
     case "permissions":
-      return <Shield className="size-4 text-primary" />;
+      return <Shield className="size-4 text-secondary" />;
     case "userInput":
-      return <MessageSquareText className="size-4 text-primary" />;
+      return <MessageSquareText className="size-4 text-secondary" />;
   }
 }

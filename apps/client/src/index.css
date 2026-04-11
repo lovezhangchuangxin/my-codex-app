@@ -5,39 +5,39 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  color-scheme: light;
-  --background: oklch(0.982 0.012 79.2);
-  --foreground: oklch(0.294 0.028 45.5);
-  --card: oklch(0.995 0.005 80.1);
-  --card-foreground: oklch(0.294 0.028 45.5);
-  --popover: oklch(0.998 0.004 80.5);
-  --popover-foreground: oklch(0.294 0.028 45.5);
-  --primary: oklch(0.498 0.094 44.9);
-  --primary-foreground: oklch(0.982 0.012 79.2);
-  --secondary: oklch(0.948 0.017 71.4);
-  --secondary-foreground: oklch(0.376 0.037 45.5);
-  --muted: oklch(0.958 0.014 72.1);
-  --muted-foreground: oklch(0.522 0.026 46.5);
-  --accent: oklch(0.934 0.038 68.4);
-  --accent-foreground: oklch(0.337 0.043 46.1);
-  --destructive: oklch(0.612 0.197 26.2);
-  --border: oklch(0.89 0.016 68.1);
-  --input: oklch(0.922 0.012 71.5);
-  --ring: oklch(0.61 0.08 52.8);
-  --chart-1: oklch(0.68 0.16 63.2);
-  --chart-2: oklch(0.67 0.11 162.2);
-  --chart-3: oklch(0.59 0.11 226.4);
-  --chart-4: oklch(0.73 0.12 112.2);
-  --chart-5: oklch(0.62 0.17 16.5);
+  color-scheme: dark;
+  --background: oklch(0.17 0.008 285);
+  --foreground: oklch(0.93 0.01 95);
+  --card: oklch(0.205 0.01 285);
+  --card-foreground: oklch(0.93 0.01 95);
+  --popover: oklch(0.235 0.01 285);
+  --popover-foreground: oklch(0.93 0.01 95);
+  --primary: oklch(0.82 0.16 158);
+  --primary-foreground: oklch(0.24 0.05 160);
+  --secondary: oklch(0.77 0.15 77);
+  --secondary-foreground: oklch(0.24 0.04 77);
+  --muted: oklch(0.235 0.01 285);
+  --muted-foreground: oklch(0.69 0.01 285);
+  --accent: oklch(0.265 0.01 285);
+  --accent-foreground: oklch(0.93 0.01 95);
+  --destructive: oklch(0.72 0.15 18);
+  --border: oklch(0.35 0.008 285 / 0.45);
+  --input: oklch(0.255 0.01 285);
+  --ring: oklch(0.82 0.16 158 / 0.45);
+  --chart-1: oklch(0.82 0.16 158);
+  --chart-2: oklch(0.77 0.15 77);
+  --chart-3: oklch(0.72 0.15 18);
+  --chart-4: oklch(0.68 0.1 215);
+  --chart-5: oklch(0.75 0.06 300);
   --radius: 1rem;
-  --sidebar: oklch(0.988 0.008 79.2);
-  --sidebar-foreground: oklch(0.294 0.028 45.5);
-  --sidebar-primary: oklch(0.498 0.094 44.9);
-  --sidebar-primary-foreground: oklch(0.982 0.012 79.2);
-  --sidebar-accent: oklch(0.948 0.017 71.4);
-  --sidebar-accent-foreground: oklch(0.376 0.037 45.5);
-  --sidebar-border: oklch(0.89 0.016 68.1);
-  --sidebar-ring: oklch(0.61 0.08 52.8);
+  --sidebar: oklch(0.19 0.01 285);
+  --sidebar-foreground: oklch(0.93 0.01 95);
+  --sidebar-primary: oklch(0.82 0.16 158);
+  --sidebar-primary-foreground: oklch(0.24 0.05 160);
+  --sidebar-accent: oklch(0.25 0.01 285);
+  --sidebar-accent-foreground: oklch(0.93 0.01 95);
+  --sidebar-border: oklch(0.35 0.008 285 / 0.45);
+  --sidebar-ring: oklch(0.82 0.16 158 / 0.45);
 }
 
 @theme inline {
@@ -97,9 +97,10 @@
     @apply bg-background font-sans text-foreground antialiased;
     margin: 0;
     background:
-      radial-gradient(circle at top, rgba(214, 153, 56, 0.16), transparent 30%),
-      radial-gradient(circle at 85% 20%, rgba(150, 125, 101, 0.12), transparent 18%),
-      linear-gradient(180deg, #f7f1e7 0%, #efe2cf 100%);
+      radial-gradient(circle at top, rgba(78, 222, 163, 0.12), transparent 26%),
+      radial-gradient(circle at 80% 16%, rgba(245, 158, 10, 0.08), transparent 18%),
+      radial-gradient(circle at 20% 100%, rgba(236, 124, 138, 0.05), transparent 24%),
+      linear-gradient(180deg, #0b0b0d 0%, #0f1012 55%, #131419 100%);
     background-attachment: fixed;
   }
   html {
@@ -117,6 +118,39 @@
     font: inherit;
   }
   ::selection {
-    background: color-mix(in srgb, oklch(0.498 0.094 44.9) 22%, transparent);
+    background: color-mix(in srgb, oklch(0.82 0.16 158) 32%, transparent);
+  }
+}
+
+@layer base {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(19, 19, 22, 0.8);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(71, 71, 78, 0.8);
+    border-radius: 999px;
+  }
+}
+
+@layer utilities {
+  .pulse-secondary {
+    animation: pulse-secondary 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulse-secondary {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.38;
   }
 }
