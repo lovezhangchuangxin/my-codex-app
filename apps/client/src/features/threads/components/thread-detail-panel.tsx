@@ -3,6 +3,7 @@ import {
   ArrowLeft,
   Bot,
   Brain,
+  ChevronDown,
   ExternalLink,
   FileCode2,
   GalleryHorizontal,
@@ -544,6 +545,8 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
     case "userMessage":
       return (
         <TimelineItem
+          collapsedSummary={summarizeUserMessage(item.content)}
+          defaultExpanded
           icon={<UserRound className="size-4 text-primary" />}
           tone="user"
           title="User message"
@@ -558,6 +561,8 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
     case "agentMessage":
       return (
         <TimelineItem
+          collapsedSummary={summarizeTextPreview(item.text, "No text returned.")}
+          defaultExpanded
           icon={<Bot className="size-4 text-primary" />}
           title="Assistant"
           tone="assistant"
@@ -572,6 +577,8 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
     case "reasoning":
       return (
         <TimelineItem
+          collapsedSummary={summarizeReasoning(item)}
+          defaultExpanded={false}
           icon={<Brain className="size-4 text-primary" />}
           title="Reasoning"
           tone="reasoning"
@@ -618,58 +625,62 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
         </TimelineItem>
       );
     case "commandExecution":
+      const displayCommand = getCommandDisplay(item.command);
+      const commandCwd = getCommandCwdDisplay(item.cwd);
       return (
         <TimelineItem
+          collapsedSummary={displayCommand}
+          defaultExpanded={false}
+          headerMeta={<StatusBadge label={item.status} />}
           icon={<SquareTerminal className="size-4 text-primary" />}
           title="Command"
           tone="command"
         >
-          <div className="space-y-2.5">
-            <div className="overflow-hidden rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(0,0,0,0.08))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]">
-              <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-[linear-gradient(90deg,rgba(78,222,163,0.08),rgba(255,255,255,0.02))] px-4 py-2.5">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-primary/85">
-                    Shell execution
-                  </span>
-                  <span className="text-xs text-muted-foreground">Selected workspace</span>
+          <div className="space-y-2">
+            <div className="rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] px-3 py-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
+              {(item.exitCode !== undefined || item.durationMs) ? (
+                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                  {item.exitCode !== undefined ? (
+                    <CommandMetaBadge label={`exit ${item.exitCode}`} />
+                  ) : null}
+                  {item.durationMs ? (
+                    <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
+                  ) : null}
                 </div>
-                <StatusBadge label={item.status} />
-              </div>
-              <div className="space-y-3 bg-[linear-gradient(180deg,rgba(8,10,12,0.82),rgba(14,16,18,0.95))] p-4">
-                <RichCodeBlock
-                  chrome={false}
-                  className="rounded-xl border border-white/6 bg-black/18"
-                  language="bash"
-                  shellPrompt
-                >
-                  {item.command}
-                </RichCodeBlock>
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/6 bg-white/3 px-3 py-2">
-                  <span className="font-mono text-[0.64rem] uppercase tracking-[0.16em] text-muted-foreground">
-                    cwd
-                  </span>
-                  <p className="min-w-0 break-words font-mono text-xs leading-6 text-foreground/88">
-                    {item.cwd}
+              ) : null}
+              <RichCodeBlock
+                chrome={false}
+                className="rounded-lg border border-white/6 bg-black/20"
+                language="bash"
+                shellPrompt
+              >
+                {displayCommand}
+              </RichCodeBlock>
+              {commandCwd.shortPath ? (
+                <div className="mt-2 space-y-1">
+                  <p className="truncate font-mono text-[0.72rem] leading-5 text-muted-foreground/88">
+                    {commandCwd.shortPath}
                   </p>
+                  {commandCwd.fullPath && commandCwd.fullPath !== commandCwd.shortPath ? (
+                    <p className="break-all font-mono text-[0.68rem] leading-5 text-muted-foreground/62">
+                      {commandCwd.fullPath}
+                    </p>
+                  ) : null}
                 </div>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-white/6 bg-background/35 px-3 py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
-              <span>{item.status}</span>
-              {item.exitCode !== undefined ? <span> / exit {item.exitCode}</span> : null}
-              {item.durationMs ? (
-                <span> / {Math.round(item.durationMs / 1000)}s</span>
               ) : null}
             </div>
             {item.aggregatedOutput ? (
               <Collapsible>
                 <CollapsibleTrigger asChild>
-                  <Button size="xs" variant="outline">
+                  <Button className="rounded-lg" size="xs" variant="outline">
                     Show output
                   </Button>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="pt-3">
-                  <RichTerminalOutput className="bg-black/60" content={item.aggregatedOutput} />
+                  <RichTerminalOutput
+                    className="rounded-lg border border-white/8 bg-black/50"
+                    content={item.aggregatedOutput}
+                  />
                 </CollapsibleContent>
               </Collapsible>
             ) : null}
@@ -679,6 +690,8 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
     case "fileChange":
       return (
         <TimelineItem
+          collapsedSummary={summarizeFileChange(item)}
+          defaultExpanded
           icon={<FileCode2 className="size-4 text-primary" />}
           title="File change"
           tone="file"
@@ -728,6 +741,8 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
     case "webSearch":
       return (
         <TimelineItem
+          collapsedSummary={summarizeTextPreview(item.query, "Query unavailable")}
+          defaultExpanded
           icon={<Search className="size-4 text-primary" />}
           title="Web search"
           tone="auxiliary"
@@ -738,6 +753,8 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
     case "imageView":
       return (
         <TimelineItem
+          collapsedSummary={summarizeTextPreview(item.path, "Image path unavailable")}
+          defaultExpanded
           icon={<GalleryHorizontal className="size-4 text-primary" />}
           title="Image view"
           tone="auxiliary"
@@ -748,6 +765,8 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
     case "unknown":
       return (
         <TimelineItem
+          collapsedSummary="Raw payload available"
+          defaultExpanded
           icon={<ExternalLink className="size-4 text-primary" />}
           title={item.title}
           tone="auxiliary"
@@ -847,6 +866,156 @@ function RichTerminalOutput({
   );
 }
 
+function CommandMetaBadge({ label }: { label: string }) {
+  return (
+    <span className="rounded-md border border-white/8 bg-background/45 px-2 py-0.5 font-mono text-[0.64rem] uppercase tracking-[0.12em] text-muted-foreground">
+      {label}
+    </span>
+  );
+}
+
+function summarizeUserMessage(content: Extract<ThreadItem, { type: "userMessage" }>["content"]): string {
+  const textInput = content.find((input) => input.type === "text");
+  const nonTextInputs = content.filter((input) => input.type !== "text");
+  const attachmentSummary = summarizeNonTextUserInputs(nonTextInputs);
+
+  if (textInput) {
+    const textPreview = summarizeTextPreview(textInput.text, "Text message");
+    return attachmentSummary ? `${textPreview} · ${attachmentSummary}` : textPreview;
+  }
+
+  if (content.length === 0) {
+    return "No content";
+  }
+
+  return attachmentSummary ?? "Text";
+}
+
+function summarizeReasoning(item: Extract<ThreadItem, { type: "reasoning" }>): string {
+  if (item.summary[0]) {
+    return summarizeTextPreview(item.summary[0], "Reasoning details");
+  }
+
+  if (item.content[0]) {
+    return summarizeTextPreview(item.content[0], "Reasoning details");
+  }
+
+  return "Reasoning details";
+}
+
+function summarizeFileChange(item: Extract<ThreadItem, { type: "fileChange" }>): string {
+  if (item.changes.length === 0) {
+    return "No files recorded";
+  }
+
+  const firstPath = item.changes[0]?.path ?? "Unknown file";
+  if (item.changes.length === 1) {
+    return firstPath;
+  }
+
+  return `${firstPath} +${item.changes.length - 1} more`;
+}
+
+function summarizeTextPreview(content: string, fallback: string): string {
+  const normalized = content.replace(/\s+/g, " ").trim();
+  return normalized.length > 0 ? normalized : fallback;
+}
+
+function summarizeNonTextUserInputs(
+  inputs: Array<Exclude<Extract<ThreadItem, { type: "userMessage" }>["content"][number], { type: "text" }>>
+): string | null {
+  if (inputs.length === 0) {
+    return null;
+  }
+
+  const labels = inputs.map((input) => {
+    switch (input.type) {
+      case "image":
+        return "Image";
+      case "localImage":
+        return "Local image";
+      case "skill":
+        return `Skill ${input.name}`;
+      case "mention":
+        return `Mention ${input.name}`;
+    }
+  });
+
+  if (labels.length <= 2) {
+    return labels.join(" · ");
+  }
+
+  return `${labels[0]} +${labels.length - 1} more`;
+}
+
+function getCommandDisplay(command: string): string {
+  const trimmed = command.trim();
+  const wrappedCommandMatch =
+    /^(?<shell>(?:\/bin\/|\/usr\/bin\/)?(?:bash|zsh|sh))\s+(?<flags>-[A-Za-z]+(?:\s+-[A-Za-z]+)*)\s+(?<body>[\s\S]+)$/u.exec(
+      trimmed
+    );
+
+  if (!wrappedCommandMatch?.groups) {
+    return command;
+  }
+
+  const { body, flags } = wrappedCommandMatch.groups;
+  if (!body || !flags || !flags.includes("c")) {
+    return command;
+  }
+
+  const unwrappedBody = unwrapShellCommandBody(body);
+  if (!unwrappedBody || unwrappedBody === trimmed) {
+    return command;
+  }
+
+  return unwrappedBody;
+}
+
+function getCommandCwdDisplay(cwd: string): {
+  fullPath: string | null;
+  shortPath: string | null;
+} {
+  const trimmed = cwd.trim();
+  if (trimmed.length === 0) {
+    return { fullPath: null, shortPath: null };
+  }
+
+  const segments = trimmed.split(/[/\\]+/).filter(Boolean);
+  if (segments.length === 0) {
+    return { fullPath: trimmed, shortPath: trimmed };
+  }
+
+  if (segments.length === 1) {
+    return { fullPath: trimmed, shortPath: segments[0] ?? trimmed };
+  }
+
+  return {
+    fullPath: trimmed,
+    shortPath: `${segments.at(-2)}/${segments.at(-1)}`
+  };
+}
+
+function unwrapShellCommandBody(body: string): string | null {
+  const trimmed = body.trim();
+  if (trimmed.length < 2) {
+    return null;
+  }
+
+  if (trimmed.startsWith("'") && trimmed.endsWith("'")) {
+    return trimmed.slice(1, -1).replace(/'\\''/g, "'");
+  }
+
+  if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed
+      .slice(1, -1)
+      .replace(/\\"/g, '"')
+      .replace(/\\\\/g, "\\");
+  }
+
+  return trimmed;
+}
+
 function PlainTextFallback({
   className,
   content
@@ -933,12 +1102,18 @@ function StructuredUserInput({
 }
 
 function TimelineItem({
+  collapsedSummary,
   children,
+  defaultExpanded = true,
+  headerMeta,
   icon,
   title,
   tone
 }: {
+  collapsedSummary?: string | null;
   children: import("react").ReactNode;
+  defaultExpanded?: boolean;
+  headerMeta?: import("react").ReactNode;
   icon: import("react").ReactNode;
   title: string;
   tone: "assistant" | "auxiliary" | "command" | "file" | "reasoning" | "user";
@@ -951,23 +1126,48 @@ function TimelineItem({
         : tone === "reasoning"
           ? "border-secondary/12 bg-secondary/6"
           : tone === "command"
-            ? "border-white/8 bg-background/70"
+        ? "border-white/8 bg-background/70"
             : tone === "file"
               ? "border-white/8 bg-background/66"
               : "border-white/8 bg-accent/60";
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
-    <div className={cn("min-w-0 max-w-full rounded-[12px] border p-3", toneClasses)}>
-      <div className="mb-2 flex min-w-0 items-center gap-2">
-        <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
-          {icon}
-        </span>
-        <div className="min-w-0">
-          <p className="font-medium text-foreground">{title}</p>
+    <Collapsible
+      className={cn("min-w-0 max-w-full rounded-[12px] border p-3", toneClasses)}
+      onOpenChange={setIsExpanded}
+      open={isExpanded}
+    >
+      <div className={cn("min-w-0", isExpanded ? "mb-2" : "space-y-0.5")}>
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
+            {icon}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-foreground">{title}</p>
+          </div>
+          {headerMeta ? <div className="flex shrink-0 items-center gap-1">{headerMeta}</div> : null}
+          <CollapsibleTrigger asChild>
+            <Button
+              aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
+              className="shrink-0 text-muted-foreground"
+              size="icon-xs"
+              variant="ghost"
+            >
+              <ChevronDown
+                className={cn("size-3.5 transition-transform duration-200", !isExpanded && "-rotate-90")}
+              />
+            </Button>
+          </CollapsibleTrigger>
         </div>
+        {!isExpanded && collapsedSummary ? (
+          <p className="truncate pl-9 text-xs leading-5 text-muted-foreground">
+            {collapsedSummary}
+          </p>
+        ) : null}
       </div>
-      {children}
-    </div>
+      <CollapsibleContent>{children}</CollapsibleContent>
+    </Collapsible>
   );
 }
 
