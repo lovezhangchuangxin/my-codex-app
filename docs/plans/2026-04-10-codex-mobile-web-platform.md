@@ -14,6 +14,22 @@ Implementation and protocol decisions in this repository must be validated again
 
 In practice, the bridge and protocol layers should be developed with that repository open as the primary upstream reference for app-server methods, event semantics, and request/response behavior.
 
+## Historical Status
+
+This document remains the historical platform plan, but its temporary local-auth
+bootstrap note is now outdated.
+
+The current local auth implementation is defined by:
+
+- `docs/specs/2026-04-11-local-pairing-device-trust-session-auth.md`
+- `docs/plans/2026-04-11-local-pairing-device-trust-session-auth.md`
+
+Reason for replacement:
+
+- the repository now implements explicit local pairing instead of a shared static token
+- the bridge now owns revocable device trust and renewable session credentials
+- this better matches the original security and recovery goals without changing the Web-first architecture
+
 ## Recommended Repository Layout
 
 ```text
@@ -355,10 +371,10 @@ Recommended direction:
 - longer-lived refresh or re-authorization token
 - explicit revocation path for lost devices
 
-Bootstrap note:
+Historical milestone note:
 
-- until pairing UX and device trust records land, the local bridge bootstrap may use an explicitly configured shared access token for every client-to-bridge request
-- this is only an implementation bridge for early milestones, not the final pairing model
+- the shared-access-token bootstrap described here applied only to early milestones
+- it has been superseded by the implemented local pairing/device-trust/session-auth model documented in `docs/specs/2026-04-11-local-pairing-device-trust-session-auth.md`
 
 ## Tauri 2 Host Integration Plan
 

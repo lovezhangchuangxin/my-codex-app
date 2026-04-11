@@ -11,6 +11,20 @@ It does not replace the broader platform architecture. It defines how `apps/clie
 should be rebuilt so the shared Web client is production-ready for both browser and
 Tauri-mobile hosting.
 
+## Historical Status
+
+This spec remains the historical record for the frontend rebuild, but its older
+connection-surface assumptions should now be read together with:
+
+- `docs/specs/2026-04-11-local-pairing-device-trust-session-auth.md`
+- `docs/plans/2026-04-11-local-pairing-device-trust-session-auth.md`
+
+Reason for replacement:
+
+- local auth moved from a temporary shared bootstrap token to explicit pairing
+- the connection surface now needs first-class device trust and session state
+- this shift improves security while keeping the client Web-first for later Tauri reuse
+
 ## Background
 
 This spec captured the rebuild of `apps/client` from the original manually assembled
@@ -169,19 +183,34 @@ It should allow the user to:
 
 ## Connection
 
-The connection surface is intentionally limited to currently supported bridge behavior.
+Historical note:
+
+- this section originally assumed the connection page would mostly reflect
+  diagnostics around a temporary bootstrap-token phase
+
+Current design note:
+
+- the connection surface now includes explicit local pairing, bridge session
+  state, and trusted-device management because those bridge APIs now exist
+
+Reason:
+
+- pairing and session recovery are now first-class product flows rather than
+  placeholder future work
 
 It should provide:
 
 - configured bridge base URL
 - current connection mode labeling for the current implementation (`local`)
 - bridge health status based on the available health endpoint
-- token/bootstrap auth presence indicators where possible
+- pairing status and pairing instructions for an unpaired browser
+- active bridge session status when paired
+- trusted-device visibility and revoke controls where available
 - recent event-stream or data-loading status summaries
 - recovery guidance when the client is disconnected or misconfigured
 
-This page must be structured so future pairing, relay, and device-management sections
-can be added without restructuring the entire application shell.
+This page must still leave room for future relay-specific sections without
+restructuring the entire application shell.
 
 ## Pending Request UX Requirements
 

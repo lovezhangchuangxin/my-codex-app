@@ -11,6 +11,22 @@ It also stays aligned with:
 - `docs/specs/2026-04-10-codex-mobile-web-platform.md`
 - `docs/plans/2026-04-10-codex-mobile-web-platform.md`
 
+## Historical Status
+
+This document remains useful as the historical plan for the `apps/client` rebuild,
+but some connection/auth assumptions inside it are now outdated.
+
+Auth-related guidance in this document is superseded by:
+
+- `docs/specs/2026-04-11-local-pairing-device-trust-session-auth.md`
+- `docs/plans/2026-04-11-local-pairing-device-trust-session-auth.md`
+
+Reason for replacement:
+
+- the bridge no longer uses one shared bootstrap token as the active local auth model
+- the current product requires explicit local pairing, revocable device trust, and renewable sessions
+- the new model is still Web-first and remains suitable for later Tauri-mobile reuse
+
 ## Implementation Strategy
 
 The rebuild should preserve the existing bridge and SDK integration surface while
@@ -429,9 +445,16 @@ UI should disable duplicate actions while a matching mutation is in flight.
 
 ## Compatibility Notes
 
-- The current bridge only supports local bootstrap token auth and `/healthz`.
-- The connection page must not depend on unimplemented bridge APIs.
-- The route structure should leave room for future pairing and relay flows without
+- Historical note:
+  The original rebuild was planned against a bridge that only exposed `/healthz`
+  plus bootstrap-token auth. That assumption is no longer current.
+- Current design:
+  the connection page should treat local pairing, device trust, session refresh,
+  and device revocation as the supported local-mode bridge contract.
+- Reason:
+  the connection route is now the user-facing control surface for pairing and
+  bridge session recovery, not just a diagnostics page for a temporary bootstrap phase.
+- The route structure should continue to leave room for future relay flows without
   forcing another shell rewrite.
 - The SDK and protocol packages remain source-compatible during this client rebuild.
 
