@@ -419,7 +419,7 @@ export function ConnectionRoute() {
               const isRevoked = device.revokedAt !== undefined;
               return (
                 <div
-                  className="rounded-[12px] border border-white/8 bg-background/42 p-3"
+                  className="rounded-[12px] border border-white/8 bg-background/42 p-3 transition-all duration-200 hover:border-white/12 hover:bg-background/52"
                   key={`${device.deviceId}-${credentialsVersion}`}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -444,7 +444,7 @@ export function ConnectionRoute() {
                         ) : null}
                       </div>
                       <p className="text-xs text-muted-foreground">{device.platform}</p>
-                      <p className="font-mono text-[0.68rem] text-muted-foreground">
+                      <p className="font-mono text-[0.7rem] text-muted-foreground">
                         Last seen {formatTimestamp(device.lastSeenAt)}
                       </p>
                     </div>
@@ -499,8 +499,8 @@ function Field({
 
 function StatusRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="space-y-1">
-      <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
+    <div className="space-y-1 border-b border-white/6 pb-2.5 last:border-0 last:pb-0">
+      <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
         {label}
       </p>
       <p className="text-sm text-foreground">{value}</p>

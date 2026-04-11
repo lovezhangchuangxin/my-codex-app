@@ -249,14 +249,14 @@ function ReadyThreadDetail({
                 threadsState={threadsState}
               />
             ) : null}
-            <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+            <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
               {thread.modelProvider}
             </Badge>
           </div>
         </div>
 
         <div className="mt-3 flex flex-wrap gap-1.5">
-          <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+          <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
             {getWorkspaceLabel(thread.cwd)}
           </Badge>
           {thread.pendingRequests.length > 0 ? (
@@ -266,7 +266,7 @@ function ReadyThreadDetail({
           ) : null}
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/38 px-3 py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/38 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
           <span>
             Turns <span className="ml-1 text-foreground">{thread.turns.length}</span>
           </span>
@@ -304,7 +304,7 @@ function ReadyThreadDetail({
           {pendingEntries.length > 0 ? (
             <section className="space-y-3">
               <div className="space-y-1">
-                <p className="font-mono text-[0.68rem] tracking-[0.28em] text-secondary uppercase">
+                <p className="font-mono text-[0.7rem] tracking-[0.18em] text-secondary uppercase">
                   Attention required
                 </p>
                 <h3 className="font-heading text-xl tracking-[-0.04em]">Pending requests</h3>
@@ -337,7 +337,7 @@ function ReadyThreadDetail({
           ) : (
             <section className="min-w-0 max-w-full space-y-3">
               <div className="space-y-1">
-                <p className="font-mono text-[0.68rem] tracking-[0.28em] text-primary/85 uppercase">
+                <p className="font-mono text-[0.7rem] tracking-[0.18em] text-primary/85 uppercase">
                   Timeline
                 </p>
                 <h3 className="font-heading text-xl tracking-[-0.04em]">Turn activity</h3>
@@ -352,7 +352,7 @@ function ReadyThreadDetail({
               >
                 {orderedTurns.map((turn) => (
                   <AccordionItem
-                    className="min-w-0 max-w-full overflow-hidden rounded-[14px] border border-white/8 bg-card/78 px-3 shadow-[0_12px_28px_rgba(0,0,0,0.16)]"
+                    className="min-w-0 max-w-full overflow-hidden rounded-[14px] border border-white/8 bg-card/78 px-3 shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-shadow duration-200"
                     key={turn.id}
                     value={turn.id}
                   >
@@ -364,7 +364,7 @@ function ReadyThreadDetail({
                           </span>
                           <StatusBadge label={turn.status} />
                         </div>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1.5 font-mono text-[0.68rem] uppercase tracking-[0.08em] text-muted-foreground">
+                        <div className="flex flex-wrap gap-x-3 gap-y-1.5 font-mono text-[0.7rem] uppercase tracking-[0.08em] text-muted-foreground">
                           <span>{formatTimestamp(turn.startedAt)}</span>
                           {turn.durationMs ? (
                             <span>{Math.round(turn.durationMs / 1000)}s</span>
@@ -418,17 +418,17 @@ function ReadyThreadDetail({
           }}
         >
           <div className="flex items-center justify-between gap-3">
-            <Label className="font-mono text-[0.72rem] uppercase tracking-[0.22em] text-muted-foreground" htmlFor="thread-composer">
+            <Label className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground" htmlFor="thread-composer">
               Send a message
             </Label>
             {activeTurnId ? (
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-primary">
+              <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-primary">
                 Live thread
               </p>
             ) : null}
           </div>
           <Textarea
-            className="border-0 bg-accent/82 font-mono text-sm leading-6 placeholder:text-muted-foreground/45"
+            className="border-0 bg-accent/82 font-mono text-sm leading-6 transition-shadow duration-200 placeholder:text-muted-foreground/45 focus-visible:ring-1 focus-visible:ring-primary/40"
             id="thread-composer"
             onChange={(event) => {
               setComposerText(event.target.value);
@@ -437,37 +437,30 @@ function ReadyThreadDetail({
             rows={4}
             value={composerText}
           />
-          <div className="rounded-[12px] border border-white/8 bg-card/55 p-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]">
-            <div className="mb-2.5 flex items-center justify-between gap-3">
-              <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
-                Composer ready
-              </p>
-              <p className="font-mono text-[0.68rem] text-muted-foreground">
-                {composerText.trim().length} chars
-              </p>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Button
+              className="w-full sm:flex-1"
+              disabled={!actionsEnabled || sendMessagePending || composerText.trim().length === 0}
+              type="submit"
+            >
+            {sendMessagePending ? "Sending..." : "Send message"}
+            </Button>
+            {activeTurnId ? (
               <Button
-                className="w-full sm:flex-1"
-                disabled={!actionsEnabled || sendMessagePending || composerText.trim().length === 0}
-                type="submit"
+                className="w-full sm:w-auto"
+                disabled={!actionsEnabled || interruptPending}
+                onClick={() => {
+                  void onInterrupt(thread.id, activeTurnId);
+                }}
+                type="button"
+                variant="outline"
               >
-              {sendMessagePending ? "Sending..." : "Send message"}
+                {interruptPending ? "Interrupting..." : "Interrupt turn"}
               </Button>
-              {activeTurnId ? (
-                <Button
-                  className="w-full sm:w-auto"
-                  disabled={!actionsEnabled || interruptPending}
-                  onClick={() => {
-                    void onInterrupt(thread.id, activeTurnId);
-                  }}
-                  type="button"
-                  variant="outline"
-                >
-                  {interruptPending ? "Interrupting..." : "Interrupt turn"}
-                </Button>
-              ) : null}
-            </div>
+            ) : null}
+            <span className="self-center whitespace-nowrap font-mono text-[0.7rem] text-muted-foreground">
+              {composerText.trim().length} chars
+            </span>
           </div>
         </form>
       </div>
@@ -732,11 +725,11 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
               </RichCodeBlock>
               {commandCwd.shortPath ? (
                 <div className="mt-2 space-y-1">
-                  <p className="truncate font-mono text-[0.72rem] leading-5 text-muted-foreground/88">
+                  <p className="truncate font-mono text-[0.7rem] leading-5 text-muted-foreground/88">
                     {commandCwd.shortPath}
                   </p>
                   {commandCwd.fullPath && commandCwd.fullPath !== commandCwd.shortPath ? (
-                    <p className="break-all font-mono text-[0.68rem] leading-5 text-muted-foreground/62">
+                    <p className="break-all font-mono text-[0.7rem] leading-5 text-muted-foreground/62">
                       {commandCwd.fullPath}
                     </p>
                   ) : null}
@@ -771,7 +764,7 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
           tone="file"
         >
           <div className="space-y-2.5">
-            <div className="font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
               {item.status} / {item.changes.length} file{item.changes.length === 1 ? "" : "s"}
             </div>
             <div className="space-y-2">
@@ -785,7 +778,7 @@ function ThreadItemRenderer({ item }: { item: ThreadItem }) {
                       {change.path}
                     </p>
                     {change.kind ? (
-                      <span className="font-mono text-[0.64rem] uppercase tracking-[0.12em] text-muted-foreground">
+                      <span className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
                         {change.kind}
                       </span>
                     ) : null}
@@ -942,7 +935,7 @@ function RichTerminalOutput({
 
 function CommandMetaBadge({ label }: { label: string }) {
   return (
-    <span className="rounded-md border border-white/8 bg-background/45 px-2 py-0.5 font-mono text-[0.64rem] uppercase tracking-[0.12em] text-muted-foreground">
+    <span className="rounded-md border border-white/8 bg-background/45 px-2 py-0.5 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
       {label}
     </span>
   );
@@ -1167,7 +1160,7 @@ function StructuredUserInput({
 }) {
   return (
     <div className="rounded-xl border border-white/8 bg-background/45 px-3 py-2.5">
-      <p className="font-mono text-[0.64rem] uppercase tracking-[0.16em] text-muted-foreground">
+      <p className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
         {label}
       </p>
       <p className="mt-1 break-words font-mono text-sm leading-6 text-foreground">{value}</p>
@@ -1208,7 +1201,7 @@ function TimelineItem({
 
   return (
     <Collapsible
-      className={cn("min-w-0 max-w-full rounded-[12px] border p-3", toneClasses)}
+      className={cn("min-w-0 max-w-full rounded-[12px] border p-3 transition-colors duration-150", toneClasses)}
       onOpenChange={setIsExpanded}
       open={isExpanded}
     >
@@ -1260,7 +1253,7 @@ function StatusBadge({ label }: { label: string }) {
               : "bg-background/70 text-muted-foreground";
 
   return (
-    <Badge className={cn("border-0 font-mono text-[0.68rem] uppercase", classes)} variant="secondary">
+    <Badge className={cn("border-0 font-mono text-[0.7rem] uppercase", classes)} variant="secondary">
       {label}
     </Badge>
   );

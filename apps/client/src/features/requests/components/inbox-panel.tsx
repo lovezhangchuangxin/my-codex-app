@@ -81,7 +81,7 @@ export function InboxPanel() {
       />
 
       {snapshot.threads.kind === "ready" ? (
-        <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/38 px-3 py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/38 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
           <span>
             Pending <span className="ml-1 text-foreground">{entries.length}</span>
           </span>
@@ -103,7 +103,7 @@ export function InboxPanel() {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
           <CardHeader className="gap-2 border-b border-white/6 bg-background/35">
-            <p className="font-mono text-[0.68rem] tracking-[0.26em] text-secondary uppercase">
+            <p className="font-mono text-[0.7rem] tracking-[0.18em] text-secondary uppercase">
               Review queue
             </p>
             <CardTitle className="text-xl tracking-[-0.04em]">Pending work</CardTitle>
@@ -196,8 +196,8 @@ export function InboxPanel() {
                 Queue summary
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/42 px-3 py-2 font-mono text-[0.68rem] uppercase tracking-[0.12em] text-muted-foreground">
+            <CardContent className="space-y-3 text-sm leading-6 text-muted-foreground">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/42 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
                 <span>
                   Command <span className="ml-1 text-foreground">{counts.command}</span>
                 </span>
@@ -211,25 +211,11 @@ export function InboxPanel() {
                   Input <span className="ml-1 text-foreground">{counts.userInput}</span>
                 </span>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-            <CardHeader>
-              <CardTitle className="text-xl">How to use this view</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2.5 text-sm leading-6 text-muted-foreground">
-              <p>Open a thread only when the request needs surrounding context.</p>
-              <p>
-                Structured user input can be answered here or inside the thread timeline.
-              </p>
-              <p>
-                Resolved items disappear as soon as bridge state catches up.
-              </p>
+              <p>Resolved items disappear as soon as bridge state catches up.</p>
               {entries.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {entries.slice(0, 3).map((entry) => (
-                    <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" key={toRequestKey(entry.request.requestId)} variant="outline">
+                    <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" key={toRequestKey(entry.request.requestId)} variant="outline">
                       {(entry.thread.name ?? entry.thread.preview) || entry.thread.id}
                     </Badge>
                   ))}

@@ -88,12 +88,12 @@ export function CodeBlock({
               <span className="size-2.5 rounded-full bg-secondary/55" />
               <span className="size-2.5 rounded-full bg-primary/55" />
             </div>
-            <p className="font-mono text-[0.64rem] uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
               {language ?? (shellPrompt ? "shell" : "plain text")}
             </p>
           </div>
           <Button
-            className="h-7 rounded-md px-2.5 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
+            className="h-7 rounded-md px-2.5 font-mono text-[0.7rem] uppercase tracking-[0.12em]"
             onClick={() => {
               void handleCopy();
             }}

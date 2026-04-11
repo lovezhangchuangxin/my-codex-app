@@ -38,7 +38,7 @@ export function AppShell() {
         <aside className="hidden lg:block lg:w-[272px]">
           <div className="sticky top-6 flex h-[calc(100svh-3rem)] flex-col overflow-hidden rounded-[24px] bg-card/55 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl">
             <div className="border-b border-white/6 px-5 pt-5 pb-4">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary/12 px-2.5 py-1 font-mono text-[0.62rem] tracking-[0.22em] text-primary uppercase">
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/12 px-2.5 py-1 font-mono text-[0.7rem] tracking-[0.18em] text-primary uppercase">
                 <Sparkles className="size-3.5" />
                 Engine Terminal
               </div>
@@ -53,13 +53,13 @@ export function AppShell() {
               </div>
             </div>
 
-            <nav className="grid gap-2 px-4 pt-4">
+            <nav className="grid gap-1.5 px-3 pt-4">
               {navigationItems.map((item) => (
                 <NavLink
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition hover:bg-accent/60 hover:text-foreground",
-                      isActive && "bg-transparent text-primary shadow-none"
+                      "flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-muted-foreground transition-all duration-200 hover:bg-accent/60 hover:text-foreground",
+                      isActive && "bg-primary/10 text-primary"
                     )
                   }
                   key={item.to}
@@ -68,16 +68,16 @@ export function AppShell() {
                   <span className="flex items-center gap-3">
                     <span
                       className={cn(
-                        "flex size-9 items-center justify-center rounded-xl bg-background/60 text-muted-foreground transition",
+                        "flex size-9 items-center justify-center rounded-xl bg-background/60 text-muted-foreground transition-all duration-200",
                         location.pathname.startsWith(item.to) &&
-                          "bg-background/60 text-primary"
+                          "bg-primary/18 text-primary"
                       )}
                     >
                       <item.icon className="size-4.5" />
                     </span>
                     {item.label}
                   </span>
-                    <span className="font-mono text-[0.64rem] uppercase opacity-65">
+                    <span className="font-mono text-[0.7rem] uppercase opacity-65">
                       {item.label === "Threads" ? "Primary" : "View"}
                     </span>
                 </NavLink>
@@ -86,7 +86,7 @@ export function AppShell() {
 
             <div className="mt-auto space-y-3 border-t border-white/6 bg-background/30 px-5 py-4">
               <div className="flex items-center justify-between gap-2">
-                <span className="font-mono text-[0.68rem] tracking-[0.26em] text-muted-foreground uppercase">
+                <span className="font-mono text-[0.7rem] tracking-[0.18em] text-muted-foreground uppercase">
                   Connection
                 </span>
                 <Badge className="bg-primary/12 text-primary" variant="secondary">
@@ -128,13 +128,16 @@ export function AppShell() {
             <NavLink
               className={({ isActive }) =>
                 cn(
-                  "flex flex-col items-center gap-1 rounded-xl px-3 py-2 font-mono text-[0.68rem] font-medium text-muted-foreground transition",
-                  isActive && "bg-transparent text-primary"
+                  "relative flex flex-col items-center gap-1 rounded-xl px-3 py-2 font-mono text-[0.7rem] font-medium text-muted-foreground transition-all duration-200",
+                  isActive && "bg-primary/12 text-primary"
                 )
               }
               key={item.to}
               to={item.to}
             >
+              {location.pathname.startsWith(item.to) && (
+                <span className="absolute top-0.5 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary" />
+              )}
               <item.icon className="size-4.5" />
               {item.label}
             </NavLink>

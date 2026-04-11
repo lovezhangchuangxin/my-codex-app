@@ -107,10 +107,10 @@ function PendingRequestCard({
               <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
                 {getRequestKindLabel(request)}
               </Badge>
-              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+              <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
                 {getWorkspaceLabel(thread.cwd)}
               </Badge>
-              <Badge className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+              <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
                 {formatTimestamp(request.requestedAt)}
               </Badge>
             </div>
@@ -145,7 +145,7 @@ function PendingRequestCard({
         <Separator className="bg-white/6" />
         <div className="flex items-center gap-2 rounded-xl bg-background/45 px-3 py-2">
           <OctagonAlert className="size-4 text-secondary" />
-          <p className="font-mono text-[0.68rem] uppercase tracking-[0.18em] text-muted-foreground">
+          <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
             Explicit confirmation required
           </p>
         </div>
@@ -198,7 +198,7 @@ function RequestBody({ request }: { request: PendingRequest }) {
             <div className="flex flex-wrap gap-2">
             {request.questions.map((question) => (
               <Badge
-                className="border-0 bg-background/70 font-mono text-[0.68rem] uppercase text-muted-foreground"
+                className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground"
                 key={question.id}
                 variant="outline"
               >
@@ -403,7 +403,7 @@ function UserInputActions({
 
         return (
           <div className="space-y-2" key={question.id}>
-            <Label className="font-mono text-[0.72rem] uppercase tracking-[0.2em] text-muted-foreground" htmlFor={`${String(request.requestId)}-${question.id}`}>
+            <Label className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground" htmlFor={`${String(request.requestId)}-${question.id}`}>
               {question.header}
             </Label>
             <p className="text-sm text-muted-foreground">{question.question}</p>
