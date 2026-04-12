@@ -1,39 +1,22 @@
 import { Suspense, lazy } from "react";
-import { Navigate, createBrowserRouter, useLocation } from "react-router-dom";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 
 import { AppShell } from "@/app/layouts/app-shell";
+import { AuthGuard } from "@/app/layouts/auth-guard";
 
-const ThreadsShell = lazy(async () => {
-  const module = await import("@/app/layouts/threads-shell");
-  return { default: module.ThreadsShell };
+const PairingScreen = lazy(async () => {
+  const module = await import("@/components/pairing/pairing-screen");
+  return { default: module.PairingScreen };
 });
 
-const InboxPanel = lazy(async () => {
-  const module = await import("@/features/requests/components/inbox-panel");
-  return { default: module.InboxPanel };
+const ThreadsLayout = lazy(async () => {
+  const module = await import("@/app/layouts/threads-layout");
+  return { default: module.ThreadsLayout };
 });
-
-const ConnectionRoute = lazy(async () => {
-  const module = await import("@/features/connection/routes/connection-route");
-  return { default: module.ConnectionRoute };
-});
-
-function LegacyEntryRedirect() {
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const threadId = searchParams.get("threadId");
-
-  return (
-    <Navigate
-      replace
-      to={threadId ? `/threads/${encodeURIComponent(threadId)}` : "/threads"}
-    />
-  );
-}
 
 function RouteFallback() {
   return (
-    <div className="rounded-[22px] bg-card/70 p-6 shadow-[0_20px_56px_rgba(0,0,0,0.3)] backdrop-blur-xl">
+    <div className="rounded-xl bg-card/70 p-6">
       <div className="space-y-3">
         <div className="h-4 w-28 rounded-full bg-muted/70" />
         <div className="h-10 w-56 rounded-full bg-muted/70" />
@@ -54,27 +37,31 @@ export const appRouter = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <LegacyEntryRedirect />
+        element: <Navigate replace to="/threads" />
+      },
+      {
+        path: "pair",
+        element: withSuspense(<PairingScreen />)
       },
       {
         path: "threads",
-        element: withSuspense(<ThreadsShell />)
+        element: (
+          <AuthGuard>
+            {withSuspense(<ThreadsLayout />)}
+          </AuthGuard>
+        )
       },
       {
         path: "threads/:threadId",
-        element: withSuspense(<ThreadsShell />)
-      },
-      {
-        path: "inbox",
-        element: withSuspense(<InboxPanel />)
-      },
-      {
-        path: "connection",
-        element: withSuspense(<ConnectionRoute />)
+        element: (
+          <AuthGuard>
+            {withSuspense(<ThreadsLayout />)}
+          </AuthGuard>
+        )
       },
       {
         path: "*",
-        element: <Navigate replace to="/threads" />
+        element: <Navigate replace to="/" />
       }
     ]
   }
