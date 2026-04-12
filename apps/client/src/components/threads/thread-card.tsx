@@ -42,9 +42,9 @@ export function ThreadCard({
   return (
     <Card
       className={cn(
-        "border border-subtle/8 bg-card/78 shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-subtle/12 hover:bg-card/92 hover:shadow-[0_18px_38px_rgba(0,0,0,0.22)]",
+        "rounded-lg border border-subtle/8 bg-card/78 transition-all duration-200 hover:border-subtle/12 hover:bg-card/92",
         isSelected &&
-          "border-primary/22 bg-card shadow-[inset_0_0_0_1px_rgba(78,222,163,0.14),0_20px_42px_rgba(0,0,0,0.22)]"
+          "border-primary/22 bg-card"
       )}
     >
       <CardContent className="space-y-3 pt-3.5">

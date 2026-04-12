@@ -132,8 +132,9 @@ export function ThreadsLayout() {
     }
 
     return (
-      <div className="relative">
+      <div className="relative h-full">
         <ThreadListPanel
+          className="h-full min-h-0 rounded-none py-0"
           connectionState={snapshot.connection}
           onOpenThread={handleOpenThread}
           selectedThreadId={null}

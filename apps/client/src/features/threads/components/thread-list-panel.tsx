@@ -44,12 +44,14 @@ export function ThreadListPanel({
   connectionState,
   onOpenThread,
   selectedThreadId,
-  threadsState
+  threadsState,
+  className
 }: {
   connectionState: LocalConnectionState;
   onOpenThread: (threadId: string) => void;
   selectedThreadId: string | null;
   threadsState: ThreadListState;
+  className?: string;
 }) {
   const { locale, t } = useI18n();
   const [search, setSearch] = useState("");
@@ -80,7 +82,7 @@ export function ThreadListPanel({
   const groupedThreads = groupThreadsByWorkspace(visibleThreads, t);
 
   return (
-    <Card className="min-h-[68svh] overflow-hidden bg-card/65 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+    <Card className={cn("min-h-[68svh] overflow-hidden bg-card/65 shadow-[0_24px_64px_rgba(0,0,0,0.28)]", className)}>
       <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35">
         <div className="min-w-0 space-y-1">
           <p className="font-mono text-[0.7rem] tracking-[0.18em] text-primary/85 uppercase">
@@ -146,8 +148,8 @@ export function ThreadListPanel({
         </div>
       </CardHeader>
 
-      <CardContent className="px-0">
-        <ScrollArea className="h-[56svh] px-4 lg:h-[calc(100svh-22rem)]">
+      <CardContent className="min-h-0 flex-1 px-0">
+        <ScrollArea className="h-full px-4">
           <div className="space-y-5 pb-2">
             {threadsState.kind === "loading" ? (
               <div className="grid gap-3">
@@ -230,9 +232,9 @@ export function ThreadListPanel({
                       {group.items.map((thread) => (
                         <Card
                           className={cn(
-                            "border border-subtle/8 bg-card/78 shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-subtle/12 hover:bg-card/92 hover:shadow-[0_18px_38px_rgba(0,0,0,0.22)]",
+                            "rounded-lg border border-subtle/8 bg-card/78 transition-all duration-200 hover:border-subtle/12 hover:bg-card/92",
                             selectedThreadId === thread.id &&
-                              "border-primary/22 bg-card shadow-[inset_0_0_0_1px_rgba(78,222,163,0.14),0_20px_42px_rgba(0,0,0,0.22)]"
+                              "border-primary/22 bg-card"
                           )}
                           key={thread.id}
                         >
