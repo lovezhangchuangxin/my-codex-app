@@ -285,6 +285,40 @@ export interface TurnInterruptRequest {
 
 export interface TurnInterruptResponse {}
 
+export interface WorkspaceEntry {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  isFile: boolean;
+}
+
+export interface WorkspaceReadDirectoryRequest {
+  threadId: string;
+  path?: string;
+}
+
+export interface WorkspaceReadDirectoryResponse {
+  root: string;
+  path: string;
+  entries: WorkspaceEntry[];
+}
+
+export type WorkspaceFileKind = "text" | "binary" | "unsupported" | "tooLarge";
+
+export interface WorkspaceReadFileRequest {
+  threadId: string;
+  path: string;
+}
+
+export interface WorkspaceReadFileResponse {
+  root: string;
+  path: string;
+  kind: WorkspaceFileKind;
+  sizeBytes?: number;
+  modifiedAtMs?: number;
+  content?: string;
+}
+
 export type RequestRespondRequest =
   | {
       requestId: JsonRpcRequestId;

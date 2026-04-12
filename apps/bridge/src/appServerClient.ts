@@ -100,7 +100,7 @@ interface ThreadReadParams {
 
 interface ThreadReadResult {
   thread: AppServerThread & {
-    turns: AppServerTurn[];
+    turns?: AppServerTurn[];
   };
 }
 
@@ -140,6 +140,26 @@ interface TurnStartResult {
 interface TurnInterruptParams {
   threadId: string;
   turnId: string;
+}
+
+interface FsReadFileParams {
+  path: string;
+}
+
+interface FsReadFileResult {
+  dataBase64: string;
+}
+
+interface FsReadDirectoryParams {
+  path: string;
+}
+
+interface FsReadDirectoryResult {
+  entries: Array<{
+    fileName: string;
+    isDirectory: boolean;
+    isFile: boolean;
+  }>;
 }
 
 interface NotificationEnvelope {
@@ -222,14 +242,11 @@ export class AppServerClient extends EventEmitter {
   }
 
   async readThread(threadId: string): Promise<ThreadReadResult> {
-    if (!this.#initialized) {
-      throw new Error("App-server client must be initialized before use");
-    }
+    return this.#readThread(threadId, true);
+  }
 
-    return this.#sendRequest<ThreadReadParams, ThreadReadResult>("thread/read", {
-      threadId,
-      includeTurns: true
-    });
+  async readThreadSummary(threadId: string): Promise<ThreadReadResult> {
+    return this.#readThread(threadId, false);
   }
 
   async startThread(params: ThreadStartParams): Promise<ThreadStartResult> {
@@ -276,6 +293,26 @@ export class AppServerClient extends EventEmitter {
     await this.#sendRequest<TurnInterruptParams, unknown>("turn/interrupt", params);
   }
 
+  async readFile(path: string): Promise<FsReadFileResult> {
+    if (!this.#initialized) {
+      throw new Error("App-server client must be initialized before use");
+    }
+
+    return this.#sendRequest<FsReadFileParams, FsReadFileResult>("fs/readFile", {
+      path
+    });
+  }
+
+  async readDirectory(path: string): Promise<FsReadDirectoryResult> {
+    if (!this.#initialized) {
+      throw new Error("App-server client must be initialized before use");
+    }
+
+    return this.#sendRequest<FsReadDirectoryParams, FsReadDirectoryResult>("fs/readDirectory", {
+      path
+    });
+  }
+
   sendServerRequestResponse(id: number | string, result: unknown): void {
     this.#write({
       id,
@@ -297,6 +334,17 @@ export class AppServerClient extends EventEmitter {
   #write(payload: Record<string, unknown>): void {
     const message = { jsonrpc: "2.0", ...payload };
     this.#child.stdin.write(`${JSON.stringify(message)}\n`);
+  }
+
+  async #readThread(threadId: string, includeTurns: boolean): Promise<ThreadReadResult> {
+    if (!this.#initialized) {
+      throw new Error("App-server client must be initialized before use");
+    }
+
+    return this.#sendRequest<ThreadReadParams, ThreadReadResult>("thread/read", {
+      threadId,
+      includeTurns
+    });
   }
 
   async #sendRequest<TParams, TResult>(method: string, params: TParams): Promise<TResult> {

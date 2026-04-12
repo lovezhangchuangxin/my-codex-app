@@ -23,7 +23,11 @@ import type {
   TurnInterruptRequest,
   TurnInterruptResponse,
   TurnStartRequest,
-  TurnStartResponse
+  TurnStartResponse,
+  WorkspaceReadDirectoryRequest,
+  WorkspaceReadDirectoryResponse,
+  WorkspaceReadFileRequest,
+  WorkspaceReadFileResponse
 } from "@my-codex-app/protocol";
 
 export interface BridgeClientConfig {
@@ -176,6 +180,34 @@ export class BridgeClient {
     return this.#requestJson<ThreadReadResponse>(
       `/api/threads/${encodeURIComponent(threadId)}`,
       { method: "GET" }
+    );
+  }
+
+  readWorkspaceDirectory(
+    request: WorkspaceReadDirectoryRequest
+  ): Promise<WorkspaceReadDirectoryResponse> {
+    return this.#requestJson<WorkspaceReadDirectoryResponse>(
+      "/api/workspace/directory",
+      {
+        method: "GET"
+      },
+      {
+        threadId: request.threadId,
+        ...(request.path !== undefined ? { path: request.path } : {})
+      }
+    );
+  }
+
+  readWorkspaceFile(request: WorkspaceReadFileRequest): Promise<WorkspaceReadFileResponse> {
+    return this.#requestJson<WorkspaceReadFileResponse>(
+      "/api/workspace/file",
+      {
+        method: "GET"
+      },
+      {
+        threadId: request.threadId,
+        path: request.path
+      }
     );
   }
 

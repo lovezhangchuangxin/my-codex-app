@@ -13,7 +13,9 @@ import type {
   ThreadListRequest,
   ThreadStartRequest,
   TurnInterruptRequest,
-  TurnStartRequest
+  TurnStartRequest,
+  WorkspaceReadDirectoryRequest,
+  WorkspaceReadFileRequest
 } from "@my-codex-app/protocol";
 
 import { AppServerClient } from "./appServerClient";
@@ -21,6 +23,7 @@ import { authenticateBridgeRequest } from "./auth/authenticate";
 import { BridgeAuthError, BridgeAuthService } from "./auth/authService";
 import { DeviceTrustStore } from "./auth/deviceTrustStore";
 import { ThreadService } from "./threadService";
+import { WorkspaceService } from "./workspaceService";
 
 class RateLimiter {
   readonly #entries = new Map<string, { count: number; resetAt: number }>();
@@ -68,6 +71,7 @@ async function main(): Promise<void> {
   await appServerClient.initialize();
   const authService = new BridgeAuthService(new DeviceTrustStore(bridgeStatePath));
   const threadService = new ThreadService(appServerClient);
+  const workspaceService = new WorkspaceService(appServerClient);
   const eventClients = new Set<EventClient>();
   const threadSubscriberCounts = new Map<string, number>();
   const threadUnsubscribeTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -187,6 +191,48 @@ async function main(): Promise<void> {
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, 502);
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/workspace/directory") {
+      try {
+        const threadId = url.searchParams.get("threadId") ?? "";
+        const path = url.searchParams.get("path") ?? undefined;
+        if (threadId.length === 0) {
+          writeJson(response, 400, { error: { message: "Missing threadId" } });
+          return;
+        }
+
+        const payload: WorkspaceReadDirectoryRequest = {
+          threadId,
+          ...(path !== undefined ? { path } : {})
+        };
+        const result = await workspaceService.readDirectory(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/workspace/file") {
+      try {
+        const threadId = url.searchParams.get("threadId") ?? "";
+        const path = url.searchParams.get("path") ?? "";
+        if (threadId.length === 0 || path.length === 0) {
+          writeJson(response, 400, { error: { message: "Missing threadId or path" } });
+          return;
+        }
+
+        const payload: WorkspaceReadFileRequest = {
+          threadId,
+          path
+        };
+        const result = await workspaceService.readFile(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
       }
       return;
     }
@@ -453,6 +499,16 @@ function writeError(
   }
 
   const message = error instanceof Error ? error.message : "Unknown bridge error";
+  const customStatusCode = getCustomStatusCode(error);
+  if (customStatusCode !== null) {
+    writeJson(response, customStatusCode, {
+      error: {
+        message
+      }
+    } satisfies ApiErrorPayload);
+    return;
+  }
+
   console.error(`[bridge] Unhandled error (${statusCode}): ${message}`);
   writeJson(response, statusCode, { error: { message } } satisfies ApiErrorPayload);
 }
@@ -508,6 +564,19 @@ function classifyAppServerError(error: unknown, fallbackStatusCode: number): num
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function getCustomStatusCode(error: unknown): number | null {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    typeof error.statusCode === "number"
+  ) {
+    return error.statusCode;
+  }
+
+  return null;
 }
 
 function logPairingStatus(status: PairingStatusResponse & { pairingCode: string; regenerated?: boolean }): void {

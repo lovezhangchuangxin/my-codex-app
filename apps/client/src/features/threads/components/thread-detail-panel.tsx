@@ -7,6 +7,7 @@ import {
   Copy,
   ExternalLink,
   FileCode2,
+  FolderOpen,
   GalleryHorizontal,
   PanelLeftOpen,
   Search,
@@ -34,6 +35,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PendingRequestList } from "@/features/requests/components/pending-request-list";
 import type { PendingRequestEntry } from "@/features/requests/lib/request-utils";
 import { useRequestDrafts } from "@/features/requests/lib/use-request-drafts";
+import { WorkspaceBrowserSheet } from "@/features/threads/components/workspace-browser-sheet";
 import { useAutoScroll } from "@/features/threads/lib/use-auto-scroll";
 import {
   buildThreadTitle,
@@ -42,6 +44,7 @@ import {
   getStatusTone
 } from "@/features/threads/lib/thread-utils";
 import type { FlatThreadItem } from "@/features/threads/lib/thread-utils";
+import { toWorkspaceRelativePath } from "@/features/threads/lib/workspace-utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { cn } from "@/lib/utils";
 import type { ThreadDetailState, ThreadListState } from "@my-codex-app/sdk";
@@ -223,6 +226,27 @@ function ReadyThreadDetail({
   }));
   const flatItems = flattenTurnItems(thread.turns);
   const scrollRef = useAutoScroll<HTMLDivElement>([flatItems.length, thread.updatedAt]);
+  const [workspaceBrowserState, setWorkspaceBrowserState] = useState<{
+    open: boolean;
+    requestedPath: string | null;
+    requestKey: number;
+  }>({
+    open: false,
+    requestedPath: null,
+    requestKey: 0
+  });
+
+  function resolveWorkspacePath(candidatePath: string): string | null {
+    return toWorkspaceRelativePath(thread.cwd, candidatePath);
+  }
+
+  function openWorkspaceBrowser(requestedPath: string | null = null) {
+    setWorkspaceBrowserState((current) => ({
+      open: true,
+      requestedPath,
+      requestKey: current.requestKey + 1
+    }));
+  }
 
   return (
     <Card className="flex h-full flex-col overflow-hidden rounded-none bg-card/68 py-0 gap-0">
@@ -260,6 +284,16 @@ function ReadyThreadDetail({
                 threadsState={threadsState}
               />
             ) : null}
+            <Button
+              onClick={() => {
+                openWorkspaceBrowser();
+              }}
+              size="sm"
+              variant="outline"
+            >
+              <FolderOpen className="size-3.5" />
+              {t("detail.workspace.open")}
+            </Button>
             <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
               {thread.modelProvider}
             </Badge>
@@ -331,7 +365,14 @@ function ReadyThreadDetail({
         ) : (
           <div className="mx-auto max-w-3xl space-y-4 pb-4">
             {flatItems.map((item) => (
-              <FlatItemRenderer key={`${item.turnId}-${item.id}`} item={item} />
+              <FlatItemRenderer
+                item={item}
+                key={`${item.turnId}-${item.id}`}
+                onOpenWorkspacePath={(path) => {
+                  openWorkspaceBrowser(path);
+                }}
+                resolveWorkspacePath={resolveWorkspacePath}
+              />
             ))}
           </div>
         )}
@@ -398,6 +439,20 @@ function ReadyThreadDetail({
           )}
         </form>
       </div>
+
+      <WorkspaceBrowserSheet
+        cwd={thread.cwd}
+        onOpenChange={(nextOpen) => {
+          setWorkspaceBrowserState((current) => ({
+            ...current,
+            open: nextOpen
+          }));
+        }}
+        open={workspaceBrowserState.open}
+        requestKey={workspaceBrowserState.requestKey}
+        requestedPath={workspaceBrowserState.requestedPath}
+        threadId={thread.id}
+      />
     </Card>
   );
 }
@@ -406,7 +461,15 @@ function ReadyThreadDetail({
 // Flat item renderer
 // ---------------------------------------------------------------------------
 
-function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
+function FlatItemRenderer({
+  item,
+  onOpenWorkspacePath,
+  resolveWorkspacePath
+}: {
+  item: FlatThreadItem;
+  onOpenWorkspacePath: (path: string) => void;
+  resolveWorkspacePath: (candidatePath: string) => string | null;
+}) {
   const { t } = useI18n();
 
   switch (item.type) {
@@ -438,7 +501,13 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
     case "commandExecution":
       return <CommandCard item={item} />;
     case "fileChange":
-      return <FileChangeCard item={item} />;
+      return (
+        <FileChangeCard
+          item={item}
+          onOpenWorkspacePath={onOpenWorkspacePath}
+          resolveWorkspacePath={resolveWorkspacePath}
+        />
+      );
     case "webSearch":
       return (
         <ToolLabel
@@ -617,7 +686,15 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
   );
 }
 
-function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChange" }> }) {
+function FileChangeCard({
+  item,
+  onOpenWorkspacePath,
+  resolveWorkspacePath
+}: {
+  item: Extract<ThreadItem, { type: "fileChange" }>;
+  onOpenWorkspacePath: (path: string) => void;
+  resolveWorkspacePath: (candidatePath: string) => string | null;
+}) {
   const { t } = useI18n();
   return (
     <div className="lg:ml-9 space-y-1.5">
@@ -635,6 +712,22 @@ function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChang
               <span className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
                 {change.kind}
               </span>
+            ) : null}
+            {resolveWorkspacePath(change.path) ? (
+              <Button
+                onClick={() => {
+                  const workspacePath = resolveWorkspacePath(change.path);
+                  if (!workspacePath) {
+                    return;
+                  }
+                  onOpenWorkspacePath(workspacePath);
+                }}
+                size="xs"
+                type="button"
+                variant="ghost"
+              >
+                {t("detail.workspace.action.openFile")}
+              </Button>
             ) : null}
           </div>
           {change.diff ? (
