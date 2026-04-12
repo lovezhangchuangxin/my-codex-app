@@ -2,7 +2,9 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import {
   ArrowLeft,
   Brain,
+  Check,
   ChevronDown,
+  Copy,
   ExternalLink,
   FileCode2,
   GalleryHorizontal,
@@ -27,6 +29,7 @@ import {
   SheetTitle,
   SheetTrigger
 } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { PendingRequestList } from "@/features/requests/components/pending-request-list";
 import type { PendingRequestEntry } from "@/features/requests/lib/request-utils";
@@ -245,9 +248,7 @@ function ReadyThreadDetail({
                   />
                 </div>
               </div>
-              <p className="truncate font-mono text-xs text-muted-foreground md:text-sm">
-                {thread.cwd}
-              </p>
+              <CwdPathDisplay cwd={thread.cwd} />
             </div>
           </div>
 
@@ -1036,6 +1037,49 @@ function StructuredUserInput({
       </p>
       <p className="mt-1 break-words font-mono text-sm leading-6 text-foreground">{value}</p>
     </div>
+  );
+}
+
+function CopyPathButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <button
+      className="shrink-0 rounded-md p-1 text-popover-foreground/50 transition-colors hover:bg-subtle/10 hover:text-popover-foreground"
+      onClick={(e) => {
+        e.stopPropagation();
+        void navigator.clipboard.writeText(value).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+      type="button"
+    >
+      {copied ? <Check className="size-3 text-primary" /> : <Copy className="size-3" />}
+    </button>
+  );
+}
+
+function CwdPathDisplay({ cwd }: { cwd: string }) {
+  const displayName = cwd ? cwd.split(/[\\/]/).filter(Boolean).pop() || cwd : cwd;
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          aria-label="Show full working directory path"
+          className="truncate font-mono text-xs text-muted-foreground transition-colors hover:text-foreground md:text-sm"
+          type="button"
+        >
+          {displayName}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto max-w-sm flex-row items-center gap-2 p-2.5">
+        <p className="min-w-0 break-all font-mono text-[0.7rem] leading-relaxed">
+          {cwd}
+        </p>
+        <CopyPathButton value={cwd} />
+      </PopoverContent>
+    </Popover>
   );
 }
 
