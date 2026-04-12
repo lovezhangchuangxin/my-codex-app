@@ -164,11 +164,10 @@ export function groupThreadsByWorkspace(threads: ThreadSummary[]) {
 }
 
 export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
-  const chronological = [...turns].reverse();
   const items: FlatThreadItem[] = [];
 
-  for (let turnIndex = 0; turnIndex < chronological.length; turnIndex++) {
-    const turn = chronological[turnIndex]!;
+  for (let turnIndex = 0; turnIndex < turns.length; turnIndex++) {
+    const turn = turns[turnIndex]!;
     for (let itemIndex = 0; itemIndex < turn.items.length; itemIndex++) {
       const base = turn.items[itemIndex]!;
       items.push({

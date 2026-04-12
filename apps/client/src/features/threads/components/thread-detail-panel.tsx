@@ -419,6 +419,9 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
         </AgentMessageBlock>
       );
     case "reasoning":
+      if (item.summary.length === 0 && item.content.length === 0) {
+        return null;
+      }
       return <ThinkingBlock item={item} />;
     case "commandExecution":
       return <CommandCard item={item} />;
