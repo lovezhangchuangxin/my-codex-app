@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useRegisterSW } from "virtual:pwa-register/react";
 import { toast } from "sonner";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 export function PwaUpdatePrompt() {
+  const { t } = useI18n();
   const intervalRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const shownRef = useRef(false);
 
   const { updateServiceWorker, needRefresh } = useRegisterSW({
     onRegisteredSW(_swUrl: string, registration: ServiceWorkerRegistration | undefined) {
@@ -13,25 +16,25 @@ export function PwaUpdatePrompt() {
     }
   });
 
-  const handleUpdate = useCallback(() => {
-    void updateServiceWorker(true);
-  }, [updateServiceWorker]);
-
   useEffect(() => {
-    if (!needRefresh) return;
+    if (!needRefresh) {
+      shownRef.current = false;
+      return;
+    }
+    if (shownRef.current) return;
+    shownRef.current = true;
 
-    const id = toast.info("A new version is available", {
+    const id = toast.info(t("pwa.newVersion"), {
       duration: Infinity,
       action: {
-        label: "Update",
-        onClick: handleUpdate
+        label: t("pwa.update"),
+        onClick: () => {
+          toast.dismiss(id);
+          void updateServiceWorker(true);
+        }
       }
     });
-
-    return () => {
-      toast.dismiss(id);
-    };
-  }, [needRefresh, handleUpdate]);
+  }, [needRefresh]);
 
   useEffect(() => {
     return () => {
