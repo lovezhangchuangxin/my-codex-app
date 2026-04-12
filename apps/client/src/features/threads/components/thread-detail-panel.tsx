@@ -462,7 +462,7 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
 function UserMessageBubble({ children }: { children: import("react").ReactNode }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary/12 px-4 py-3">
+      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-white/[0.06] px-4 py-3">
         <div className="space-y-2">
           {children}
         </div>
