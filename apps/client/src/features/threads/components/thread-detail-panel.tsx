@@ -529,41 +529,65 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
 
 function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecution" }> }) {
   const displayCommand = getCommandDisplay(item.command);
+  const commandExpanded = displayCommand !== item.command;
+  const hasDetails = commandExpanded || item.aggregatedOutput;
 
   return (
-    <div className="lg:ml-9 overflow-hidden rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
-      <div className="flex items-center gap-2 px-3 py-2">
-        <SquareTerminal className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
-          {displayCommand}
-        </span>
-        {item.durationMs ? (
-          <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
-        ) : null}
-        {item.status === "inProgress" || item.status === "failed" ? (
-          <StatusBadge label={item.status} />
-        ) : null}
-      </div>
-      {item.aggregatedOutput ? (
-        <Collapsible>
-          <CollapsibleTrigger asChild>
-            <div className="border-t border-white/4 px-3 py-1.5">
-              <Button size="xs" variant="ghost" className="text-muted-foreground">
-                Show output
-              </Button>
-            </div>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="border-t border-white/4 p-3">
-              <RichTerminalOutput
-                className="rounded-lg border border-white/8 bg-black/50"
-                content={item.aggregatedOutput}
-              />
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+    <Collapsible className="lg:ml-9 overflow-hidden rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
+      <CollapsibleTrigger asChild>
+        <button
+          className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
+          type="button"
+        >
+          <SquareTerminal className="size-3.5 shrink-0 text-muted-foreground" />
+          <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+            {displayCommand}
+          </span>
+          {item.durationMs ? (
+            <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
+          ) : null}
+          {item.status === "inProgress" || item.status === "failed" ? (
+            <StatusBadge label={item.status} />
+          ) : null}
+          {hasDetails ? (
+            <ChevronDown className="size-3 shrink-0 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+          ) : null}
+        </button>
+      </CollapsibleTrigger>
+      {hasDetails ? (
+        <CollapsibleContent>
+          <div className="space-y-0">
+            {commandExpanded ? (
+              <div className="border-t border-white/4 px-3 py-2">
+                <p className="whitespace-pre-wrap break-all font-mono text-xs leading-5 text-foreground/80">
+                  {item.command}
+                </p>
+              </div>
+            ) : null}
+            {item.aggregatedOutput ? (
+              <div className="border-t border-white/4 p-3">
+                <Collapsible>
+                  <CollapsibleTrigger asChild>
+                    <Button size="xs" variant="ghost" className="text-muted-foreground">
+                      <ChevronDown className="mr-0.5 size-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                      Output
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="pt-2">
+                      <RichTerminalOutput
+                        className="rounded-lg border border-white/8 bg-black/50"
+                        content={item.aggregatedOutput}
+                      />
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            ) : null}
+          </div>
+        </CollapsibleContent>
       ) : null}
-    </div>
+    </Collapsible>
   );
 }
 
