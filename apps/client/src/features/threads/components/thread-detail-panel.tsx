@@ -107,7 +107,6 @@ export function ThreadDetailPanel({
   if (detailState.kind === "idle") {
     return (
       <EmptyDetailState
-        isDesktop={isDesktop}
         message={t("detail.empty.noThread.message")}
         title={t("detail.empty.noThread.title")}
       />
@@ -116,7 +115,7 @@ export function ThreadDetailPanel({
 
   if (detailState.kind === "loading") {
     return (
-      <Card className="min-h-[68svh] bg-card/65 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+      <Card className="h-full rounded-none bg-card/65">
         <CardContent className="space-y-4 pt-5">
           <div className="h-10 w-48 rounded-full bg-muted/70" />
           <div className="h-5 w-full rounded-full bg-muted/70" />
@@ -133,7 +132,7 @@ export function ThreadDetailPanel({
 
   if (detailState.kind === "error") {
     return (
-      <Card className="min-h-[68svh] bg-destructive/6 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
+      <Card className="h-full rounded-none bg-destructive/6">
         <CardContent className="space-y-4 pt-5">
           {!isDesktop ? (
             <Button onClick={onBack} size="sm" variant="ghost">
@@ -223,7 +222,7 @@ function ReadyThreadDetail({
   const scrollRef = useAutoScroll<HTMLDivElement>([flatItems.length, thread.updatedAt]);
 
   return (
-    <Card className="flex h-full flex-col overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.3)]">
+    <Card className="flex h-full flex-col overflow-hidden rounded-none bg-card/68 py-0 gap-0">
       {/* Header */}
       <div className="shrink-0 border-b border-subtle/6 bg-background/35 px-4 py-3.5 md:px-5">
         <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
@@ -325,7 +324,6 @@ function ReadyThreadDetail({
       >
         {flatItems.length === 0 ? (
           <EmptyDetailState
-            isDesktop={isDesktop}
             message={t("detail.empty.noMessages.message")}
             title={t("detail.empty.noMessages.title")}
           />
@@ -741,17 +739,15 @@ function MobileThreadSwitcher({
 // ---------------------------------------------------------------------------
 
 function EmptyDetailState({
-  isDesktop,
   message,
   title
 }: {
-  isDesktop: boolean;
   message: string;
   title: string;
 }) {
   return (
-    <Card className="min-h-[68svh] bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-      <CardContent className={cn("grid min-h-[68svh] place-items-center p-6", !isDesktop && "min-h-[60svh]")}>
+    <Card className="h-full rounded-none bg-card/68">
+      <CardContent className="grid h-full place-items-center p-6">
         <div className="max-w-md space-y-3 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-primary/12 text-primary">
             <Sparkles className="size-6" />

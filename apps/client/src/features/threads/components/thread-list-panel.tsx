@@ -82,7 +82,7 @@ export function ThreadListPanel({
   const groupedThreads = groupThreadsByWorkspace(visibleThreads, t);
 
   return (
-    <Card className={cn("min-h-[68svh] overflow-hidden bg-card/65 shadow-[0_24px_64px_rgba(0,0,0,0.28)]", className)}>
+    <Card className={cn("h-full overflow-hidden bg-card/65", className)}>
       <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35">
         <div className="min-w-0 space-y-1">
           <p className="font-mono text-[0.7rem] tracking-[0.18em] text-primary/85 uppercase">
