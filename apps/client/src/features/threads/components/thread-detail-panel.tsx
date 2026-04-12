@@ -529,30 +529,21 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
 
 function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecution" }> }) {
   const displayCommand = getCommandDisplay(item.command);
-  const commandCwd = getCommandCwdDisplay(item.cwd);
 
   return (
-    <div className="ml-9 overflow-hidden rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
+    <div className="lg:ml-9 overflow-hidden rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
       <div className="flex items-center gap-2 px-3 py-2">
         <SquareTerminal className="size-3.5 shrink-0 text-muted-foreground" />
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
           {displayCommand}
         </span>
-        {item.exitCode !== undefined ? (
-          <CommandMetaBadge label={`exit ${item.exitCode}`} />
-        ) : null}
         {item.durationMs ? (
           <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
         ) : null}
-        <StatusBadge label={item.status} />
+        {item.status === "inProgress" || item.status === "failed" ? (
+          <StatusBadge label={item.status} />
+        ) : null}
       </div>
-      {commandCwd.shortPath ? (
-        <div className="border-t border-white/4 px-3 py-1.5">
-          <p className="truncate font-mono text-[0.7rem] leading-5 text-muted-foreground/88">
-            {commandCwd.shortPath}
-          </p>
-        </div>
-      ) : null}
       {item.aggregatedOutput ? (
         <Collapsible>
           <CollapsibleTrigger asChild>
@@ -1016,29 +1007,6 @@ function getCommandDisplay(command: string): string {
   return unwrappedBody;
 }
 
-function getCommandCwdDisplay(cwd: string): {
-  fullPath: string | null;
-  shortPath: string | null;
-} {
-  const trimmed = cwd.trim();
-  if (trimmed.length === 0) {
-    return { fullPath: null, shortPath: null };
-  }
-
-  const segments = trimmed.split(/[/\\]+/).filter(Boolean);
-  if (segments.length === 0) {
-    return { fullPath: trimmed, shortPath: trimmed };
-  }
-
-  if (segments.length === 1) {
-    return { fullPath: trimmed, shortPath: segments[0] ?? trimmed };
-  }
-
-  return {
-    fullPath: trimmed,
-    shortPath: `${segments.at(-2)}/${segments.at(-1)}`
-  };
-}
 
 function unwrapShellCommandBody(body: string): string | null {
   const trimmed = body.trim();

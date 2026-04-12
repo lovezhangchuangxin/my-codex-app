@@ -78,9 +78,13 @@ interface AppServerRequestEnvelope {
   params?: unknown;
 }
 
+type CommandExecutionItem = Extract<ThreadItem, { type: "commandExecution" }>;
+type CachedCommandItem = { turnId: string; item: CommandExecutionItem };
+
 export class ThreadService {
   readonly #pendingRequestState = new PendingRequestState();
   readonly #requestMethodById = new Map<string, string>();
+  readonly #commandItemCache = new Map<string, Map<string, CachedCommandItem>>();
 
   constructor(private readonly appServerClient: AppServerClient) {}
 
@@ -101,8 +105,9 @@ export class ThreadService {
 
   async readThread(threadId: string): Promise<ThreadReadResponse> {
     const result = await this.appServerClient.readThread(threadId);
+    const thread = this.#toThreadDetail(result.thread);
     return {
-      thread: this.#toThreadDetail(result.thread)
+      thread: this.#mergeCachedCommandItems(threadId, thread)
     };
   }
 
@@ -201,6 +206,7 @@ export class ThreadService {
     const onNotification = (notification: { method: string; params?: unknown }) => {
       const event = this.#toBridgeEvent(notification.method, notification.params);
       if (event) {
+        this.#cacheCommandEvent(event);
         listener(event);
       }
     };
@@ -259,6 +265,61 @@ export class ThreadService {
         : {}),
       items: turn.items.map((item) => this.#toThreadItem(item))
     };
+  }
+
+  #cacheCommandEvent(event: BridgeEvent): void {
+    if (event.type !== "itemStarted" && event.type !== "itemCompleted") {
+      return;
+    }
+
+    if (event.item.type !== "commandExecution") {
+      return;
+    }
+
+    const { threadId, turnId, item } = event;
+    let threadCache = this.#commandItemCache.get(threadId);
+    if (!threadCache) {
+      threadCache = new Map();
+      this.#commandItemCache.set(threadId, threadCache);
+    }
+
+    const existing = threadCache.get(item.id);
+    // itemCompleted has fuller data (output, exitCode, duration) — always prefer it
+    if (existing && event.type === "itemStarted") {
+      return;
+    }
+
+    threadCache.set(item.id, { turnId, item });
+  }
+
+  #mergeCachedCommandItems(threadId: string, thread: ThreadDetail): ThreadDetail {
+    const threadCache = this.#commandItemCache.get(threadId);
+    if (!threadCache || threadCache.size === 0) {
+      return thread;
+    }
+
+    const turnMap = new Map(thread.turns.map((turn) => [turn.id, turn]));
+    const itemIdsInTurns = new Set(thread.turns.flatMap((turn) => turn.items.map((item) => item.id)));
+
+    for (const [itemId, cached] of threadCache) {
+      // Only insert items not already present in the turn
+      if (itemIdsInTurns.has(itemId)) {
+        continue;
+      }
+
+      const turn = turnMap.get(cached.turnId);
+      if (!turn) {
+        continue;
+      }
+
+      const updatedTurn: TurnDetail = {
+        ...turn,
+        items: [...turn.items, cached.item]
+      };
+      turnMap.set(cached.turnId, updatedTurn);
+    }
+
+    return { ...thread, turns: thread.turns.map((turn) => turnMap.get(turn.id) ?? turn) };
   }
 
   #toBridgeEvent(method: string, params: unknown): BridgeEvent | null {
