@@ -1,6 +1,7 @@
 import type { ThreadSummary } from "@my-codex-app/protocol";
 
 import { ThreadCard } from "@/components/threads/thread-card";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 export function WorkspaceGroup({
   isSelected,
@@ -13,6 +14,8 @@ export function WorkspaceGroup({
   threads: ThreadSummary[];
   workspace: string;
 }) {
+  const { t } = useI18n();
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between gap-3">
@@ -25,7 +28,7 @@ export function WorkspaceGroup({
             {workspace}
           </h3>
           <p className="mt-1 font-mono text-[0.7rem] text-muted-foreground uppercase">
-            {threads.length} thread{threads.length === 1 ? "" : "s"}
+            {t("thread.list.workspaceCount", { count: threads.length })}
           </p>
         </div>
       </div>

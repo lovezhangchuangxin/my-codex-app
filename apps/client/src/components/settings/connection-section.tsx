@@ -2,12 +2,14 @@ import { RefreshCcw } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { bridgeBaseUrl } from "@/lib/env";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { formatConnectionKind } from "@/lib/runtime/connection-utils";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 import { cn } from "@/lib/utils";
 
 export function ConnectionSection() {
+  const { t } = useI18n();
   const runtime = useRuntime();
   const snapshot = useRuntimeSnapshot();
   const { kind, message } = snapshot.connection;
@@ -22,13 +24,15 @@ export function ConnectionSection() {
   return (
     <div className="space-y-3">
       <h3 className="font-mono text-xs tracking-[0.18em] text-muted-foreground uppercase">
-        Connection
+        {t("settings.connection.title")}
       </h3>
 
-      <div className="space-y-2 rounded-xl border border-white/8 bg-background/42 p-3">
+      <div className="space-y-2 rounded-xl border border-subtle/8 bg-background/42 p-3">
         <div className="flex items-center gap-2">
           <span className={cn("size-2 rounded-full", color)} />
-          <span className="text-sm font-medium text-foreground">{formatConnectionKind(kind)}</span>
+          <span className="text-sm font-medium text-foreground">
+            {formatConnectionKind(kind, t)}
+          </span>
         </div>
         <p className="truncate font-mono text-xs text-muted-foreground">{bridgeBaseUrl}</p>
         {message ? (
@@ -43,7 +47,7 @@ export function ConnectionSection() {
           variant="outline"
         >
           <RefreshCcw className="size-3.5" />
-          Reconnect
+          {t("connection.action.reconnect")}
         </Button>
       </div>
     </div>

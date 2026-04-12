@@ -19,20 +19,25 @@ export function detectDeviceInfo(): {
 } {
   const ua = navigator.userAgent;
 
-  const isIOS = /iPhone|iPad|iPod/i.test(ua);
+  const isIPhone = /iPhone/i.test(ua);
+  const isIPad = /iPad/i.test(ua);
+  const isIOS = isIPhone || isIPad || /iPod/i.test(ua);
   const isAndroid = /Android/i.test(ua);
   const isMac = /Mac/i.test(ua);
   const isWindows = /Windows/i.test(ua);
 
   let platform: string;
   let browser: string;
+  let label: string;
 
   if (isIOS) {
     platform = "ios";
     browser = ua.includes("CriOS") ? "chrome" : "safari";
+    label = `${isIPhone ? "iPhone" : isIPad ? "iPad" : "iOS"} ${toBrowserLabel(browser)}`;
   } else if (isAndroid) {
     platform = "android";
     browser = ua.includes("Chrome") ? "chrome" : "browser";
+    label = `Android ${toBrowserLabel(browser)}`;
   } else if (isMac) {
     platform = "macos";
     browser = ua.includes("Chrome")
@@ -40,6 +45,7 @@ export function detectDeviceInfo(): {
       : ua.includes("Firefox")
         ? "firefox"
         : "safari";
+    label = `macOS ${toBrowserLabel(browser)}`;
   } else if (isWindows) {
     platform = "windows";
     browser = ua.includes("Chrome")
@@ -47,13 +53,29 @@ export function detectDeviceInfo(): {
       : ua.includes("Firefox")
         ? "firefox"
         : "edge";
+    label = `Windows ${toBrowserLabel(browser)}`;
   } else {
     platform = "linux";
     browser = "browser";
+    label = `Linux ${toBrowserLabel(browser)}`;
   }
 
-  const label = `${platform} ${browser}`;
   const deviceId = crypto.randomUUID?.() ?? randomUUIDFallback();
 
   return { label, platform: `${platform}-${browser}`, deviceId };
+}
+
+function toBrowserLabel(browser: string) {
+  switch (browser) {
+    case "chrome":
+      return "Chrome";
+    case "safari":
+      return "Safari";
+    case "firefox":
+      return "Firefox";
+    case "edge":
+      return "Edge";
+    default:
+      return "Browser";
+  }
 }

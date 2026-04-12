@@ -43,7 +43,7 @@ export function MarkdownContent({
 
             if (isInlineCode) {
               return (
-                <code className="rounded-md border border-white/8 bg-white/6 px-1.5 py-0.5 font-mono text-[0.82em] text-foreground">
+                <code className="rounded-md border border-subtle/8 bg-subtle/6 px-1.5 py-0.5 font-mono text-[0.82em] text-foreground">
                   {renderedChildren}
                 </code>
               );

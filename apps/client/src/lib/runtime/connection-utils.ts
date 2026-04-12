@@ -1,21 +1,26 @@
-export function formatConnectionKind(kind: string): string {
+import { translateEnglish } from "@/lib/i18n/catalog";
+
+export function formatConnectionKind(
+  kind: string,
+  t: (key: string) => string = translateEnglish
+): string {
   switch (kind) {
     case "authenticated":
-      return "Connected";
+      return t("connection.status.authenticated");
     case "refreshing":
-      return "Refreshing...";
+      return t("connection.status.refreshing");
     case "reconnecting":
-      return "Reconnecting...";
+      return t("connection.status.reconnecting");
     case "resyncing":
-      return "Resyncing...";
+      return t("connection.status.resyncing");
     case "disconnected":
-      return "Disconnected";
+      return t("connection.status.disconnected");
     case "unpaired":
-      return "Not paired";
+      return t("connection.status.unpaired");
     case "expired":
-      return "Session expired";
+      return t("connection.status.expired");
     case "revoked":
-      return "Device revoked";
+      return t("connection.status.revoked");
     default:
       return kind;
   }

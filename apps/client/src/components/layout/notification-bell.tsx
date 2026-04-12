@@ -1,9 +1,11 @@
 import { Bell } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 
 export function NotificationBell({ onClick }: { onClick: () => void }) {
+  const { t } = useI18n();
   const snapshot = useRuntimeSnapshot();
 
   const pendingCount =
@@ -13,6 +15,7 @@ export function NotificationBell({ onClick }: { onClick: () => void }) {
 
   return (
     <Button
+      aria-label={t("header.openRequests")}
       className="relative"
       onClick={onClick}
       size="icon-sm"

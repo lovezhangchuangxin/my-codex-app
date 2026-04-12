@@ -4,6 +4,7 @@ import type {
   RequestPermissionProfile,
   ThreadSummary
 } from "@my-codex-app/protocol";
+import { translateEnglish } from "@/lib/i18n/catalog";
 
 export interface PendingRequestEntry {
   request: PendingRequest;
@@ -29,46 +30,62 @@ export function buildPendingRequestEntries(threads: ThreadSummary[]): PendingReq
     .sort((left, right) => right.request.requestedAt - left.request.requestedAt);
 }
 
-export function getRequestKindLabel(request: PendingRequest) {
-  switch (request.kind) {
+export function formatPendingRequestKind(
+  kind: PendingRequest["kind"],
+  t: (key: string) => string = translateEnglish
+) {
+  switch (kind) {
     case "command":
-      return "Command approval";
+      return t("request.kind.command");
     case "fileChange":
-      return "File change";
+      return t("request.kind.fileChange");
     case "permissions":
-      return "Permission request";
+      return t("request.kind.permissions");
     case "userInput":
-      return "User input";
+      return t("request.kind.userInput");
   }
 }
 
-export function getRequestDescription(request: PendingRequest) {
+export function getRequestKindLabel(
+  request: PendingRequest,
+  t: (key: string) => string = translateEnglish
+) {
+  return formatPendingRequestKind(request.kind, t);
+}
+
+export function getRequestDescription(
+  request: PendingRequest,
+  t: (key: string) => string = translateEnglish
+) {
   switch (request.kind) {
     case "command":
-      return request.reason ?? "Codex requested permission to run a command.";
+      return request.reason ?? t("request.description.commandFallback");
     case "fileChange":
-      return request.reason ?? "Codex proposed a filesystem change.";
+      return request.reason ?? t("request.description.fileChangeFallback");
     case "permissions":
-      return request.reason ?? "Codex asked for additional execution permissions.";
+      return request.reason ?? t("request.description.permissionsFallback");
     case "userInput":
-      return "Codex needs more structured input to continue the turn.";
+      return t("request.description.userInputFallback");
   }
 }
 
-export function describePermissionProfile(profile: RequestPermissionProfile) {
+export function describePermissionProfile(
+  profile: RequestPermissionProfile,
+  t: (key: string, params?: Record<string, string>) => string = translateEnglish
+) {
   const details: string[] = [];
 
   if (profile.network?.enabled) {
-    details.push("Network access");
+    details.push(t("request.permission.networkAccess"));
   }
 
   if (profile.fileSystem?.read?.length) {
-    details.push(`Read: ${profile.fileSystem.read.join(", ")}`);
+    details.push(t("request.permission.read", { paths: profile.fileSystem.read.join(", ") }));
   }
 
   if (profile.fileSystem?.write?.length) {
-    details.push(`Write: ${profile.fileSystem.write.join(", ")}`);
+    details.push(t("request.permission.write", { paths: profile.fileSystem.write.join(", ") }));
   }
 
-  return details.length > 0 ? details : ["Custom permissions requested"];
+  return details.length > 0 ? details : [t("request.permission.custom")];
 }

@@ -1,12 +1,6 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ThreadStatusFilter } from "@/features/threads/lib/thread-utils";
-
-const statusFilters: Array<{ label: string; value: ThreadStatusFilter }> = [
-  { label: "All", value: "all" },
-  { label: "Active", value: "active" },
-  { label: "Pending", value: "waitingApproval" },
-  { label: "Idle", value: "idle" }
-];
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 export function ThreadStatusTabs({
   value,
@@ -15,6 +9,14 @@ export function ThreadStatusTabs({
   value: ThreadStatusFilter;
   onChange: (value: ThreadStatusFilter) => void;
 }) {
+  const { t } = useI18n();
+  const statusFilters: Array<{ label: string; value: ThreadStatusFilter }> = [
+    { label: t("thread.filter.all"), value: "all" },
+    { label: t("thread.filter.active"), value: "active" },
+    { label: t("thread.filter.waitingApproval"), value: "waitingApproval" },
+    { label: t("thread.filter.idle"), value: "idle" }
+  ];
+
   return (
     <Tabs
       className="min-w-0"

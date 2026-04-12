@@ -23,12 +23,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ThreadListState } from "@my-codex-app/sdk";
 import type { LocalConnectionState } from "@my-codex-app/protocol";
+import { formatPendingRequestKind } from "@/features/requests/lib/request-utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 import {
   buildThreadTitle,
   formatRelativeTime,
   formatStatusLabel,
   formatTimestamp,
+  getStatusTone,
   getWorkspaceLabel,
   groupThreadsByWorkspace,
   matchesThreadFilter,
@@ -36,14 +39,6 @@ import {
   type ThreadStatusFilter
 } from "@/features/threads/lib/thread-utils";
 import { cn } from "@/lib/utils";
-
-const statusFilters: Array<{ label: string; value: ThreadStatusFilter }> = [
-  { label: "All", value: "all" },
-  { label: "Active", value: "active" },
-  { label: "Waiting approval", value: "waitingApproval" },
-  { label: "Waiting input", value: "waitingInput" },
-  { label: "Idle", value: "idle" }
-];
 
 export function ThreadListPanel({
   connectionState,
@@ -56,9 +51,17 @@ export function ThreadListPanel({
   selectedThreadId: string | null;
   threadsState: ThreadListState;
 }) {
+  const { locale, t } = useI18n();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<ThreadStatusFilter>("all");
   const deferredSearch = useDeferredValue(search);
+  const statusFilters: Array<{ label: string; value: ThreadStatusFilter }> = [
+    { label: t("thread.filter.all"), value: "all" },
+    { label: t("thread.filter.active"), value: "active" },
+    { label: t("thread.filter.waitingApproval"), value: "waitingApproval" },
+    { label: t("thread.filter.waitingInput"), value: "waitingInput" },
+    { label: t("thread.filter.idle"), value: "idle" }
+  ];
 
   const visibleThreads =
     threadsState.kind === "ready"
@@ -74,32 +77,32 @@ export function ThreadListPanel({
         ).length
       : 0;
 
-  const groupedThreads = groupThreadsByWorkspace(visibleThreads);
+  const groupedThreads = groupThreadsByWorkspace(visibleThreads, t);
 
   return (
     <Card className="min-h-[68svh] overflow-hidden bg-card/65 shadow-[0_24px_64px_rgba(0,0,0,0.28)]">
-      <CardHeader className="gap-4 border-b border-white/6 bg-background/35">
+      <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35">
         <div className="min-w-0 space-y-1">
           <p className="font-mono text-[0.7rem] tracking-[0.18em] text-primary/85 uppercase">
-            Active sessions
+            {t("thread.list.eyebrow")}
           </p>
-          <CardTitle className="text-xl tracking-[-0.04em]">Recent threads</CardTitle>
+          <CardTitle className="text-xl tracking-[-0.04em]">{t("thread.list.title")}</CardTitle>
           <CardDescription>
-            Browse active Codex work by workspace, status, and last activity.
+            {t("thread.list.description")}
           </CardDescription>
         </div>
 
         <div className="min-w-0 space-y-3">
           {threadsState.kind === "ready" ? (
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="border border-white/6 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="secondary">
-                {visibleThreads.length} visible
+              <Badge className="border border-subtle/6 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="secondary">
+                {t("thread.list.badge.visibleCount", { count: visibleThreads.length })}
               </Badge>
-              <Badge className="border border-white/6 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="secondary">
-                {filterCount} in filter
+              <Badge className="border border-subtle/6 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="secondary">
+                {t("thread.list.badge.filterCount", { count: filterCount })}
               </Badge>
-              <Badge className="border border-white/6 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="secondary">
-                {totalThreads} loaded
+              <Badge className="border border-subtle/6 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="secondary">
+                {t("thread.list.badge.loadedCount", { count: totalThreads })}
               </Badge>
             </div>
           ) : null}
@@ -111,7 +114,7 @@ export function ThreadListPanel({
               onChange={(event) => {
                 setSearch(event.target.value);
               }}
-              placeholder="Query threads or metadata"
+              placeholder={t("thread.list.searchPlaceholder")}
               value={search}
             />
           </div>
@@ -167,7 +170,7 @@ export function ThreadListPanel({
             {threadsState.kind === "error" ? (
               <Card className="bg-destructive/8">
                 <CardContent className="space-y-2 pt-4">
-                  <p className="font-medium text-destructive">Unable to load thread list</p>
+                  <p className="font-medium text-destructive">{t("thread.list.error.loadTitle")}</p>
                   <p className="text-sm text-muted-foreground">{threadsState.message}</p>
                 </CardContent>
               </Card>
@@ -180,10 +183,10 @@ export function ThreadListPanel({
                     <Search className="size-5" />
                   </div>
                   <p className="font-heading text-xl tracking-[-0.04em]">
-                    {idleThreadListTitle(connectionState)}
+                    {idleThreadListTitle(connectionState, t)}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {idleThreadListMessage(connectionState)}
+                    {idleThreadListMessage(connectionState, t)}
                   </p>
                 </CardContent>
               </Card>
@@ -195,10 +198,11 @@ export function ThreadListPanel({
                   <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-accent text-primary">
                     <Search className="size-5" />
                   </div>
-                  <p className="font-heading text-xl tracking-[-0.04em]">No matching threads</p>
+                  <p className="font-heading text-xl tracking-[-0.04em]">
+                    {t("thread.list.empty.noMatches.title")}
+                  </p>
                   <p className="text-sm text-muted-foreground">
-                    Adjust the search or status filter, or create a fresh thread from the
-                    page header.
+                    {t("thread.list.empty.noMatches.message")}
                   </p>
                 </CardContent>
               </Card>
@@ -217,7 +221,7 @@ export function ThreadListPanel({
                           {group.workspace}
                         </h3>
                         <p className="mt-1 font-mono text-[0.7rem] text-muted-foreground uppercase">
-                          {group.items.length} thread{group.items.length === 1 ? "" : "s"}
+                          {t("thread.list.workspaceCount", { count: group.items.length })}
                         </p>
                       </div>
                     </div>
@@ -226,7 +230,7 @@ export function ThreadListPanel({
                       {group.items.map((thread) => (
                         <Card
                           className={cn(
-                            "border border-white/8 bg-card/78 shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-white/12 hover:bg-card/92 hover:shadow-[0_18px_38px_rgba(0,0,0,0.22)]",
+                            "border border-subtle/8 bg-card/78 shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-all duration-200 hover:-translate-y-0.5 hover:border-subtle/12 hover:bg-card/92 hover:shadow-[0_18px_38px_rgba(0,0,0,0.22)]",
                             selectedThreadId === thread.id &&
                               "border-primary/22 bg-card shadow-[inset_0_0_0_1px_rgba(78,222,163,0.14),0_20px_42px_rgba(0,0,0,0.22)]"
                           )}
@@ -243,12 +247,15 @@ export function ThreadListPanel({
                               >
                                 <div className="flex flex-wrap items-center gap-1.5">
                                   <p className="truncate font-heading text-base tracking-[-0.04em] md:text-[1.05rem]">
-                                    {buildThreadTitle(thread)}
+                                    {buildThreadTitle(thread, t)}
                                   </p>
-                                  <StatusBadge label={formatStatusLabel(thread.status)} />
+                                  <StatusBadge
+                                    label={formatStatusLabel(thread.status, t)}
+                                    tone={getStatusTone(thread.status)}
+                                  />
                                 </div>
                                 <p className="mt-1.5 line-clamp-2 text-sm leading-5 text-muted-foreground">
-                                  {thread.preview || "No preview yet."}
+                                  {thread.preview || t("thread.list.previewEmpty")}
                                 </p>
                               </button>
 
@@ -256,7 +263,7 @@ export function ThreadListPanel({
                                 <DropdownMenuTrigger asChild>
                                   <Button size="icon-sm" variant="ghost">
                                     <MoreHorizontal className="size-4" />
-                                    <span className="sr-only">Thread actions</span>
+                                    <span className="sr-only">{t("thread.list.action.threadActions")}</span>
                                   </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
@@ -265,32 +272,34 @@ export function ThreadListPanel({
                                       onOpenThread(thread.id);
                                     }}
                                   >
-                                    Open thread
+                                    {t("thread.list.action.openThread")}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem
                                     onSelect={() => {
                                       startTransition(() => {
-                                        void copyThreadId(thread.id);
+                                        void copyThreadId(thread.id, t);
                                       });
                                     }}
                                   >
-                                    Copy thread id
+                                    {t("thread.list.action.copyThreadId")}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-1.5">
-                              <Badge className="border border-white/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
+                              <Badge className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
                                 {thread.modelProvider}
                               </Badge>
-                              <Badge className="border border-white/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
-                                {getWorkspaceLabel(thread.cwd)}
+                              <Badge className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
+                                {getWorkspaceLabel(thread.cwd, t)}
                               </Badge>
                               {thread.pendingRequests.length > 0 ? (
                                 <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
-                                  {thread.pendingRequests.length} pending
+                                  {t("thread.list.badge.pending", {
+                                    count: thread.pendingRequests.length
+                                  })}
                                 </Badge>
                               ) : null}
                             </div>
@@ -299,19 +308,25 @@ export function ThreadListPanel({
                               <div className="flex flex-wrap gap-1.5">
                                 {summarizePendingKinds(thread.pendingRequests).map((kind) => (
                                   <Badge
-                                    className="border border-white/8 bg-background/50 font-mono text-[0.7rem] uppercase text-muted-foreground"
+                                    className="border border-subtle/8 bg-background/50 font-mono text-[0.7rem] uppercase text-muted-foreground"
                                     key={kind}
                                     variant="secondary"
                                   >
-                                    {kind}
+                                    {formatPendingRequestKind(kind, t)}
                                   </Badge>
                                 ))}
                               </div>
                             ) : null}
 
-                            <div className="flex items-center justify-between gap-3 rounded-[10px] border border-white/8 bg-background/45 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
-                              <span>Updated {formatRelativeTime(thread.updatedAt)}</span>
-                              <span className="truncate text-right">{formatTimestamp(thread.updatedAt)}</span>
+                            <div className="flex items-center justify-between gap-3 rounded-[10px] border border-subtle/8 bg-background/45 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
+                              <span>
+                                {t("thread.list.updated", {
+                                  relative: formatRelativeTime(thread.updatedAt, locale, t)
+                                })}
+                              </span>
+                              <span className="truncate text-right">
+                                {formatTimestamp(thread.updatedAt, locale, t)}
+                              </span>
                             </div>
                           </CardContent>
                         </Card>
@@ -327,24 +342,30 @@ export function ThreadListPanel({
   );
 }
 
-async function copyThreadId(threadId: string) {
+async function copyThreadId(threadId: string, t: (key: string) => string) {
   try {
     await navigator.clipboard.writeText(threadId);
-    toast.success("Thread id copied");
+    toast.success(t("thread.list.toast.copySuccess"));
   } catch {
-    toast.error("Unable to copy the thread id");
+    toast.error(t("thread.list.toast.copyError"));
   }
 }
 
-function StatusBadge({ label }: { label: string }) {
+function StatusBadge({
+  label,
+  tone
+}: {
+  label: string;
+  tone: ReturnType<typeof getStatusTone>;
+}) {
   const classes =
-    label === "Waiting approval"
+    tone === "waitingApproval"
       ? "bg-secondary/16 text-secondary pulse-secondary"
-      : label === "Waiting input"
+      : tone === "waitingInput"
         ? "bg-primary/12 text-primary"
-        : label === "Active"
+        : tone === "active"
           ? "bg-primary/12 text-primary"
-          : label === "System error"
+          : tone === "error"
             ? "bg-destructive/12 text-destructive"
             : "bg-background/70 text-muted-foreground";
 
@@ -355,44 +376,50 @@ function StatusBadge({ label }: { label: string }) {
   );
 }
 
-function idleThreadListTitle(connectionState: LocalConnectionState): string {
+function idleThreadListTitle(
+  connectionState: LocalConnectionState,
+  t: (key: string) => string
+): string {
   switch (connectionState.kind) {
     case "unpaired":
-      return "Pair this browser";
+      return t("thread.idle.unpaired.title");
     case "revoked":
-      return "Device revoked";
+      return t("thread.idle.revoked.title");
     case "expired":
-      return "Session expired";
+      return t("thread.idle.expired.title");
     case "refreshing":
-      return "Refreshing session";
+      return t("thread.idle.refreshing.title");
     case "reconnecting":
-      return "Reconnecting";
+      return t("thread.idle.reconnecting.title");
     case "resyncing":
-      return "Resyncing";
+      return t("thread.idle.resyncing.title");
     case "disconnected":
-      return "Bridge disconnected";
+      return t("thread.idle.disconnected.title");
     default:
-      return "Thread list unavailable";
+      return t("thread.idle.generic.title");
   }
 }
 
-function idleThreadListMessage(connectionState: LocalConnectionState): string {
+function idleThreadListMessage(
+  connectionState: LocalConnectionState,
+  t: (key: string) => string
+): string {
   switch (connectionState.kind) {
     case "unpaired":
-      return "Complete local pairing on the Connection page before loading recent threads.";
+      return t("thread.idle.unpaired.message");
     case "revoked":
-      return connectionState.message ?? "This trusted device can no longer access the bridge.";
+      return connectionState.message ?? t("thread.idle.revoked.message");
     case "expired":
-      return connectionState.message ?? "Re-pair this browser to restore local bridge access.";
+      return connectionState.message ?? t("thread.idle.expired.message");
     case "refreshing":
-      return "The client is rotating bridge credentials before reloading thread state.";
+      return t("thread.idle.refreshing.message");
     case "reconnecting":
-      return connectionState.message ?? "The client is reconnecting to the bridge.";
+      return connectionState.message ?? t("thread.idle.reconnecting.message");
     case "resyncing":
-      return "The client is rebuilding the latest thread list from bridge authority.";
+      return t("thread.idle.resyncing.message");
     case "disconnected":
-      return connectionState.message ?? "Bridge is currently unavailable.";
+      return connectionState.message ?? t("thread.idle.disconnected.message");
     default:
-      return "Thread state is not ready yet.";
+      return t("thread.idle.generic.message");
   }
 }

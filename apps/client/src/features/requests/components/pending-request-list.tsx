@@ -27,9 +27,9 @@ import {
 } from "@/features/requests/lib/request-utils";
 import {
   buildThreadTitle,
-  formatTimestamp,
   getWorkspaceLabel
 } from "@/features/threads/lib/thread-utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { cn } from "@/lib/utils";
 
 export function PendingRequestList({
@@ -51,6 +51,8 @@ export function PendingRequestList({
   setDraft: (requestId: string | number, questionId: string, value: string) => void;
   showThreadContext: boolean;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="space-y-4">
       {entries.map((entry) => (
@@ -66,6 +68,7 @@ export function PendingRequestList({
           )}
           setDraft={setDraft}
           showThreadContext={showThreadContext}
+          t={t}
         />
       ))}
     </div>
@@ -80,7 +83,8 @@ function PendingRequestCard({
   onRespondToRequest,
   responding,
   setDraft,
-  showThreadContext
+  showThreadContext,
+  t
 }: {
   entry: PendingRequestEntry;
   getDraft: (requestId: string | number, questionId: string) => string;
@@ -90,7 +94,9 @@ function PendingRequestCard({
   responding: boolean;
   setDraft: (requestId: string | number, questionId: string, value: string) => void;
   showThreadContext: boolean;
+  t: (key: string, params?: Record<string, number | string | undefined>) => string;
 }) {
+  const { formatDateTime } = useI18n();
   const { request, thread } = entry;
 
   return (
@@ -100,28 +106,28 @@ function PendingRequestCard({
         highlighted && "bg-card shadow-[inset_0_0_0_1px_rgba(245,158,10,0.3),0_18px_44px_rgba(0,0,0,0.24)]"
       )}
     >
-      <CardHeader className="gap-3 border-b border-white/6">
+      <CardHeader className="gap-3 border-b border-subtle/6">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
               <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
-                {getRequestKindLabel(request)}
+                {getRequestKindLabel(request, t)}
               </Badge>
               <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
-                {getWorkspaceLabel(thread.cwd)}
+                {getWorkspaceLabel(thread.cwd, t)}
               </Badge>
               <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
-                {formatTimestamp(request.requestedAt)}
+                {formatDateTime(request.requestedAt)}
               </Badge>
             </div>
             <div className="space-y-1">
               <CardTitle className="flex items-center gap-2 text-lg tracking-[-0.04em]">
                 {getRequestIcon(request)}
-                {getRequestDescription(request)}
+                {getRequestDescription(request, t)}
               </CardTitle>
               {showThreadContext ? (
                 <p className="text-sm text-muted-foreground">
-                  Thread: {buildThreadTitle(thread)}
+                  {t("request.threadLabel", { title: buildThreadTitle(thread, t) })}
                 </p>
               ) : null}
             </div>
@@ -134,19 +140,19 @@ function PendingRequestCard({
               size="sm"
               variant="outline"
             >
-              Open thread
+              {t("request.action.openThread")}
             </Button>
           ) : null}
         </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <RequestBody request={request} />
-        <Separator className="bg-white/6" />
+        <RequestBody request={request} t={t} />
+        <Separator className="bg-subtle/6" />
         <div className="flex items-center gap-2 rounded-xl bg-background/45 px-3 py-2">
           <OctagonAlert className="size-4 text-secondary" />
           <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
-            Explicit confirmation required
+            {t("request.explicitConfirmation")}
           </p>
         </div>
         <RequestActions
@@ -155,13 +161,20 @@ function PendingRequestCard({
           request={request}
           responding={responding}
           setDraft={setDraft}
+          t={t}
         />
       </CardContent>
     </Card>
   );
 }
 
-function RequestBody({ request }: { request: PendingRequest }) {
+function RequestBody({
+  request,
+  t
+}: {
+  request: PendingRequest;
+  t: (key: string, params?: Record<string, number | string | undefined>) => string;
+}) {
   switch (request.kind) {
     case "command":
       return (
@@ -172,21 +185,25 @@ function RequestBody({ request }: { request: PendingRequest }) {
             </div>
           ) : null}
           {request.cwd ? (
-            <p className="text-sm text-muted-foreground">cwd: {request.cwd}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("request.command.cwd")}: {request.cwd}
+            </p>
           ) : null}
         </div>
       );
     case "fileChange":
       return (
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p>Codex is waiting for confirmation before applying a patch.</p>
-          {request.grantRoot ? <p className="font-mono">Grant root: {request.grantRoot}</p> : null}
+          <p>{t("request.fileChange.waiting")}</p>
+          {request.grantRoot ? (
+            <p className="font-mono">{t("request.fileChange.grantRoot", { root: request.grantRoot })}</p>
+          ) : null}
         </div>
       );
     case "permissions":
       return (
         <ul className="space-y-2 text-sm text-muted-foreground">
-          {describePermissionProfile(request.permissions).map((detail) => (
+          {describePermissionProfile(request.permissions, t).map((detail) => (
             <li key={detail}>{detail}</li>
           ))}
         </ul>
@@ -194,8 +211,8 @@ function RequestBody({ request }: { request: PendingRequest }) {
     case "userInput":
       return (
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p>{request.questions.length} question(s) are waiting for an answer.</p>
-            <div className="flex flex-wrap gap-2">
+          <p>{t("request.userInput.waitingQuestions", { count: request.questions.length })}</p>
+          <div className="flex flex-wrap gap-2">
             {request.questions.map((question) => (
               <Badge
                 className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground"
@@ -216,13 +233,15 @@ function RequestActions({
   onRespondToRequest,
   request,
   responding,
-  setDraft
+  setDraft,
+  t
 }: {
   getDraft: (requestId: string | number, questionId: string) => string;
   onRespondToRequest: (request: RequestRespondRequest) => Promise<boolean>;
   request: PendingRequest;
   responding: boolean;
   setDraft: (requestId: string | number, questionId: string, value: string) => void;
+  t: (key: string, params?: Record<string, number | string | undefined>) => string;
 }) {
   switch (request.kind) {
     case "command":
@@ -238,7 +257,7 @@ function RequestActions({
             }}
             size="sm"
           >
-            Allow once
+            {t("request.action.command.allowOnce")}
           </Button>
           <Button
             disabled={responding}
@@ -251,7 +270,7 @@ function RequestActions({
             size="sm"
             variant="secondary"
           >
-            Allow for session
+            {t("request.action.command.allowSession")}
           </Button>
           <Button
             disabled={responding}
@@ -264,7 +283,7 @@ function RequestActions({
             size="sm"
             variant="destructive"
           >
-            Deny
+            {t("request.action.command.deny")}
           </Button>
         </div>
       );
@@ -281,7 +300,7 @@ function RequestActions({
             }}
             size="sm"
           >
-            Apply once
+            {t("request.action.file.applyOnce")}
           </Button>
           <Button
             disabled={responding}
@@ -294,7 +313,7 @@ function RequestActions({
             size="sm"
             variant="secondary"
           >
-            Allow for session
+            {t("request.action.file.allowSession")}
           </Button>
           <Button
             disabled={responding}
@@ -307,7 +326,7 @@ function RequestActions({
             size="sm"
             variant="destructive"
           >
-            Deny
+            {t("request.action.file.deny")}
           </Button>
         </div>
       );
@@ -328,7 +347,7 @@ function RequestActions({
             }}
             size="sm"
           >
-            Allow this turn
+            {t("request.action.permissions.allowTurn")}
           </Button>
           <Button
             disabled={responding}
@@ -345,7 +364,7 @@ function RequestActions({
             size="sm"
             variant="secondary"
           >
-            Allow this session
+            {t("request.action.permissions.allowSession")}
           </Button>
           <Button
             disabled={responding}
@@ -362,7 +381,7 @@ function RequestActions({
             size="sm"
             variant="destructive"
           >
-            Deny
+            {t("request.action.permissions.deny")}
           </Button>
         </div>
       );
@@ -374,6 +393,7 @@ function RequestActions({
           request={request}
           responding={responding}
           setDraft={setDraft}
+          t={t}
         />
       );
   }
@@ -384,13 +404,15 @@ function UserInputActions({
   onRespondToRequest,
   request,
   responding,
-  setDraft
+  setDraft,
+  t
 }: {
   getDraft: (requestId: string | number, questionId: string) => string;
   onRespondToRequest: (request: RequestRespondRequest) => Promise<boolean>;
   request: PendingUserInputRequest;
   responding: boolean;
   setDraft: (requestId: string | number, questionId: string, value: string) => void;
+  t: (key: string, params?: Record<string, number | string | undefined>) => string;
 }) {
   const canSubmit = request.questions.every(
     (question) => getDraft(request.requestId, question.id).trim().length > 0
@@ -434,7 +456,7 @@ function UserInputActions({
                 onChange={(event) => {
                   setDraft(request.requestId, question.id, event.target.value);
                 }}
-                placeholder="Enter your response"
+                placeholder={t("request.action.userInput.placeholder")}
                 type="password"
                 value={value}
               />
@@ -446,7 +468,7 @@ function UserInputActions({
                 onChange={(event) => {
                   setDraft(request.requestId, question.id, event.target.value);
                 }}
-                placeholder="Enter your response"
+                placeholder={t("request.action.userInput.placeholder")}
                 rows={3}
                 value={value}
               />
@@ -474,7 +496,7 @@ function UserInputActions({
           });
         }}
       >
-        Submit response
+        {t("request.action.userInput.submit")}
       </Button>
     </div>
   );

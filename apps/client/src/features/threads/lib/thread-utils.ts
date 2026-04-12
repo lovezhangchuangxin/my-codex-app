@@ -6,6 +6,9 @@ import type {
   TurnDetail,
   UserInput
 } from "@my-codex-app/protocol";
+import type { AppLocale } from "@/lib/i18n/types";
+import { formatDateTime, formatRelativeTime as formatLocalizedRelativeTime } from "@/lib/i18n/formatters";
+import { translateEnglish } from "@/lib/i18n/catalog";
 
 export type FlatThreadItem = ThreadItem & {
   turnId: string;
@@ -20,81 +23,103 @@ export type ThreadStatusFilter =
   | "waitingInput"
   | "idle";
 
-export function buildThreadTitle(thread: Pick<ThreadSummary, "name" | "preview" | "id">) {
-  return (thread.name ?? thread.preview) || "Untitled thread";
+export function buildThreadTitle(
+  thread: Pick<ThreadSummary, "name" | "preview" | "id">,
+  t: (key: string) => string = translateEnglish
+) {
+  return (thread.name ?? thread.preview) || t("thread.title.untitled");
 }
 
-export function getWorkspaceLabel(cwd: string) {
+export function getWorkspaceLabel(
+  cwd: string,
+  t: (key: string) => string = translateEnglish
+) {
   const trimmed = cwd.trim();
   if (trimmed.length === 0) {
-    return "Unknown workspace";
+    return t("thread.workspace.unknown");
   }
 
   const segments = trimmed.split(/[/\\]+/).filter(Boolean);
   return segments.at(-1) ?? trimmed;
 }
 
-export function formatStatusLabel(status: ThreadRuntimeStatus) {
+export function formatStatusLabel(
+  status: ThreadRuntimeStatus,
+  t: (key: string) => string = translateEnglish
+) {
   if (status.type !== "active") {
     switch (status.type) {
       case "idle":
-        return "Idle";
+        return t("thread.status.idle");
       case "notLoaded":
-        return "Not loaded";
+        return t("thread.status.notLoaded");
       case "systemError":
-        return "System error";
+        return t("thread.status.systemError");
     }
   }
 
   if (status.activeFlags.includes("waitingOnApproval")) {
-    return "Waiting approval";
+    return t("thread.status.waitingApproval");
   }
 
   if (status.activeFlags.includes("waitingOnUserInput")) {
-    return "Waiting input";
+    return t("thread.status.waitingInput");
   }
 
-  return "Active";
+  return t("thread.status.active");
 }
 
-export function formatTimestamp(value: number | undefined) {
-  return value ? new Date(value * 1000).toLocaleString() : "n/a";
+export function getStatusTone(status: ThreadRuntimeStatus) {
+  if (status.type === "systemError") {
+    return "error";
+  }
+
+  if (status.type === "active" && status.activeFlags.includes("waitingOnApproval")) {
+    return "waitingApproval";
+  }
+
+  if (status.type === "active" && status.activeFlags.includes("waitingOnUserInput")) {
+    return "waitingInput";
+  }
+
+  if (status.type === "active") {
+    return "active";
+  }
+
+  return "neutral";
 }
 
-export function formatRelativeTime(seconds: number) {
-  const delta = Math.floor(Date.now() / 1000) - seconds;
-
-  if (delta < 60) {
-    return "just now";
-  }
-
-  if (delta < 3600) {
-    return `${Math.floor(delta / 60)}m ago`;
-  }
-
-  if (delta < 86400) {
-    return `${Math.floor(delta / 3600)}h ago`;
-  }
-
-  if (delta < 604800) {
-    return `${Math.floor(delta / 86400)}d ago`;
-  }
-
-  return new Date(seconds * 1000).toLocaleDateString();
+export function formatTimestamp(
+  value: number | undefined,
+  locale: AppLocale = "en",
+  t: (key: string) => string = translateEnglish
+) {
+  return formatDateTime(locale, value, t);
 }
 
-export function formatUserInput(input: UserInput) {
+export function formatRelativeTime(
+  seconds: number,
+  locale: AppLocale = "en",
+  t: (key: string) => string = translateEnglish
+) {
+  return formatLocalizedRelativeTime(locale, seconds, t);
+}
+
+export function formatUserInput(
+  input: UserInput,
+  t: (key: string) => string = translateEnglish
+) {
   switch (input.type) {
     case "text":
       return input.text;
     case "image":
-      return `Image: ${input.url}`;
+      return `${t("detail.userInput.image")}: ${input.url}`;
     case "localImage":
-      return `Local image: ${input.path}`;
+      return `${t("detail.userInput.localImage")}: ${input.path}`;
     case "skill":
-      return `Skill: ${input.name} (${input.path})`;
+      return `${t("detail.userInput.skill")}: ${input.name} (${input.path})`;
     case "mention":
-      return `Mention: ${input.name} (${input.path})`;
+      return `${t("detail.userInput.mention")}: ${input.name} (${input.path})`;
   }
 }
 
@@ -147,11 +172,14 @@ export function matchesThreadFilter(
   }
 }
 
-export function groupThreadsByWorkspace(threads: ThreadSummary[]) {
+export function groupThreadsByWorkspace(
+  threads: ThreadSummary[],
+  t: (key: string) => string = translateEnglish
+) {
   const grouped = new Map<string, ThreadSummary[]>();
 
   for (const thread of threads) {
-    const workspace = getWorkspaceLabel(thread.cwd);
+    const workspace = getWorkspaceLabel(thread.cwd, t);
     const current = grouped.get(workspace) ?? [];
     current.push(thread);
     grouped.set(workspace, current);

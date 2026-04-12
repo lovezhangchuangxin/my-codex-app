@@ -1,8 +1,10 @@
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { formatConnectionKind } from "@/lib/runtime/connection-utils";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 
 export function ConnectionIndicator() {
+  const { t } = useI18n();
   const snapshot = useRuntimeSnapshot();
   const { kind } = snapshot.connection;
 
@@ -16,7 +18,9 @@ export function ConnectionIndicator() {
   return (
     <div className="hidden items-center gap-2 lg:flex" role="status">
       <span className={cn("size-2 rounded-full", color)} aria-hidden="true" />
-      <span className="font-mono text-xs text-muted-foreground">{formatConnectionKind(kind)}</span>
+      <span className="font-mono text-xs text-muted-foreground">
+        {formatConnectionKind(kind, t)}
+      </span>
     </div>
   );
 }

@@ -86,7 +86,7 @@ export function DevicesSection() {
 
             return (
               <div
-                className="rounded-xl border border-white/8 bg-background/42 p-3"
+                className="rounded-xl border border-subtle/8 bg-background/42 p-3"
                 key={device.deviceId}
               >
                 <div className="flex items-start justify-between gap-3">

@@ -35,9 +35,11 @@ import { useAutoScroll } from "@/features/threads/lib/use-auto-scroll";
 import {
   buildThreadTitle,
   flattenTurnItems,
-  formatStatusLabel
+  formatStatusLabel,
+  getStatusTone
 } from "@/features/threads/lib/thread-utils";
 import type { FlatThreadItem } from "@/features/threads/lib/thread-utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { cn } from "@/lib/utils";
 import type { ThreadDetailState, ThreadListState } from "@my-codex-app/sdk";
 import { findActiveTurnId } from "@my-codex-app/sdk";
@@ -100,12 +102,14 @@ export function ThreadDetailPanel({
   sendMessagePending: boolean;
   threadsState: ThreadListState;
 }) {
+  const { t } = useI18n();
+
   if (detailState.kind === "idle") {
     return (
       <EmptyDetailState
         isDesktop={isDesktop}
-        message="Select a thread to read the conversation."
-        title="No thread selected"
+        message={t("detail.empty.noThread.message")}
+        title={t("detail.empty.noThread.title")}
       />
     );
   }
@@ -134,11 +138,11 @@ export function ThreadDetailPanel({
           {!isDesktop ? (
             <Button onClick={onBack} size="sm" variant="ghost">
               <ArrowLeft className="size-4" />
-              Back to threads
+              {t("detail.action.backToThreads")}
             </Button>
           ) : null}
           <Alert className="border-destructive/20 bg-transparent">
-            <AlertTitle>Unable to load thread detail</AlertTitle>
+            <AlertTitle>{t("detail.error.loadTitle")}</AlertTitle>
             <AlertDescription>{detailState.message}</AlertDescription>
           </Alert>
         </CardContent>
@@ -205,11 +209,12 @@ function ReadyThreadDetail({
   thread: ThreadDetail;
   threadsState: ThreadListState;
 }) {
+  const { t } = useI18n();
   const [composerText, setComposerText] = useState("");
   const drafts = useRequestDrafts();
   const activeTurnId = findActiveTurnId(thread);
   const actionsEnabled = connectionState.kind === "authenticated";
-  const banner = useDeferredBanner(connectionState);
+  const banner = useDeferredBanner(connectionState, t);
   const pendingEntries: PendingRequestEntry[] = thread.pendingRequests.map((request) => ({
     request,
     thread
@@ -220,22 +225,25 @@ function ReadyThreadDetail({
   return (
     <Card className="flex h-full flex-col overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.3)]">
       {/* Header */}
-      <div className="shrink-0 border-b border-white/6 bg-background/35 px-4 py-3.5 md:px-5">
+      <div className="shrink-0 border-b border-subtle/6 bg-background/35 px-4 py-3.5 md:px-5">
         <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start gap-2">
             {!isDesktop ? (
               <Button onClick={onBack} size="icon-sm" variant="ghost">
                 <ArrowLeft className="size-4" />
-                <span className="sr-only">Back to threads</span>
+                <span className="sr-only">{t("detail.action.backToThreads")}</span>
               </Button>
             ) : null}
             <div className="min-w-0 space-y-1.5">
               <div className="flex min-w-0 items-center gap-1.5">
                 <h2 className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap font-heading text-[1.1rem] tracking-[-0.04em] md:max-w-[34rem] md:text-[1.32rem] lg:max-w-[42rem] xl:max-w-[48rem]">
-                  {buildThreadTitle(thread)}
+                  {buildThreadTitle(thread, t)}
                 </h2>
                 <div className="shrink-0">
-                  <StatusBadge label={formatStatusLabel(thread.status)} />
+                  <StatusBadge
+                    label={formatStatusLabel(thread.status, t)}
+                    tone={getStatusTone(thread.status)}
+                  />
                 </div>
               </div>
               <p className="truncate font-mono text-xs text-muted-foreground md:text-sm">
@@ -261,7 +269,9 @@ function ReadyThreadDetail({
         {thread.pendingRequests.length > 0 ? (
           <div className="mt-3">
             <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
-              {thread.pendingRequests.length} pending request{thread.pendingRequests.length > 1 ? "s" : ""}
+              {t("detail.badge.pendingRequests", {
+                count: thread.pendingRequests.length
+              })}
             </Badge>
           </div>
         ) : null}
@@ -280,7 +290,7 @@ function ReadyThreadDetail({
       {lastError ? (
         <div className="shrink-0 px-4 pt-3 md:px-5">
           <Alert className="border-destructive/20 bg-destructive/5">
-            <AlertTitle>Latest client error</AlertTitle>
+            <AlertTitle>{t("detail.alert.latestClientError")}</AlertTitle>
             <AlertDescription>{lastError}</AlertDescription>
           </Alert>
         </div>
@@ -288,7 +298,7 @@ function ReadyThreadDetail({
 
       {/* Pending requests */}
       {pendingEntries.length > 0 ? (
-        <div className="shrink-0 space-y-3 border-b border-white/6 px-4 py-4 md:px-5">
+        <div className="shrink-0 space-y-3 border-b border-subtle/6 px-4 py-4 md:px-5">
           <PendingRequestList
             entries={pendingEntries}
             getDraft={drafts.getDraft}
@@ -316,8 +326,8 @@ function ReadyThreadDetail({
         {flatItems.length === 0 ? (
           <EmptyDetailState
             isDesktop={isDesktop}
-            message="Send the first message to start the conversation."
-            title="No messages yet"
+            message={t("detail.empty.noMessages.message")}
+            title={t("detail.empty.noMessages.title")}
           />
         ) : (
           <div className="mx-auto max-w-3xl space-y-4 pb-4">
@@ -329,7 +339,7 @@ function ReadyThreadDetail({
       </div>
 
       {/* Composer */}
-      <div className="shrink-0 border-t border-white/6 bg-background/82 px-4 py-3 backdrop-blur-xl md:px-5">
+      <div className="shrink-0 border-t border-subtle/6 bg-background/82 px-4 py-3 backdrop-blur-xl md:px-5">
         <form
           className="flex items-end gap-2"
           onSubmit={(event) => {
@@ -358,7 +368,7 @@ function ReadyThreadDetail({
                 event.currentTarget.form?.requestSubmit();
               }
             }}
-            placeholder="Send a message"
+            placeholder={t("detail.composer.placeholder")}
             rows={1}
             value={composerText}
           />
@@ -374,7 +384,7 @@ function ReadyThreadDetail({
               variant="outline"
             >
               <Square className="size-4" />
-              <span className="sr-only">Stop</span>
+              <span className="sr-only">{t("detail.action.stop")}</span>
             </Button>
           ) : (
             <Button
@@ -384,7 +394,7 @@ function ReadyThreadDetail({
               type="submit"
             >
               <Send className="size-4" />
-              <span className="sr-only">Send</span>
+              <span className="sr-only">{t("detail.action.send")}</span>
             </Button>
           )}
         </form>
@@ -398,6 +408,8 @@ function ReadyThreadDetail({
 // ---------------------------------------------------------------------------
 
 function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
+  const { t } = useI18n();
+
   switch (item.type) {
     case "userMessage":
       return (
@@ -413,7 +425,9 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
           {item.text ? (
             <RichMarkdown content={item.text} />
           ) : (
-            <p className="text-sm leading-6 text-muted-foreground">No text returned.</p>
+            <p className="text-sm leading-6 text-muted-foreground">
+              {t("detail.agent.noTextReturned")}
+            </p>
           )}
         </AgentMessageBlock>
       );
@@ -428,11 +442,19 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
       return <FileChangeCard item={item} />;
     case "webSearch":
       return (
-        <ToolLabel icon={<Search className="size-3" />} label="Web search" value={item.query} />
+        <ToolLabel
+          icon={<Search className="size-3" />}
+          label={t("detail.tool.webSearch")}
+          value={item.query}
+        />
       );
     case "imageView":
       return (
-        <ToolLabel icon={<GalleryHorizontal className="size-3" />} label="Image" value={item.path} />
+        <ToolLabel
+          icon={<GalleryHorizontal className="size-3" />}
+          label={t("detail.tool.image")}
+          value={item.path}
+        />
       );
     case "unknown":
       return (
@@ -445,7 +467,7 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
               </Button>
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-2">
-              <RichCodeBlock className="bg-black/35" language="json">
+              <RichCodeBlock className="bg-code-bg" language="json">
                 {JSON.stringify(item.raw, null, 2)}
               </RichCodeBlock>
             </CollapsibleContent>
@@ -462,7 +484,7 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
 function UserMessageBubble({ children }: { children: import("react").ReactNode }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-white/[0.06] px-4 py-3">
+      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-subtle/[0.06] px-4 py-3">
         <div className="space-y-2">
           {children}
         </div>
@@ -485,6 +507,7 @@ function AgentMessageBlock({ children }: { children: import("react").ReactNode }
 }
 
 function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning" }> }) {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
   return (
@@ -496,11 +519,11 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
         type="button"
       >
         <Brain className="size-3.5" />
-        <span>Thinking...</span>
+        <span>{t("detail.reasoning.thinking")}</span>
         <ChevronDown className={cn("size-3 transition-transform duration-200", !open && "-rotate-90")} />
       </button>
       {open ? (
-        <div className="mt-2 space-y-2 rounded-xl border border-white/8 bg-secondary/6 p-3">
+        <div className="mt-2 space-y-2 rounded-xl border border-subtle/8 bg-secondary/6 p-3">
           {item.summary.length > 0 ? (
             <ul className="space-y-1.5 text-sm leading-6 text-foreground">
               {item.summary.map((summary, index) => (
@@ -528,15 +551,16 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
 }
 
 function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecution" }> }) {
+  const { t } = useI18n();
   const displayCommand = getCommandDisplay(item.command);
   const commandExpanded = displayCommand !== item.command;
   const hasDetails = commandExpanded || item.aggregatedOutput;
 
   return (
-    <Collapsible className="lg:ml-9 overflow-hidden rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
+    <Collapsible className="lg:ml-9 overflow-hidden rounded-xl border border-subtle/8 bg-code-bg shadow-[inset_0_0_0_1px_var(--color-subtle)/3]">
       <CollapsibleTrigger asChild>
         <button
-          className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-white/[0.03]"
+          className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-subtle/[0.03]"
           type="button"
         >
           <SquareTerminal className="size-3.5 shrink-0 text-muted-foreground" />
@@ -547,7 +571,10 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
             <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
           ) : null}
           {item.status === "inProgress" || item.status === "failed" ? (
-            <StatusBadge label={item.status} />
+            <StatusBadge
+              label={formatExecutionStatus(item.status, t)}
+              tone={item.status === "failed" ? "error" : "active"}
+            />
           ) : null}
           {hasDetails ? (
             <ChevronDown className="size-3 shrink-0 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
@@ -558,25 +585,25 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
         <CollapsibleContent>
           <div className="space-y-0">
             {commandExpanded ? (
-              <div className="border-t border-white/4 px-3 py-2">
+              <div className="border-t border-subtle/4 px-3 py-2">
                 <p className="whitespace-pre-wrap break-all font-mono text-xs leading-5 text-foreground/80">
                   {item.command}
                 </p>
               </div>
             ) : null}
             {item.aggregatedOutput ? (
-              <div className="border-t border-white/4 p-3">
+              <div className="border-t border-subtle/4 p-3">
                 <Collapsible>
                   <CollapsibleTrigger asChild>
                     <Button size="xs" variant="ghost" className="text-muted-foreground">
                       <ChevronDown className="mr-0.5 size-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                      Output
+                      {t("detail.command.output")}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
                     <div className="pt-2">
                       <RichTerminalOutput
-                        className="rounded-lg border border-white/8 bg-black/50"
+                        className="rounded-lg border border-subtle/8 bg-code-bg"
                         content={item.aggregatedOutput}
                       />
                     </div>
@@ -592,11 +619,12 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
 }
 
 function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChange" }> }) {
+  const { t } = useI18n();
   return (
     <div className="ml-9 space-y-1.5">
       {item.changes.map((change, index) => (
         <div
-          className="overflow-hidden rounded-xl border border-white/8 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+          className="overflow-hidden rounded-xl border border-subtle/8 shadow-[inset_0_0_0_1px_var(--color-subtle)/5]"
           key={`${item.id}-${index}`}
         >
           <div className="flex items-center gap-2 bg-background/85 px-3 py-2">
@@ -613,15 +641,15 @@ function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChang
           {change.diff ? (
             <Collapsible>
               <CollapsibleTrigger asChild>
-                <div className="border-t border-white/4 px-3 py-1">
+                <div className="border-t border-subtle/4 px-3 py-1">
                   <Button size="xs" variant="ghost" className="text-muted-foreground">
-                    Show diff
+                    {t("detail.fileChange.showDiff")}
                   </Button>
                 </div>
               </CollapsibleTrigger>
               <CollapsibleContent>
-                <div className="border-t border-white/4 p-3">
-                  <RichCodeBlock className="bg-black/45" language="diff">
+                <div className="border-t border-subtle/4 p-3">
+                  <RichCodeBlock className="bg-code-bg" language="diff">
                     {change.diff}
                   </RichCodeBlock>
                 </div>
@@ -657,6 +685,8 @@ function MobileThreadSwitcher({
   selectedThreadId: string | null;
   threadsState: ThreadListState;
 }) {
+  const { t } = useI18n();
+
   if (threadsState.kind !== "ready") {
     return null;
   }
@@ -666,21 +696,21 @@ function MobileThreadSwitcher({
       <SheetTrigger asChild>
         <Button size="icon-sm" variant="outline">
           <PanelLeftOpen className="size-4" />
-          <span className="sr-only">Open thread switcher</span>
+          <span className="sr-only">{t("detail.switcher.open")}</span>
         </Button>
       </SheetTrigger>
-      <SheetContent className="max-w-sm border-l border-white/6 bg-card/95" side="right">
+      <SheetContent className="max-w-sm border-l border-subtle/6 bg-card/95" side="right">
         <SheetHeader>
-          <SheetTitle>Switch thread</SheetTitle>
+          <SheetTitle>{t("detail.switcher.title")}</SheetTitle>
           <SheetDescription>
-            Jump straight into another workspace without losing your current route.
+            {t("detail.switcher.description")}
           </SheetDescription>
         </SheetHeader>
         <div className="max-h-[calc(100svh-7rem)] space-y-2 overflow-y-auto px-4 pb-4">
           {threadsState.threads.map((thread) => (
             <Button
               className={cn(
-                "h-auto w-full justify-start rounded-[12px] border border-white/8 bg-card/76 px-4 py-3 text-left",
+                "h-auto w-full justify-start rounded-[12px] border border-subtle/8 bg-card/76 px-4 py-3 text-left",
                 selectedThreadId === thread.id &&
                   "border-primary/20 bg-card shadow-[inset_0_0_0_1px_rgba(78,222,163,0.14)]"
               )}
@@ -690,12 +720,12 @@ function MobileThreadSwitcher({
               }}
               variant="ghost"
             >
-              <span className="min-w-0">
-                <span className="block truncate font-medium text-foreground">
-                  {buildThreadTitle(thread)}
-                </span>
-                <span className="block truncate font-mono text-xs text-muted-foreground">
-                  {thread.cwd}
+                <span className="min-w-0">
+                  <span className="block truncate font-medium text-foreground">
+                    {buildThreadTitle(thread, t)}
+                  </span>
+                  <span className="block truncate font-mono text-xs text-muted-foreground">
+                    {thread.cwd}
                 </span>
               </span>
             </Button>
@@ -734,19 +764,23 @@ function EmptyDetailState({
   );
 }
 
-function StatusBadge({ label }: { label: string }) {
+function StatusBadge({
+  label,
+  tone
+}: {
+  label: string;
+  tone: "active" | "error" | "neutral" | "waitingApproval" | "waitingInput";
+}) {
   const classes =
-    label === "Waiting approval"
+    tone === "waitingApproval"
       ? "bg-secondary/16 text-secondary pulse-secondary"
-      : label === "Waiting input"
+      : tone === "waitingInput"
         ? "bg-primary/12 text-primary"
-        : label === "Active" || label === "completed"
+        : tone === "active"
           ? "bg-primary/12 text-primary"
-          : label === "inProgress"
-            ? "bg-primary/12 text-primary"
-            : label === "failed" || label === "System error"
-              ? "bg-destructive/12 text-destructive"
-              : "bg-background/70 text-muted-foreground";
+          : tone === "error"
+            ? "bg-destructive/12 text-destructive"
+            : "bg-background/70 text-muted-foreground";
 
   return (
     <Badge className={cn("border-0 font-mono text-[0.7rem] uppercase", classes)} variant="secondary">
@@ -761,26 +795,30 @@ function StatusBadge({ label }: { label: string }) {
 
 const BANNER_DELAY_MS = 1500;
 
-function useDeferredBanner(connectionState: LocalConnectionState) {
+function useDeferredBanner(
+  connectionState: LocalConnectionState,
+  t: (key: string) => string
+) {
   const [visibleBanner, setVisibleBanner] = useState<ReturnType<typeof connectionBanner>>(null);
 
   useEffect(() => {
-    const next = connectionBanner(connectionState);
+    const next = connectionBanner(connectionState, t);
     if (!next) {
       setVisibleBanner(null);
       return;
     }
     const timer = setTimeout(() => {
-      setVisibleBanner(connectionBanner(connectionState));
+      setVisibleBanner(connectionBanner(connectionState, t));
     }, BANNER_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [connectionState.kind]);
+  }, [connectionState.kind, connectionState.message, t]);
 
   return visibleBanner;
 }
 
 function connectionBanner(
-  connectionState: LocalConnectionState
+  connectionState: LocalConnectionState,
+  t: (key: string) => string
 ):
   | {
       message: string;
@@ -793,44 +831,44 @@ function connectionBanner(
       return null;
     case "refreshing":
       return {
-        title: "Refreshing bridge session",
-        message: "The client is rotating credentials before continuing live updates.",
+        title: t("detail.banner.refreshing.title"),
+        message: t("detail.banner.refreshing.message"),
         tone: "info"
       };
     case "reconnecting":
       return {
-        title: "Reconnecting",
-        message: connectionState.message ?? "Bridge connectivity dropped and recovery is in progress.",
+        title: t("detail.banner.reconnecting.title"),
+        message: connectionState.message ?? t("detail.banner.reconnecting.message"),
         tone: "info"
       };
     case "resyncing":
       return {
-        title: "Resyncing from bridge authority",
-        message: "The thread view is catching up to the bridge after reconnect or refresh.",
+        title: t("detail.banner.resyncing.title"),
+        message: t("detail.banner.resyncing.message"),
         tone: "info"
       };
     case "disconnected":
       return {
-        title: "Showing last known thread state",
-        message: connectionState.message ?? "Bridge is unavailable right now.",
+        title: t("detail.banner.disconnected.title"),
+        message: connectionState.message ?? t("detail.banner.disconnected.message"),
         tone: "error"
       };
     case "revoked":
       return {
-        title: "Trusted device revoked",
-        message: connectionState.message ?? "This browser can no longer issue authenticated actions.",
+        title: t("detail.banner.revoked.title"),
+        message: connectionState.message ?? t("detail.banner.revoked.message"),
         tone: "error"
       };
     case "expired":
       return {
-        title: "Session expired",
-        message: connectionState.message ?? "Re-pair this browser to restore bridge access.",
+        title: t("detail.banner.expired.title"),
+        message: connectionState.message ?? t("detail.banner.expired.message"),
         tone: "error"
       };
     case "unpaired":
       return {
-        title: "Pairing required",
-        message: "Pair this browser from the Connection page before interacting with threads.",
+        title: t("detail.banner.unpaired.title"),
+        message: t("detail.banner.unpaired.message"),
         tone: "error"
       };
   }
@@ -841,17 +879,33 @@ function UserInputRenderer({
 }: {
   input: Extract<ThreadItem, { type: "userMessage" }>["content"][number];
 }) {
+  const { t } = useI18n();
+
   switch (input.type) {
     case "text":
       return <RichMarkdown content={input.text} />;
     case "image":
-      return <StructuredUserInput label="Image" value={input.url} />;
+      return <StructuredUserInput label={t("detail.userInput.image")} value={input.url} />;
     case "localImage":
-      return <StructuredUserInput label="Local image" value={input.path} />;
+      return <StructuredUserInput label={t("detail.userInput.localImage")} value={input.path} />;
     case "skill":
-      return <StructuredUserInput label="Skill" value={`${input.name} (${input.path})`} />;
+      return <StructuredUserInput label={t("detail.userInput.skill")} value={`${input.name} (${input.path})`} />;
     case "mention":
-      return <StructuredUserInput label="Mention" value={`${input.name} (${input.path})`} />;
+      return <StructuredUserInput label={t("detail.userInput.mention")} value={`${input.name} (${input.path})`} />;
+  }
+}
+
+function formatExecutionStatus(
+  status: "completed" | "failed" | "inProgress",
+  t: (key: string) => string
+) {
+  switch (status) {
+    case "completed":
+      return t("turn.status.completed");
+    case "failed":
+      return t("turn.status.failed");
+    case "inProgress":
+      return t("turn.status.inProgress");
   }
 }
 
@@ -916,7 +970,7 @@ function RichTerminalOutput({
 
 function CommandMetaBadge({ label }: { label: string }) {
   return (
-    <span className="rounded-md border border-white/8 bg-background/45 px-2 py-0.5 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
+    <span className="rounded-md border border-subtle/8 bg-background/45 px-2 py-0.5 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
       {label}
     </span>
   );
@@ -948,7 +1002,7 @@ function PlainCodeFallback({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-white/8 bg-[#111317] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
+        "overflow-hidden rounded-2xl border border-subtle/8 bg-code-bg shadow-[inset_0_0_0_1px_var(--color-subtle)/3]",
         className
       )}
     >
@@ -980,7 +1034,7 @@ function StructuredUserInput({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-white/8 bg-background/45 px-3 py-2.5">
+    <div className="rounded-xl border border-subtle/8 bg-background/45 px-3 py-2.5">
       <p className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
         {label}
       </p>

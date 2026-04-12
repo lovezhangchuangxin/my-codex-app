@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { bridgeHealthUrl } from "@/lib/env";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { useBridgeClient, useRuntime } from "@/lib/runtime/runtime-provider";
 
 import { detectDeviceInfo } from "./device-info";
@@ -22,6 +23,7 @@ type BridgeAvailability =
   | { status: "unreachable" };
 
 export function PairingScreen() {
+  const { t } = useI18n();
   const bridgeClient = useBridgeClient();
   const runtime = useRuntime();
   const navigate = useNavigate();
@@ -68,11 +70,11 @@ export function PairingScreen() {
         navigate("/threads", { replace: true });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Pairing failed. Please try again.";
+          error instanceof Error ? error.message : t("pairing.error.generic");
         setPairingState({ status: "error", message });
       }
     },
-    [bridgeClient, runtime, navigate, pairingCode]
+    [bridgeClient, runtime, navigate, pairingCode, t]
   );
 
   const isSubmitting = pairingState.status === "submitting";
@@ -85,10 +87,10 @@ export function PairingScreen() {
             <KeyRound className="size-5 text-muted-foreground" />
           </div>
           <h1 className="text-xl font-semibold tracking-tight">
-            Pair your device
+            {t("pairing.title")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Enter the pairing code from your bridge terminal
+            {t("pairing.subtitle")}
           </p>
         </div>
 
@@ -100,16 +102,16 @@ export function PairingScreen() {
             onChange={(event) => {
               setPairingCode(event.target.value);
             }}
-            placeholder="e.g. ABCD-1234"
+            placeholder={t("pairing.codePlaceholder")}
             value={pairingCode}
           />
 
           <p className="text-[13px] text-muted-foreground">
-            Run{" "}
+            {t("pairing.helperPrefix")}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
               pnpm dev:bridge
             </code>{" "}
-            in your terminal to get a code.
+            {t("pairing.helperSuffix")}
           </p>
 
           {pairingState.status === "error" ? (
@@ -121,9 +123,9 @@ export function PairingScreen() {
           {bridgeAvailability.status === "unreachable" && pairingState.status === "idle" ? (
             <Alert>
               <AlertDescription>
-                Bridge not detected. Make sure{" "}
-                <code className="font-mono text-xs">pnpm dev:bridge</code>{" "}
-                is running on your computer.
+                {t("pairing.bridgeUnavailablePrefix")}
+                <code className="font-mono text-xs">pnpm dev:bridge</code>
+                {t("pairing.bridgeUnavailableSuffix")}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -134,7 +136,7 @@ export function PairingScreen() {
             size="lg"
             type="submit"
           >
-            {isSubmitting ? "Connecting..." : "Connect"}
+            {isSubmitting ? t("pairing.connecting") : t("pairing.connect")}
           </Button>
         </form>
       </div>

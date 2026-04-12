@@ -10,8 +10,11 @@ import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx";
 import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
 import yaml from "react-syntax-highlighter/dist/esm/languages/prism/yaml";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { oneLight } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n/use-i18n";
+import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
 const LANGUAGE_ALIASES: Record<string, string> = {
@@ -57,6 +60,8 @@ export function CodeBlock({
   language?: string | undefined;
   shellPrompt?: boolean;
 }) {
+  const { t } = useI18n();
+  const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
   const content = useMemo(() => children.replace(/\n$/, ""), [children]);
 
@@ -75,13 +80,13 @@ export function CodeBlock({
   return (
     <div
       className={cn(
-        "not-prose overflow-hidden rounded-lg border border-white/8 bg-[#111317] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
+        "not-prose overflow-hidden rounded-lg border border-subtle/8 bg-code-bg shadow-[inset_0_0_0_1px_var(--color-subtle)/3]",
         !chrome && "rounded-xl border-0 bg-transparent shadow-none",
         className
       )}
     >
       {chrome ? (
-        <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-white/4 px-3 py-1.5">
+        <div className="flex items-center justify-between gap-3 border-b border-subtle/6 bg-subtle/4 px-3 py-1.5">
           <div className="flex items-center gap-3">
             <div className="flex gap-1.5">
               <span className="size-2 rounded-full bg-destructive/45" />
@@ -89,7 +94,7 @@ export function CodeBlock({
               <span className="size-2 rounded-full bg-primary/55" />
             </div>
             <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
-              {language ?? (shellPrompt ? "shell" : "plain text")}
+              {language ?? (shellPrompt ? t("codeBlock.shell") : t("codeBlock.plainText"))}
             </p>
           </div>
           <Button
@@ -105,7 +110,7 @@ export function CodeBlock({
             variant="ghost"
           >
             {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            {copied ? "Copied" : "Copy"}
+            {copied ? t("codeBlock.copied") : t("codeBlock.copy")}
           </Button>
         </div>
       ) : null}
@@ -132,7 +137,7 @@ export function CodeBlock({
             padding: shellPrompt ? "1rem 1rem 1rem 2rem" : "1rem"
           }}
           language={language ?? "text"}
-          style={oneDark}
+          style={theme === "light" ? oneLight : oneDark}
           wrapLongLines
           wrapLines
         >

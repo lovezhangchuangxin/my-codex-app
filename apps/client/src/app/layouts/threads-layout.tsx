@@ -8,12 +8,14 @@ import { ThreadDetailPanel } from "@/features/threads/components/thread-detail-p
 import { ThreadListPanel } from "@/features/threads/components/thread-list-panel";
 import { useMobilePanel } from "@/hooks/use-mobile-panel";
 import { useMediaQuery } from "@/hooks/use-media-query";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 import type { ThreadDetailState } from "@my-codex-app/sdk";
 import type { LocalConnectionState } from "@my-codex-app/protocol";
 
 export function ThreadsLayout() {
+  const { t } = useI18n();
   const runtime = useRuntime();
   const snapshot = useRuntimeSnapshot();
   const navigate = useNavigate();
@@ -33,7 +35,7 @@ export function ThreadsLayout() {
       ? { kind: "idle" }
       : snapshot.selectedThreadId === activeThreadId
         ? snapshot.detail
-        : unresolvedRouteDetailState(activeThreadId, snapshot.connection);
+        : unresolvedRouteDetailState(activeThreadId, snapshot.connection, t);
 
   useEffect(() => {
     void runtime.selectThread(isDesktop ? routeThreadId : mobilePanel.selectedThreadId);
@@ -60,7 +62,7 @@ export function ThreadsLayout() {
           }
         });
       } catch (error) {
-        toast.error(toErrorMessage(error));
+        toast.error(toErrorMessage(error, t));
       }
     })();
   }
@@ -80,7 +82,7 @@ export function ThreadsLayout() {
       await runtime.sendMessage(activeId, text);
       return true;
     } catch (error) {
-      toast.error(toErrorMessage(error));
+      toast.error(toErrorMessage(error, t));
       return false;
     }
   }
@@ -89,7 +91,7 @@ export function ThreadsLayout() {
     try {
       await runtime.interruptTurn(activeId, turnId);
     } catch (error) {
-      toast.error(toErrorMessage(error));
+      toast.error(toErrorMessage(error, t));
     }
   }
 
@@ -98,7 +100,7 @@ export function ThreadsLayout() {
       await runtime.respondToRequest(request);
       return true;
     } catch (error) {
-      toast.error(toErrorMessage(error));
+      toast.error(toErrorMessage(error, t));
       return false;
     }
   }
@@ -155,7 +157,7 @@ export function ThreadsLayout() {
   // Desktop: side-by-side panels
   return (
     <div className="flex h-full">
-      <div className="w-[280px] shrink-0 overflow-hidden border-r border-white/6">
+      <div className="w-[280px] shrink-0 overflow-hidden border-r border-subtle/6">
         <ThreadListPanel
           connectionState={snapshot.connection}
           onOpenThread={handleOpenThread}
@@ -190,38 +192,39 @@ export function ThreadsLayout() {
   );
 }
 
-function toErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unknown client error";
+function toErrorMessage(error: unknown, t: (key: string) => string) {
+  return error instanceof Error ? error.message : t("common.unknownClientError");
 }
 
 function unresolvedRouteDetailState(
   threadId: string,
-  connectionState: LocalConnectionState
+  connectionState: LocalConnectionState,
+  t: (key: string) => string
 ): ThreadDetailState {
   switch (connectionState.kind) {
     case "unpaired":
       return {
         kind: "error",
         threadId,
-        message: "Pair this browser before loading thread detail."
+        message: t("detail.banner.unpaired.message")
       };
     case "revoked":
       return {
         kind: "error",
         threadId,
-        message: connectionState.message ?? "This trusted device was revoked."
+        message: connectionState.message ?? t("detail.banner.revoked.message")
       };
     case "expired":
       return {
         kind: "error",
         threadId,
-        message: connectionState.message ?? "The bridge session expired."
+        message: connectionState.message ?? t("detail.banner.expired.message")
       };
     case "disconnected":
       return {
         kind: "error",
         threadId,
-        message: connectionState.message ?? "Bridge is disconnected."
+        message: connectionState.message ?? t("detail.banner.disconnected.message")
       };
     default:
       return { kind: "loading", threadId };
