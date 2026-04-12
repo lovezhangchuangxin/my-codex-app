@@ -26,8 +26,8 @@ export class BrowserBridgeCredentialStore implements BridgeCredentialStore {
   }
 }
 
-// crypto.randomUUID() 仅在安全上下文（HTTPS / localhost）下可用，
-// 通过 HTTP 局域网 IP 访问时不可用，需回退到 getRandomValues 手动生成 UUID v4。
+// crypto.randomUUID() is only available in secure contexts (HTTPS / localhost),
+// not available when accessing via HTTP LAN IP, fall back to getRandomValues.
 function randomUUIDFallback(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -49,7 +49,7 @@ export function createDefaultDeviceDraft(): {
   const isMobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   return {
     deviceId: crypto.randomUUID?.() ?? randomUUIDFallback(),
-    label: isMobile ? "Mobile browser" : "Browser",
+    label: isMobile ? "Mobile Browser" : "Browser",
     platform
   };
 }
