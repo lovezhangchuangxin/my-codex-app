@@ -219,6 +219,7 @@ Recommended additions under `apps/client/src/features/threads/`:
 Keep browser state local to the thread-detail feature:
 
 - `open`
+- mobile presentation mode (`files` or `preview`)
 - `currentDirectoryPath`
 - expanded directories map
 - loading/error state per directory fetch
@@ -257,8 +258,10 @@ Desktop:
 
 Mobile:
 
-- full-height sheet
-- stacked layout or simple drill-in behavior
+- full-screen sheet
+- default to `files` mode on open
+- switch to `preview` mode when the user selects a file
+- allow returning to `files` mode without resetting expanded directory state
 
 ### Message-stream deep links
 
@@ -304,7 +307,7 @@ Reuse existing client presentation helpers where possible:
 6. Build client-side workspace browser components and local state helpers.
 7. Add a header trigger to `thread-detail-panel.tsx`.
 8. Add file-open actions from file-change items into the workspace browser.
-9. Tune mobile and desktop sheet behavior.
+9. Tune mobile sheet behavior for full-screen `files` / `preview` modes.
 10. Run focused validation and review docs/code consistency.
 
 ## Validation Plan

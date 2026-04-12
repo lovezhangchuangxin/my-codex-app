@@ -9,6 +9,7 @@ export const enMessages = {
   "codeBlock.copied": "Copied",
   "codeBlock.plainText": "plain text",
   "codeBlock.shell": "shell",
+  "common.close": "Close",
   "common.notAvailable": "n/a",
   "common.unknownClientError": "Unknown client error",
   "connection.action.reconnect": "Reconnect",

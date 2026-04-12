@@ -89,8 +89,14 @@ from thread detail.
 - The workspace browser should open as an overlay surface rather than a new page.
 - Desktop should use a right-side sheet or drawer large enough to show both a
   directory tree and a file preview.
-- Mobile should use a full-height sheet with a drill-in flow that remains usable
-  on narrow screens.
+- Mobile should use a full-screen sheet rather than a partial-width drawer.
+- Mobile should not stack the file tree and file preview vertically in the same
+  viewport by default.
+- Mobile should use a two-mode drill-in flow:
+  - `files` mode is the default on open
+  - selecting a file switches to `preview` mode
+  - users can return to `files` mode to pick another file without losing tree
+    expansion state
 
 ### Directory Browsing
 
@@ -107,6 +113,8 @@ from thread detail.
   available" state.
 - Very large files should degrade gracefully rather than freezing the UI.
 - File preview should favor read clarity over editor chrome.
+- On mobile, preview mode should maximize the available reading space for file
+  content.
 
 ### Thread-Aware Navigation
 
@@ -237,5 +245,7 @@ The initial protocol should not support:
   browser.
 - The bridge rejects attempts to read outside the workspace root.
 - The implementation works on both desktop and mobile layouts.
+- On mobile, the workspace browser opens full-screen and uses the `files` /
+  `preview` mode flow rather than a stacked split view.
 - The feature uses typed bridge/protocol contracts rather than direct upstream
   app-server exposure.

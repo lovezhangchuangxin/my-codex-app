@@ -5,6 +5,7 @@ export const zhCnMessages: typeof enMessages = {
   "codeBlock.copied": "已复制",
   "codeBlock.plainText": "纯文本",
   "codeBlock.shell": "命令行",
+  "common.close": "关闭",
   "common.notAvailable": "无",
   "common.unknownClientError": "未知客户端错误",
   "connection.action.reconnect": "重新连接",
