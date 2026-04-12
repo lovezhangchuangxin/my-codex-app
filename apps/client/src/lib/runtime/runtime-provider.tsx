@@ -27,6 +27,10 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
     void runtime.bootstrap();
 
     const retryConnection = () => {
+      const { connection } = runtime.getSnapshot();
+      if (connection.kind === "authenticated") {
+        return;
+      }
       void runtime.retryConnection();
     };
 

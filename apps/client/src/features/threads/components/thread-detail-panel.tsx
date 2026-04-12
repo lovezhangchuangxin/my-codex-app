@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import {
   ArrowLeft,
   Bot,
@@ -9,19 +9,17 @@ import {
   GalleryHorizontal,
   PanelLeftOpen,
   Search,
+  Send,
   Sparkles,
-  SquareTerminal,
-  UserRound
+  Square,
+  SquareTerminal
 } from "lucide-react";
 
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Sheet,
   SheetContent,
@@ -34,13 +32,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { PendingRequestList } from "@/features/requests/components/pending-request-list";
 import type { PendingRequestEntry } from "@/features/requests/lib/request-utils";
 import { useRequestDrafts } from "@/features/requests/lib/use-request-drafts";
+import { useAutoScroll } from "@/features/threads/lib/use-auto-scroll";
 import {
   buildThreadTitle,
-  formatRelativeTime,
-  formatStatusLabel,
-  formatTimestamp,
-  getWorkspaceLabel
+  flattenTurnItems,
+  formatStatusLabel
 } from "@/features/threads/lib/thread-utils";
+import type { FlatThreadItem } from "@/features/threads/lib/thread-utils";
 import { cn } from "@/lib/utils";
 import type { ThreadDetailState, ThreadListState } from "@my-codex-app/sdk";
 import { findActiveTurnId } from "@my-codex-app/sdk";
@@ -65,6 +63,10 @@ const LazyTerminalOutput = lazy(async () => {
   const module = await import("@/components/common/terminal-output");
   return { default: module.TerminalOutput };
 });
+
+// ---------------------------------------------------------------------------
+// Entry: ThreadDetailPanel
+// ---------------------------------------------------------------------------
 
 export function ThreadDetailPanel({
   connectionState,
@@ -103,7 +105,7 @@ export function ThreadDetailPanel({
     return (
       <EmptyDetailState
         isDesktop={isDesktop}
-        message="Select a thread to read its full turn timeline, approvals, and streamed output."
+        message="Select a thread to read the conversation."
         title="No thread selected"
       />
     );
@@ -167,6 +169,10 @@ export function ThreadDetailPanel({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Main: ReadyThreadDetail
+// ---------------------------------------------------------------------------
+
 function ReadyThreadDetail({
   connectionState,
   highlightedRequestKey,
@@ -204,20 +210,18 @@ function ReadyThreadDetail({
   const drafts = useRequestDrafts();
   const activeTurnId = findActiveTurnId(thread);
   const actionsEnabled = connectionState.kind === "authenticated";
-  const banner = connectionBanner(connectionState);
+  const banner = useDeferredBanner(connectionState);
   const pendingEntries: PendingRequestEntry[] = thread.pendingRequests.map((request) => ({
     request,
     thread
   }));
-  const orderedTurns = [...thread.turns].reverse();
-  const defaultOpenTurn = activeTurnId ?? orderedTurns[0]?.id;
-  const accordionDefaultValue = defaultOpenTurn
-    ? { defaultValue: defaultOpenTurn }
-    : {};
+  const flatItems = flattenTurnItems(thread.turns);
+  const scrollRef = useAutoScroll<HTMLDivElement>([flatItems.length, thread.updatedAt]);
 
   return (
-    <Card className="min-h-[68svh] overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.3)]">
-      <div className="border-b border-white/6 bg-background/35 px-4 py-3.5 md:px-5">
+    <Card className="flex h-full flex-col overflow-hidden bg-card/68 shadow-[0_24px_64px_rgba(0,0,0,0.3)]">
+      {/* Header */}
+      <div className="shrink-0 border-b border-white/6 bg-background/35 px-4 py-3.5 md:px-5">
         <div className="flex min-w-0 flex-col gap-3 md:flex-row md:items-start md:justify-between">
           <div className="flex min-w-0 items-start gap-2">
             {!isDesktop ? (
@@ -255,34 +259,18 @@ function ReadyThreadDetail({
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
-            {getWorkspaceLabel(thread.cwd)}
-          </Badge>
-          {thread.pendingRequests.length > 0 ? (
+        {thread.pendingRequests.length > 0 ? (
+          <div className="mt-3">
             <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
-              {thread.pendingRequests.length} pending
+              {thread.pendingRequests.length} pending request{thread.pendingRequests.length > 1 ? "s" : ""}
             </Badge>
-          ) : null}
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 rounded-[12px] border border-white/8 bg-background/38 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
-          <span>
-            Turns <span className="ml-1 text-foreground">{thread.turns.length}</span>
-          </span>
-          <span>
-            Requests{" "}
-            <span className="ml-1 text-foreground">{thread.pendingRequests.length}</span>
-          </span>
-          <span>
-            Updated{" "}
-            <span className="ml-1 text-foreground">{formatRelativeTime(thread.updatedAt)}</span>
-          </span>
-        </div>
+          </div>
+        ) : null}
       </div>
 
+      {/* Connection / error banners */}
       {banner ? (
-        <div className="px-4 pt-3 md:px-5">
+        <div className="shrink-0 px-4 pt-3 md:px-5">
           <Alert className={banner.tone === "error" ? "border-destructive/20 bg-destructive/5" : "border-primary/20 bg-primary/5"}>
             <AlertTitle>{banner.title}</AlertTitle>
             <AlertDescription>{banner.message}</AlertDescription>
@@ -291,7 +279,7 @@ function ReadyThreadDetail({
       ) : null}
 
       {lastError ? (
-        <div className="px-4 pt-3 md:px-5">
+        <div className="shrink-0 px-4 pt-3 md:px-5">
           <Alert className="border-destructive/20 bg-destructive/5">
             <AlertTitle>Latest client error</AlertTitle>
             <AlertDescription>{lastError}</AlertDescription>
@@ -299,115 +287,55 @@ function ReadyThreadDetail({
         </div>
       ) : null}
 
-      <ScrollArea className="h-[48svh] px-4 py-3 md:h-[calc(100svh-25rem)] md:px-5 lg:h-[calc(100svh-21rem)]">
-        <div className="min-w-0 max-w-full space-y-4 pb-4">
-          {pendingEntries.length > 0 ? (
-            <section className="space-y-3">
-              <div className="space-y-1">
-                <p className="font-mono text-[0.7rem] tracking-[0.18em] text-secondary uppercase">
-                  Attention required
-                </p>
-                <h3 className="font-heading text-xl tracking-[-0.04em]">Pending requests</h3>
-              </div>
-              <PendingRequestList
-                entries={pendingEntries}
-                getDraft={drafts.getDraft}
-                highlightedRequestKey={highlightedRequestKey}
-                onOpenThread={onOpenThread}
-                onRespondToRequest={async (request) => {
-                  const resolved = await onRespondToRequest(request);
-                  if (resolved) {
-                    drafts.clearRequest(request.requestId);
-                  }
-                  return resolved;
-                }}
-                respondingRequestIds={respondingRequestIds}
-                setDraft={drafts.setDraft}
-                showThreadContext={false}
-              />
-            </section>
-          ) : null}
-
-          {thread.turns.length === 0 ? (
-            <EmptyDetailState
-              isDesktop={isDesktop}
-              message="Send the first message to materialize this thread and start tracking turns."
-              title="No turns yet"
-            />
-          ) : (
-            <section className="min-w-0 max-w-full space-y-3">
-              <div className="space-y-1">
-                <p className="font-mono text-[0.7rem] tracking-[0.18em] text-primary/85 uppercase">
-                  Timeline
-                </p>
-                <h3 className="font-heading text-xl tracking-[-0.04em]">Turn activity</h3>
-              </div>
-
-              <Accordion
-                className="min-w-0 max-w-full space-y-2.5"
-                collapsible
-                key={thread.id}
-                type="single"
-                {...accordionDefaultValue}
-              >
-                {orderedTurns.map((turn) => (
-                  <AccordionItem
-                    className="min-w-0 max-w-full overflow-hidden rounded-[14px] border border-white/8 bg-card/78 px-3 shadow-[0_12px_28px_rgba(0,0,0,0.16)] transition-shadow duration-200"
-                    key={turn.id}
-                    value={turn.id}
-                  >
-                    <AccordionTrigger className="min-w-0 max-w-full py-3 hover:no-underline">
-                      <div className="flex min-w-0 max-w-full flex-1 flex-col gap-2 pr-4 text-left">
-                        <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                          <span className="min-w-0 truncate font-heading text-base tracking-[-0.04em] md:text-lg">
-                            {turn.id}
-                          </span>
-                          <StatusBadge label={turn.status} />
-                        </div>
-                        <div className="flex flex-wrap gap-x-3 gap-y-1.5 font-mono text-[0.7rem] uppercase tracking-[0.08em] text-muted-foreground">
-                          <span>{formatTimestamp(turn.startedAt)}</span>
-                          {turn.durationMs ? (
-                            <span>{Math.round(turn.durationMs / 1000)}s</span>
-                          ) : null}
-                          {turn.completedAt ? (
-                            <span>done {formatRelativeTime(turn.completedAt)}</span>
-                          ) : null}
-                          {!turn.completedAt && turn.startedAt ? (
-                            <span>live</span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="min-w-0 max-w-full space-y-3 pb-3">
-                      {turn.error ? (
-                        <Alert className="border-destructive/20 bg-destructive/5">
-                          <AlertTitle>Turn error</AlertTitle>
-                          <AlertDescription>{turn.error.message}</AlertDescription>
-                        </Alert>
-                      ) : null}
-
-                      <div className="min-w-0 max-w-full space-y-3">
-                        {turn.items.map((item) => (
-                          <ThreadItemRenderer item={item} key={item.id} />
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </section>
-          )}
+      {/* Pending requests */}
+      {pendingEntries.length > 0 ? (
+        <div className="shrink-0 space-y-3 border-b border-white/6 px-4 py-4 md:px-5">
+          <PendingRequestList
+            entries={pendingEntries}
+            getDraft={drafts.getDraft}
+            highlightedRequestKey={highlightedRequestKey}
+            onOpenThread={onOpenThread}
+            onRespondToRequest={async (request) => {
+              const resolved = await onRespondToRequest(request);
+              if (resolved) {
+                drafts.clearRequest(request.requestId);
+              }
+              return resolved;
+            }}
+            respondingRequestIds={respondingRequestIds}
+            setDraft={drafts.setDraft}
+            showThreadContext={false}
+          />
         </div>
-      </ScrollArea>
+      ) : null}
 
-      <div className="sticky bottom-0 z-10 border-t border-white/6 bg-background/82 px-4 py-3 backdrop-blur-xl md:px-5">
+      {/* Message stream */}
+      <div
+        className="min-h-0 flex-1 overflow-y-auto scroll-smooth px-4 py-4 md:px-5"
+        ref={scrollRef}
+      >
+        {flatItems.length === 0 ? (
+          <EmptyDetailState
+            isDesktop={isDesktop}
+            message="Send the first message to start the conversation."
+            title="No messages yet"
+          />
+        ) : (
+          <div className="mx-auto max-w-3xl space-y-4 pb-4">
+            {flatItems.map((item) => (
+              <FlatItemRenderer key={`${item.turnId}-${item.id}`} item={item} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Composer */}
+      <div className="shrink-0 border-t border-white/6 bg-background/82 px-4 py-3 backdrop-blur-xl md:px-5">
         <form
-          className="space-y-2.5"
+          className="flex items-end gap-2"
           onSubmit={(event) => {
             event.preventDefault();
-            if (thread.id.length === 0) {
-              return;
-            }
+            if (thread.id.length === 0) return;
 
             void (async () => {
               const sent = await onSendMessage(thread.id, composerText);
@@ -417,56 +345,291 @@ function ReadyThreadDetail({
             })();
           }}
         >
-          <div className="flex items-center justify-between gap-3">
-            <Label className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground" htmlFor="thread-composer">
-              Send a message
-            </Label>
-            {activeTurnId ? (
-              <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-primary">
-                Live thread
-              </p>
-            ) : null}
-          </div>
           <Textarea
-            className="border-0 bg-accent/82 font-mono text-sm leading-6 transition-shadow duration-200 placeholder:text-muted-foreground/45 focus-visible:ring-1 focus-visible:ring-primary/40"
+            autoFocus
+            className="min-h-[42px] flex-1 resize-none border-0 bg-accent/82 font-mono text-sm leading-6 transition-shadow duration-200 placeholder:text-muted-foreground/45 focus-visible:ring-1 focus-visible:ring-primary/40"
             id="thread-composer"
             onChange={(event) => {
               setComposerText(event.target.value);
             }}
-            placeholder="Steer the current thread, request a change, or answer with more context."
-            rows={4}
+            onKeyDown={(event) => {
+              if (!isDesktop) return;
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
+            placeholder="Send a message"
+            rows={1}
             value={composerText}
           />
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {activeTurnId ? (
             <Button
-              className="w-full sm:flex-1"
+              className="size-10 shrink-0"
+              disabled={!actionsEnabled || interruptPending}
+              onClick={() => {
+                void onInterrupt(thread.id, activeTurnId);
+              }}
+              size="icon"
+              type="button"
+              variant="outline"
+            >
+              <Square className="size-4" />
+              <span className="sr-only">Stop</span>
+            </Button>
+          ) : (
+            <Button
+              className="size-10 shrink-0"
               disabled={!actionsEnabled || sendMessagePending || composerText.trim().length === 0}
+              size="icon"
               type="submit"
             >
-            {sendMessagePending ? "Sending..." : "Send message"}
+              <Send className="size-4" />
+              <span className="sr-only">Send</span>
             </Button>
-            {activeTurnId ? (
-              <Button
-                className="w-full sm:w-auto"
-                disabled={!actionsEnabled || interruptPending}
-                onClick={() => {
-                  void onInterrupt(thread.id, activeTurnId);
-                }}
-                type="button"
-                variant="outline"
-              >
-                {interruptPending ? "Interrupting..." : "Interrupt turn"}
-              </Button>
-            ) : null}
-            <span className="self-center whitespace-nowrap font-mono text-[0.7rem] text-muted-foreground">
-              {composerText.trim().length} chars
-            </span>
-          </div>
+          )}
         </form>
       </div>
     </Card>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Flat item renderer
+// ---------------------------------------------------------------------------
+
+function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
+  switch (item.type) {
+    case "userMessage":
+      return (
+        <UserMessageBubble>
+          {item.content.map((input, index) => (
+            <UserInputRenderer input={input} key={`${item.id}-${index}`} />
+          ))}
+        </UserMessageBubble>
+      );
+    case "agentMessage":
+      return (
+        <AgentMessageBlock>
+          {item.text ? (
+            <RichMarkdown content={item.text} />
+          ) : (
+            <p className="text-sm leading-6 text-muted-foreground">No text returned.</p>
+          )}
+        </AgentMessageBlock>
+      );
+    case "reasoning":
+      return <ThinkingBlock item={item} />;
+    case "commandExecution":
+      return <CommandCard item={item} />;
+    case "fileChange":
+      return <FileChangeCard item={item} />;
+    case "webSearch":
+      return (
+        <ToolLabel icon={<Search className="size-3" />} label="Web search" value={item.query} />
+      );
+    case "imageView":
+      return (
+        <ToolLabel icon={<GalleryHorizontal className="size-3" />} label="Image" value={item.path} />
+      );
+    case "unknown":
+      return (
+        <div className="ml-9">
+          <Collapsible>
+            <CollapsibleTrigger asChild>
+              <Button size="xs" variant="ghost">
+                <ExternalLink className="mr-1 size-3" />
+                {item.title}
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2">
+              <RichCodeBlock className="bg-black/35" language="json">
+                {JSON.stringify(item.raw, null, 2)}
+              </RichCodeBlock>
+            </CollapsibleContent>
+          </Collapsible>
+        </div>
+      );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Message components
+// ---------------------------------------------------------------------------
+
+function UserMessageBubble({ children }: { children: import("react").ReactNode }) {
+  return (
+    <div className="flex justify-end">
+      <div className="max-w-[85%] rounded-2xl rounded-br-md bg-primary/12 px-4 py-3">
+        <div className="space-y-2">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AgentMessageBlock({ children }: { children: import("react").ReactNode }) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/12">
+        <Bot className="size-4 text-primary" />
+      </div>
+      <div className="min-w-0 flex-1">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning" }> }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="ml-9">
+      <button
+        aria-expanded={open}
+        className="flex items-center gap-1.5 text-[0.8rem] text-muted-foreground transition-colors hover:text-foreground"
+        onClick={() => setOpen(!open)}
+        type="button"
+      >
+        <Brain className="size-3.5" />
+        <span>Thinking...</span>
+        <ChevronDown className={cn("size-3 transition-transform duration-200", !open && "-rotate-90")} />
+      </button>
+      {open ? (
+        <div className="mt-2 space-y-2 rounded-xl border border-white/8 bg-secondary/6 p-3">
+          {item.summary.length > 0 ? (
+            <ul className="space-y-1.5 text-sm leading-6 text-foreground">
+              {item.summary.map((summary, index) => (
+                <li key={index}>{summary}</li>
+              ))}
+            </ul>
+          ) : null}
+          {item.content.length > 0 ? (
+            <div className="space-y-2">
+              {item.content.map((content, index) => (
+                <div key={index} className="rounded-lg bg-background/50 px-3 py-2">
+                  {looksLikeMarkdownContent(content) ? (
+                    <RichMarkdown className="text-sm text-muted-foreground" content={content} />
+                  ) : (
+                    <ReasoningPreformatted content={content} />
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecution" }> }) {
+  const displayCommand = getCommandDisplay(item.command);
+  const commandCwd = getCommandCwdDisplay(item.cwd);
+
+  return (
+    <div className="ml-9 overflow-hidden rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <SquareTerminal className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+          {displayCommand}
+        </span>
+        {item.exitCode !== undefined ? (
+          <CommandMetaBadge label={`exit ${item.exitCode}`} />
+        ) : null}
+        {item.durationMs ? (
+          <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
+        ) : null}
+        <StatusBadge label={item.status} />
+      </div>
+      {commandCwd.shortPath ? (
+        <div className="border-t border-white/4 px-3 py-1.5">
+          <p className="truncate font-mono text-[0.7rem] leading-5 text-muted-foreground/88">
+            {commandCwd.shortPath}
+          </p>
+        </div>
+      ) : null}
+      {item.aggregatedOutput ? (
+        <Collapsible>
+          <CollapsibleTrigger asChild>
+            <div className="border-t border-white/4 px-3 py-1.5">
+              <Button size="xs" variant="ghost" className="text-muted-foreground">
+                Show output
+              </Button>
+            </div>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="border-t border-white/4 p-3">
+              <RichTerminalOutput
+                className="rounded-lg border border-white/8 bg-black/50"
+                content={item.aggregatedOutput}
+              />
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
+      ) : null}
+    </div>
+  );
+}
+
+function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChange" }> }) {
+  return (
+    <div className="ml-9 space-y-1.5">
+      {item.changes.map((change, index) => (
+        <div
+          className="overflow-hidden rounded-xl border border-white/8 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+          key={`${item.id}-${index}`}
+        >
+          <div className="flex items-center gap-2 bg-background/85 px-3 py-2">
+            <FileCode2 className="size-3.5 shrink-0 text-muted-foreground" />
+            <p className="min-w-0 flex-1 truncate font-mono text-xs text-foreground">
+              {change.path}
+            </p>
+            {change.kind ? (
+              <span className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
+                {change.kind}
+              </span>
+            ) : null}
+          </div>
+          {change.diff ? (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <div className="border-t border-white/4 px-3 py-1">
+                  <Button size="xs" variant="ghost" className="text-muted-foreground">
+                    Show diff
+                  </Button>
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="border-t border-white/4 p-3">
+                  <RichCodeBlock className="bg-black/45" language="diff">
+                    {change.diff}
+                  </RichCodeBlock>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+          ) : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ToolLabel({ icon, label, value }: { icon: import("react").ReactNode; label: string; value: string }) {
+  return (
+    <div className="ml-9 flex items-center gap-1.5 rounded-lg bg-accent/60 px-2.5 py-1.5 text-muted-foreground">
+      {icon}
+      <span className="font-mono text-[0.7rem] uppercase tracking-wide">{label}:</span>
+      <span className="truncate text-xs text-foreground">{value}</span>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Mobile thread switcher
+// ---------------------------------------------------------------------------
 
 function MobileThreadSwitcher({
   onOpenThread,
@@ -526,6 +689,10 @@ function MobileThreadSwitcher({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Shared components
+// ---------------------------------------------------------------------------
+
 function EmptyDetailState({
   isDesktop,
   message,
@@ -548,6 +715,51 @@ function EmptyDetailState({
       </CardContent>
     </Card>
   );
+}
+
+function StatusBadge({ label }: { label: string }) {
+  const classes =
+    label === "Waiting approval"
+      ? "bg-secondary/16 text-secondary pulse-secondary"
+      : label === "Waiting input"
+        ? "bg-primary/12 text-primary"
+        : label === "Active" || label === "completed"
+          ? "bg-primary/12 text-primary"
+          : label === "inProgress"
+            ? "bg-primary/12 text-primary"
+            : label === "failed" || label === "System error"
+              ? "bg-destructive/12 text-destructive"
+              : "bg-background/70 text-muted-foreground";
+
+  return (
+    <Badge className={cn("border-0 font-mono text-[0.7rem] uppercase", classes)} variant="secondary">
+      {label}
+    </Badge>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const BANNER_DELAY_MS = 1500;
+
+function useDeferredBanner(connectionState: LocalConnectionState) {
+  const [visibleBanner, setVisibleBanner] = useState<ReturnType<typeof connectionBanner>>(null);
+
+  useEffect(() => {
+    const next = connectionBanner(connectionState);
+    if (!next) {
+      setVisibleBanner(null);
+      return;
+    }
+    const timer = setTimeout(() => {
+      setVisibleBanner(connectionBanner(connectionState));
+    }, BANNER_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [connectionState.kind]);
+
+  return visibleBanner;
 }
 
 function connectionBanner(
@@ -604,254 +816,6 @@ function connectionBanner(
         message: "Pair this browser from the Connection page before interacting with threads.",
         tone: "error"
       };
-  }
-}
-
-function ThreadItemRenderer({ item }: { item: ThreadItem }) {
-  switch (item.type) {
-    case "userMessage":
-      return (
-        <TimelineItem
-          collapsedSummary={summarizeUserMessage(item.content)}
-          defaultExpanded
-          icon={<UserRound className="size-4 text-primary" />}
-          tone="user"
-          title="User message"
-        >
-          <div className="space-y-3">
-            {item.content.map((input, index) => (
-              <UserInputRenderer input={input} key={`${item.id}-${index}`} />
-            ))}
-          </div>
-        </TimelineItem>
-      );
-    case "agentMessage":
-      return (
-        <TimelineItem
-          collapsedSummary={summarizeTextPreview(item.text, "No text returned.")}
-          defaultExpanded
-          icon={<Bot className="size-4 text-primary" />}
-          title="Assistant"
-          tone="assistant"
-        >
-          {item.text ? (
-            <RichMarkdown content={item.text} />
-          ) : (
-            <p className="text-sm leading-6 text-muted-foreground">No text returned.</p>
-          )}
-        </TimelineItem>
-      );
-    case "reasoning":
-      return (
-        <TimelineItem
-          collapsedSummary={summarizeReasoning(item)}
-          defaultExpanded={false}
-          icon={<Brain className="size-4 text-primary" />}
-          title="Reasoning"
-          tone="reasoning"
-        >
-          <div className="space-y-2.5">
-            {item.summary.length > 0 ? (
-              <ul className="space-y-2 text-sm leading-6 text-foreground">
-                {item.summary.map((summary, index) => (
-                  <li
-                    className="rounded-xl border border-white/8 bg-background/35 px-3 py-2"
-                    key={`${item.id}-summary-${index}`}
-                  >
-                    {summary}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
-            {item.content.length > 0 ? (
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button size="xs" variant="outline">
-                    Show detailed reasoning
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3">
-                  <div className="space-y-3 rounded-xl bg-background/70 p-4">
-                    {item.content.map((content, index) => (
-                      <div
-                        className="rounded-xl border border-white/8 bg-background/45 px-4 py-3"
-                        key={`${item.id}-content-${index}`}
-                      >
-                        {looksLikeMarkdownContent(content) ? (
-                          <RichMarkdown className="text-sm text-muted-foreground" content={content} />
-                        ) : (
-                          <ReasoningPreformatted content={content} />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            ) : null}
-          </div>
-        </TimelineItem>
-      );
-    case "commandExecution":
-      const displayCommand = getCommandDisplay(item.command);
-      const commandCwd = getCommandCwdDisplay(item.cwd);
-      return (
-        <TimelineItem
-          collapsedSummary={displayCommand}
-          defaultExpanded={false}
-          headerMeta={<StatusBadge label={item.status} />}
-          icon={<SquareTerminal className="size-4 text-primary" />}
-          title="Command"
-          tone="command"
-        >
-          <div className="space-y-2">
-            <div className="rounded-xl border border-white/8 bg-[linear-gradient(180deg,rgba(12,14,18,0.94),rgba(9,10,13,0.98))] px-3 py-3 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.025)]">
-              {(item.exitCode !== undefined || item.durationMs) ? (
-                <div className="mb-2 flex flex-wrap items-center gap-1.5">
-                  {item.exitCode !== undefined ? (
-                    <CommandMetaBadge label={`exit ${item.exitCode}`} />
-                  ) : null}
-                  {item.durationMs ? (
-                    <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
-                  ) : null}
-                </div>
-              ) : null}
-              <RichCodeBlock
-                chrome={false}
-                className="rounded-lg border border-white/6 bg-black/20"
-                language="bash"
-                shellPrompt
-              >
-                {displayCommand}
-              </RichCodeBlock>
-              {commandCwd.shortPath ? (
-                <div className="mt-2 space-y-1">
-                  <p className="truncate font-mono text-[0.7rem] leading-5 text-muted-foreground/88">
-                    {commandCwd.shortPath}
-                  </p>
-                  {commandCwd.fullPath && commandCwd.fullPath !== commandCwd.shortPath ? (
-                    <p className="break-all font-mono text-[0.7rem] leading-5 text-muted-foreground/62">
-                      {commandCwd.fullPath}
-                    </p>
-                  ) : null}
-                </div>
-              ) : null}
-            </div>
-            {item.aggregatedOutput ? (
-              <Collapsible>
-                <CollapsibleTrigger asChild>
-                  <Button className="rounded-lg" size="xs" variant="outline">
-                    Show output
-                  </Button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="pt-3">
-                  <RichTerminalOutput
-                    className="rounded-lg border border-white/8 bg-black/50"
-                    content={item.aggregatedOutput}
-                  />
-                </CollapsibleContent>
-              </Collapsible>
-            ) : null}
-          </div>
-        </TimelineItem>
-      );
-    case "fileChange":
-      return (
-        <TimelineItem
-          collapsedSummary={summarizeFileChange(item)}
-          defaultExpanded
-          icon={<FileCode2 className="size-4 text-primary" />}
-          title="File change"
-          tone="file"
-        >
-          <div className="space-y-2.5">
-            <div className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
-              {item.status} / {item.changes.length} file{item.changes.length === 1 ? "" : "s"}
-            </div>
-            <div className="space-y-2">
-              {item.changes.map((change, index) => (
-                <div
-                  className="overflow-hidden rounded-xl bg-background/70 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                  key={`${item.id}-${index}`}
-                >
-                  <div className="flex items-center justify-between gap-3 bg-background/85 px-3 py-2">
-                    <p className="min-w-0 truncate font-mono text-xs text-foreground">
-                      {change.path}
-                    </p>
-                    {change.kind ? (
-                      <span className="font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
-                        {change.kind}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="p-3">
-                    {change.diff ? (
-                      <Collapsible>
-                        <CollapsibleTrigger asChild>
-                          <Button size="xs" variant="outline">
-                            Show diff
-                          </Button>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent className="pt-3">
-                          <RichCodeBlock className="bg-black/45" language="diff">
-                            {change.diff}
-                          </RichCodeBlock>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    ) : null}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </TimelineItem>
-      );
-    case "webSearch":
-      return (
-        <TimelineItem
-          collapsedSummary={summarizeTextPreview(item.query, "Query unavailable")}
-          defaultExpanded
-          icon={<Search className="size-4 text-primary" />}
-          title="Web search"
-          tone="auxiliary"
-        >
-          <p className="text-sm text-foreground">{item.query}</p>
-        </TimelineItem>
-      );
-    case "imageView":
-      return (
-        <TimelineItem
-          collapsedSummary={summarizeTextPreview(item.path, "Image path unavailable")}
-          defaultExpanded
-          icon={<GalleryHorizontal className="size-4 text-primary" />}
-          title="Image view"
-          tone="auxiliary"
-        >
-          <p className="text-sm text-foreground">{item.path}</p>
-        </TimelineItem>
-      );
-    case "unknown":
-      return (
-        <TimelineItem
-          collapsedSummary="Raw payload available"
-          defaultExpanded
-          icon={<ExternalLink className="size-4 text-primary" />}
-          title={item.title}
-          tone="auxiliary"
-        >
-          <Collapsible>
-            <CollapsibleTrigger asChild>
-              <Button size="xs" variant="outline">
-                Show raw payload
-              </Button>
-            </CollapsibleTrigger>
-            <CollapsibleContent className="pt-3">
-              <RichCodeBlock className="bg-black/35" language="json">
-                {JSON.stringify(item.raw, null, 2)}
-              </RichCodeBlock>
-            </CollapsibleContent>
-          </Collapsible>
-        </TimelineItem>
-      );
   }
 }
 
@@ -941,78 +905,89 @@ function CommandMetaBadge({ label }: { label: string }) {
   );
 }
 
-function summarizeUserMessage(content: Extract<ThreadItem, { type: "userMessage" }>["content"]): string {
-  const textInput = content.find((input) => input.type === "text");
-  const nonTextInputs = content.filter((input) => input.type !== "text");
-  const attachmentSummary = summarizeNonTextUserInputs(nonTextInputs);
-
-  if (textInput) {
-    const textPreview = summarizeTextPreview(textInput.text, "Text message");
-    return attachmentSummary ? `${textPreview} · ${attachmentSummary}` : textPreview;
-  }
-
-  if (content.length === 0) {
-    return "No content";
-  }
-
-  return attachmentSummary ?? "Text";
+function PlainTextFallback({
+  className,
+  content
+}: {
+  className?: string | undefined;
+  content: string;
+}) {
+  return (
+    <div className={cn("whitespace-pre-wrap break-words text-sm leading-6 text-foreground", className)}>
+      {content}
+    </div>
+  );
 }
 
-function summarizeReasoning(item: Extract<ThreadItem, { type: "reasoning" }>): string {
-  if (item.summary[0]) {
-    return summarizeTextPreview(item.summary[0], "Reasoning details");
-  }
-
-  if (item.content[0]) {
-    return summarizeTextPreview(item.content[0], "Reasoning details");
-  }
-
-  return "Reasoning details";
+function PlainCodeFallback({
+  className,
+  content,
+  shellPrompt = false
+}: {
+  className?: string | undefined;
+  content: string;
+  shellPrompt?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-2xl border border-white/8 bg-[#111317] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
+        className
+      )}
+    >
+      <pre
+        className={cn(
+          "m-0 overflow-x-auto whitespace-pre-wrap break-words p-4 font-mono text-[0.8rem] leading-[1.65] text-foreground",
+          shellPrompt && "pl-8"
+        )}
+      >
+        {shellPrompt ? `$ ${content}` : content}
+      </pre>
+    </div>
+  );
 }
 
-function summarizeFileChange(item: Extract<ThreadItem, { type: "fileChange" }>): string {
-  if (item.changes.length === 0) {
-    return "No files recorded";
-  }
-
-  const firstPath = item.changes[0]?.path ?? "Unknown file";
-  if (item.changes.length === 1) {
-    return firstPath;
-  }
-
-  return `${firstPath} +${item.changes.length - 1} more`;
+function ReasoningPreformatted({ content }: { content: string }) {
+  return (
+    <pre className="m-0 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-muted-foreground">
+      {content}
+    </pre>
+  );
 }
 
-function summarizeTextPreview(content: string, fallback: string): string {
-  const normalized = content.replace(/\s+/g, " ").trim();
-  return normalized.length > 0 ? normalized : fallback;
+function StructuredUserInput({
+  label,
+  value
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-white/8 bg-background/45 px-3 py-2.5">
+      <p className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="mt-1 break-words font-mono text-sm leading-6 text-foreground">{value}</p>
+    </div>
+  );
 }
 
-function summarizeNonTextUserInputs(
-  inputs: Array<Exclude<Extract<ThreadItem, { type: "userMessage" }>["content"][number], { type: "text" }>>
-): string | null {
-  if (inputs.length === 0) {
-    return null;
+function looksLikeMarkdownContent(content: string) {
+  const trimmed = content.trim();
+
+  if (trimmed.length === 0) {
+    return false;
   }
 
-  const labels = inputs.map((input) => {
-    switch (input.type) {
-      case "image":
-        return "Image";
-      case "localImage":
-        return "Local image";
-      case "skill":
-        return `Skill ${input.name}`;
-      case "mention":
-        return `Mention ${input.name}`;
-    }
-  });
-
-  if (labels.length <= 2) {
-    return labels.join(" · ");
-  }
-
-  return `${labels[0]} +${labels.length - 1} more`;
+  return (
+    /^#{1,6}\s/m.test(trimmed) ||
+    /^>\s/m.test(trimmed) ||
+    /^```/m.test(trimmed) ||
+    /^\s*[-*+]\s/m.test(trimmed) ||
+    /^\s*\d+\.\s/m.test(trimmed) ||
+    /\[[^\]]+\]\([^)]+\)/.test(trimmed) ||
+    /\|.+\|/.test(trimmed)
+  );
 }
 
 function getCommandDisplay(command: string): string {
@@ -1081,180 +1056,4 @@ function unwrapShellCommandBody(body: string): string | null {
   }
 
   return trimmed;
-}
-
-function PlainTextFallback({
-  className,
-  content
-}: {
-  className?: string | undefined;
-  content: string;
-}) {
-  return (
-    <div className={cn("whitespace-pre-wrap break-words text-sm leading-6 text-foreground", className)}>
-      {content}
-    </div>
-  );
-}
-
-function PlainCodeFallback({
-  className,
-  content,
-  shellPrompt = false
-}: {
-  className?: string | undefined;
-  content: string;
-  shellPrompt?: boolean;
-}) {
-  return (
-    <div
-      className={cn(
-        "overflow-hidden rounded-2xl border border-white/8 bg-[#111317] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
-        className
-      )}
-    >
-      <pre
-        className={cn(
-          "m-0 overflow-x-auto whitespace-pre-wrap break-words p-4 font-mono text-[0.8rem] leading-[1.65] text-foreground",
-          shellPrompt && "pl-8"
-        )}
-      >
-        {shellPrompt ? `$ ${content}` : content}
-      </pre>
-    </div>
-  );
-}
-
-function ReasoningPreformatted({ content }: { content: string }) {
-  return (
-    <pre className="m-0 whitespace-pre-wrap break-words font-mono text-xs leading-6 text-muted-foreground">
-      {content}
-    </pre>
-  );
-}
-
-function looksLikeMarkdownContent(content: string) {
-  const trimmed = content.trim();
-
-  if (trimmed.length === 0) {
-    return false;
-  }
-
-  return (
-    /^#{1,6}\s/m.test(trimmed) ||
-    /^>\s/m.test(trimmed) ||
-    /^```/m.test(trimmed) ||
-    /^\s*[-*+]\s/m.test(trimmed) ||
-    /^\s*\d+\.\s/m.test(trimmed) ||
-    /\[[^\]]+\]\([^)]+\)/.test(trimmed) ||
-    /\|.+\|/.test(trimmed)
-  );
-}
-
-function StructuredUserInput({
-  label,
-  value
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-xl border border-white/8 bg-background/45 px-3 py-2.5">
-      <p className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-1 break-words font-mono text-sm leading-6 text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function TimelineItem({
-  collapsedSummary,
-  children,
-  defaultExpanded = true,
-  headerMeta,
-  icon,
-  title,
-  tone
-}: {
-  collapsedSummary?: string | null;
-  children: import("react").ReactNode;
-  defaultExpanded?: boolean;
-  headerMeta?: import("react").ReactNode;
-  icon: import("react").ReactNode;
-  title: string;
-  tone: "assistant" | "auxiliary" | "command" | "file" | "reasoning" | "user";
-}) {
-  const toneClasses =
-    tone === "user"
-      ? "border-primary/12 bg-primary/7"
-      : tone === "assistant"
-        ? "border-white/8 bg-card/78"
-        : tone === "reasoning"
-          ? "border-secondary/12 bg-secondary/6"
-          : tone === "command"
-        ? "border-white/8 bg-background/70"
-            : tone === "file"
-              ? "border-white/8 bg-background/66"
-              : "border-white/8 bg-accent/60";
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-
-  return (
-    <Collapsible
-      className={cn("min-w-0 max-w-full rounded-[12px] border p-3 transition-colors duration-150", toneClasses)}
-      onOpenChange={setIsExpanded}
-      open={isExpanded}
-    >
-      <div className={cn("min-w-0", isExpanded ? "mb-2" : "space-y-0.5")}>
-        <div className="flex min-w-0 items-center gap-2">
-          <span className="flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-primary/12">
-            {icon}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-medium text-foreground">{title}</p>
-          </div>
-          {headerMeta ? <div className="flex shrink-0 items-center gap-1">{headerMeta}</div> : null}
-          <CollapsibleTrigger asChild>
-            <Button
-              aria-label={isExpanded ? `Collapse ${title}` : `Expand ${title}`}
-              className="shrink-0 text-muted-foreground"
-              size="icon-xs"
-              variant="ghost"
-            >
-              <ChevronDown
-                className={cn("size-3.5 transition-transform duration-200", !isExpanded && "-rotate-90")}
-              />
-            </Button>
-          </CollapsibleTrigger>
-        </div>
-        {!isExpanded && collapsedSummary ? (
-          <p className="truncate pl-9 text-xs leading-5 text-muted-foreground">
-            {collapsedSummary}
-          </p>
-        ) : null}
-      </div>
-      <CollapsibleContent>{children}</CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function StatusBadge({ label }: { label: string }) {
-  const classes =
-    label === "Waiting approval"
-      ? "bg-secondary/16 text-secondary pulse-secondary"
-      : label === "Waiting input"
-        ? "bg-primary/12 text-primary"
-        : label === "Active" || label === "completed"
-          ? "bg-primary/12 text-primary"
-          : label === "inProgress"
-            ? "bg-primary/12 text-primary"
-            : label === "failed" || label === "System error"
-              ? "bg-destructive/12 text-destructive"
-              : "bg-background/70 text-muted-foreground";
-
-  return (
-    <Badge className={cn("border-0 font-mono text-[0.7rem] uppercase", classes)} variant="secondary">
-      {label}
-    </Badge>
-  );
 }

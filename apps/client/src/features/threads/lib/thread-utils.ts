@@ -1,9 +1,17 @@
 import type {
   PendingRequest,
+  ThreadItem,
   ThreadRuntimeStatus,
   ThreadSummary,
+  TurnDetail,
   UserInput
 } from "@my-codex-app/protocol";
+
+export type FlatThreadItem = ThreadItem & {
+  turnId: string;
+  turnIndex: number;
+  isFirstInTurn: boolean;
+};
 
 export type ThreadStatusFilter =
   | "all"
@@ -153,4 +161,24 @@ export function groupThreadsByWorkspace(threads: ThreadSummary[]) {
     workspace,
     items
   }));
+}
+
+export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
+  const chronological = [...turns].reverse();
+  const items: FlatThreadItem[] = [];
+
+  for (let turnIndex = 0; turnIndex < chronological.length; turnIndex++) {
+    const turn = chronological[turnIndex]!;
+    for (let itemIndex = 0; itemIndex < turn.items.length; itemIndex++) {
+      const base = turn.items[itemIndex]!;
+      items.push({
+        ...base,
+        turnId: turn.id,
+        turnIndex,
+        isFirstInTurn: itemIndex === 0
+      });
+    }
+  }
+
+  return items;
 }

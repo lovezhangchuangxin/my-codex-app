@@ -107,7 +107,8 @@ export function ThreadsLayout() {
   if (!isDesktop) {
     if (mobilePanel.view === "thread-detail" && mobilePanel.selectedThreadId) {
       return (
-        <ThreadDetailPanel
+        <div className="h-full">
+          <ThreadDetailPanel
           connectionState={snapshot.connection}
           detailState={displayedDetailState}
           highlightedRequestKey={highlightedRequestKey}
@@ -124,6 +125,7 @@ export function ThreadsLayout() {
           sendMessagePending={snapshot.mutations.sendMessagePending}
           threadsState={snapshot.threads}
         />
+        </div>
       );
     }
 
@@ -152,7 +154,7 @@ export function ThreadsLayout() {
 
   // Desktop: side-by-side panels
   return (
-    <div className="flex h-[calc(100svh-60px)]">
+    <div className="flex h-full">
       <div className="w-[280px] shrink-0 overflow-hidden border-r border-white/6">
         <ThreadListPanel
           connectionState={snapshot.connection}
