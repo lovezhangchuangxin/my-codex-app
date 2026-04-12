@@ -310,9 +310,6 @@ function ReadyThreadDetail({
               <FolderOpen className="size-3.5" />
               {t("detail.workspace.open")}
             </Button>
-            <Badge className="border-0 bg-background/70 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
-              {thread.modelProvider}
-            </Badge>
           </div>
         </div>
 
