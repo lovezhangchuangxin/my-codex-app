@@ -620,7 +620,7 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
 function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChange" }> }) {
   const { t } = useI18n();
   return (
-    <div className="ml-9 space-y-1.5">
+    <div className="lg:ml-9 space-y-1.5">
       {item.changes.map((change, index) => (
         <div
           className="overflow-hidden rounded-xl border border-subtle/8 shadow-[inset_0_0_0_1px_var(--color-subtle)/5]"
@@ -639,13 +639,13 @@ function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChang
           </div>
           {change.diff ? (
             <Collapsible>
-              <CollapsibleTrigger asChild>
-                <div className="border-t border-subtle/4 px-3 py-1">
+              <div className="border-t border-subtle/4 px-3 py-1">
+                <CollapsibleTrigger asChild>
                   <Button size="xs" variant="ghost" className="text-muted-foreground">
                     {t("detail.fileChange.showDiff")}
                   </Button>
-                </div>
-              </CollapsibleTrigger>
+                </CollapsibleTrigger>
+              </div>
               <CollapsibleContent>
                 <div className="border-t border-subtle/4 p-3">
                   <RichCodeBlock className="bg-code-bg" language="diff">
@@ -663,10 +663,10 @@ function FileChangeCard({ item }: { item: Extract<ThreadItem, { type: "fileChang
 
 function ToolLabel({ icon, label, value }: { icon: import("react").ReactNode; label: string; value: string }) {
   return (
-    <div className="ml-9 flex items-center gap-1.5 rounded-lg bg-accent/60 px-2.5 py-1.5 text-muted-foreground">
+    <div className="lg:ml-9 flex items-center gap-1.5 rounded-lg bg-accent/60 px-2.5 py-1.5 text-muted-foreground">
       {icon}
       <span className="font-mono text-[0.7rem] uppercase tracking-wide">{label}:</span>
-      <span className="truncate text-xs text-foreground">{value}</span>
+      <span className="min-w-0 flex-1 truncate text-xs text-foreground">{value}</span>
     </div>
   );
 }
