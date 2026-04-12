@@ -2,6 +2,8 @@ import type {
   ApiErrorPayload,
   BridgeEvent,
   BridgeAuthErrorCode,
+  DeviceDeleteRequest,
+  DeviceDeleteResponse,
   DeviceListResponse,
   DeviceRevokeRequest,
   DeviceRevokeResponse,
@@ -141,6 +143,16 @@ export class BridgeClient {
 
   revokeDevice(request: DeviceRevokeRequest): Promise<DeviceRevokeResponse> {
     return this.#requestJson<DeviceRevokeResponse>("/api/devices/revoke", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  deleteDevice(request: DeviceDeleteRequest): Promise<DeviceDeleteResponse> {
+    return this.#requestJson<DeviceDeleteResponse>("/api/devices/delete", {
       method: "POST",
       body: JSON.stringify(request),
       headers: {

@@ -5,10 +5,11 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useBridgeClient, useRuntime } from "@/lib/runtime/runtime-provider";
-import { formatRelativeTime } from "@/features/threads/lib/thread-utils";
+import { useI18n } from "@/lib/i18n/use-i18n";
 import type { DeviceTrustRecord } from "@my-codex-app/protocol";
 
 export function DevicesSection() {
+  const { formatRelativeTime, t } = useI18n();
   const bridgeClient = useBridgeClient();
   const runtime = useRuntime();
   const credentials = bridgeClient.getCredentials();
@@ -26,11 +27,11 @@ export function DevicesSection() {
       const response = await bridgeClient.listDevices();
       setDevices(response.devices);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to load devices");
+      toast.error(error instanceof Error ? error.message : t("devices.error.loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [bridgeClient]);
+  }, [bridgeClient, t]);
 
   useEffect(() => {
     void refreshDevices();
@@ -45,9 +46,23 @@ export function DevicesSection() {
         runtime.resetState();
       }
       await refreshDevices();
-      toast.success("Device revoked");
+      toast.success(t("devices.success.revoked"));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to revoke device");
+      toast.error(error instanceof Error ? error.message : t("devices.error.revokeFailed"));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete(deviceId: string) {
+    if (credentials?.device.deviceId === deviceId) return;
+    setLoading(true);
+    try {
+      await bridgeClient.deleteDevice({ deviceId });
+      await refreshDevices();
+      toast.success(t("devices.success.deleted"));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : t("devices.error.deleteFailed"));
     } finally {
       setLoading(false);
     }
@@ -56,13 +71,13 @@ export function DevicesSection() {
   return (
     <div className="space-y-3">
       <h3 className="font-mono text-xs tracking-[0.18em] text-muted-foreground uppercase">
-        Trusted devices
+        {t("settings.devices.title")}
       </h3>
 
       {!credentials ? (
-        <p className="text-sm text-muted-foreground">Pair first to manage trusted devices.</p>
+        <p className="text-sm text-muted-foreground">{t("devices.empty.pairFirst")}</p>
       ) : devices.length === 0 && !loading ? (
-        <p className="text-sm text-muted-foreground">No trusted devices found.</p>
+        <p className="text-sm text-muted-foreground">{t("devices.empty.none")}</p>
       ) : (
         <div className="space-y-2">
           {devices.map((device) => {
@@ -86,17 +101,17 @@ export function DevicesSection() {
                       <span className="text-sm font-medium text-foreground">{device.label}</span>
                       {isCurrent ? (
                         <Badge className="bg-primary/12 text-primary" variant="secondary">
-                          Current
+                          {t("devices.badge.current")}
                         </Badge>
                       ) : null}
                       {isRevoked ? (
                         <Badge className="bg-destructive/12 text-destructive" variant="secondary">
-                          Revoked
+                          {t("devices.badge.revoked")}
                         </Badge>
                       ) : null}
                     </div>
                     <p className="font-mono text-[0.7rem] text-muted-foreground">
-                      Last seen {formatRelativeTime(device.lastSeenAt)}
+                      {t("devices.lastSeen", { relative: formatRelativeTime(device.lastSeenAt) })}
                     </p>
                   </div>
 
@@ -109,9 +124,20 @@ export function DevicesSection() {
                       size="sm"
                       variant="outline"
                     >
-                      Revoke
+                      {t("devices.action.revoke")}
                     </Button>
-                  ) : null}
+                  ) : (
+                    <Button
+                      disabled={loading}
+                      onClick={() => {
+                        void handleDelete(device.deviceId);
+                      }}
+                      size="sm"
+                      variant="outline"
+                    >
+                      {t("devices.action.delete")}
+                    </Button>
+                  )}
                 </div>
               </div>
             );

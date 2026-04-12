@@ -223,6 +223,20 @@ export class DeviceTrustStore {
     return this.#toDeviceTrustRecord(nextDevice);
   }
 
+  deleteDevice(deviceId: string): boolean {
+    const exists = this.hasDeviceId(deviceId);
+    if (!exists) {
+      return false;
+    }
+
+    this.#state = {
+      ...this.#state,
+      devices: this.#state.devices.filter((entry) => entry.deviceId !== deviceId)
+    };
+    this.#save();
+    return true;
+  }
+
   #load(): BridgeAuthState {
     if (!existsSync(this.#statePath)) {
       const initialState = createInitialState();

@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import type {
   BridgeAuthErrorCode,
   DeviceInfo,
+  DeviceDeleteResponse,
   DeviceListResponse,
   DeviceRevokeResponse,
   PairingCompleteRequest,
@@ -170,6 +171,18 @@ export class BridgeAuthService {
     if (!revoked) {
       throw new BridgeAuthError("Unknown device", "invalidAccessToken", 404);
     }
+    return {};
+  }
+
+  deleteDevice(deviceId: string): DeviceDeleteResponse {
+    const device = this.store.getDevice(deviceId);
+    if (!device) {
+      throw new BridgeAuthError("Unknown device", "invalidAccessToken", 404);
+    }
+    if (device.revokedAt === undefined) {
+      throw new BridgeAuthError("Cannot delete active device", "invalidAccessToken", 400);
+    }
+    this.store.deleteDevice(deviceId);
     return {};
   }
 

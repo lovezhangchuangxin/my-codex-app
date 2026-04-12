@@ -2,6 +2,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Separator } from "@/components/ui/separator";
 import { ConnectionSection } from "@/components/settings/connection-section";
 import { DevicesSection } from "@/components/settings/devices-section";
+import { LanguageSection } from "@/components/settings/language-section";
+import { useI18n } from "@/lib/i18n/use-i18n";
 
 export function SettingsSheet({
   open,
@@ -10,22 +12,28 @@ export function SettingsSheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full border-l border-white/6 bg-card/95 sm:max-w-md" side="right">
         <SheetHeader>
-          <SheetTitle>Settings</SheetTitle>
+          <SheetTitle>{t("settings.title")}</SheetTitle>
         </SheetHeader>
-        <div className="space-y-6 px-4 py-4">
+        <div className="flex-1 space-y-6 overflow-y-auto px-4 py-4">
+          <LanguageSection />
+          <Separator className="bg-white/6" />
           <ConnectionSection />
           <Separator className="bg-white/6" />
           <DevicesSection />
           <Separator className="bg-white/6" />
           <div className="space-y-1">
             <h3 className="font-mono text-xs tracking-[0.18em] text-muted-foreground uppercase">
-              About
+              {t("settings.about.title")}
             </h3>
-            <p className="text-sm text-muted-foreground">My Codex App v0.1.0</p>
+            <p className="text-sm text-muted-foreground">
+              {t("settings.about.version", { version: "v0.1.0" })}
+            </p>
           </div>
         </div>
       </SheetContent>

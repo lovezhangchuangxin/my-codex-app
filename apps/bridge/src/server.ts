@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import type {
   ApiErrorPayload,
+  DeviceDeleteRequest,
   DeviceListResponse,
   DeviceRevokeRequest,
   PairingCompleteRequest,
@@ -224,6 +225,22 @@ async function main(): Promise<void> {
         }
 
         const result = authService.revokeDevice(payload.deviceId);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, 404);
+      }
+      return;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/devices/delete") {
+      try {
+        const payload = await readJsonBody<DeviceDeleteRequest>(request);
+        if (!isRecord(payload) || typeof payload.deviceId !== "string") {
+          writeJson(response, 400, { error: { message: "Invalid device/delete payload" } });
+          return;
+        }
+
+        const result = authService.deleteDevice(payload.deviceId);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, 404);

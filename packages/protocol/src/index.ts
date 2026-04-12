@@ -84,6 +84,12 @@ export interface DeviceRevokeRequest {
 
 export interface DeviceRevokeResponse {}
 
+export interface DeviceDeleteRequest {
+  deviceId: string;
+}
+
+export interface DeviceDeleteResponse {}
+
 export type ThreadRuntimeStatus =
   | { type: "notLoaded" }
   | { type: "idle" }
