@@ -1,7 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from "react";
 import {
   ArrowLeft,
-  Bot,
   Brain,
   ChevronDown,
   ExternalLink,
@@ -437,7 +436,7 @@ function FlatItemRenderer({ item }: { item: FlatThreadItem }) {
       );
     case "unknown":
       return (
-        <div className="ml-9">
+        <div className="lg:ml-9">
           <Collapsible>
             <CollapsibleTrigger asChild>
               <Button size="xs" variant="ghost">
@@ -475,8 +474,8 @@ function UserMessageBubble({ children }: { children: import("react").ReactNode }
 function AgentMessageBlock({ children }: { children: import("react").ReactNode }) {
   return (
     <div className="flex gap-3">
-      <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/12">
-        <Bot className="size-4 text-primary" />
+      <div className="hidden lg:flex size-6 shrink-0 items-center justify-center rounded-lg bg-primary/12">
+        <img src="/openai.svg" alt="" className="size-4" />
       </div>
       <div className="min-w-0 flex-1">
         {children}
@@ -489,7 +488,7 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="ml-9">
+    <div className="lg:ml-9">
       <button
         aria-expanded={open}
         className="flex items-center gap-1.5 text-[0.8rem] text-muted-foreground transition-colors hover:text-foreground"
