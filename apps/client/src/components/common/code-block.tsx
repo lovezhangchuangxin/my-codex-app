@@ -75,25 +75,28 @@ export function CodeBlock({
   return (
     <div
       className={cn(
-        "not-prose overflow-hidden rounded-2xl border border-white/8 bg-[#111317] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
+        "not-prose overflow-hidden rounded-lg border border-white/8 bg-[#111317] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
         !chrome && "rounded-xl border-0 bg-transparent shadow-none",
         className
       )}
     >
       {chrome ? (
-        <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-white/4 px-3 py-2">
+        <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-white/4 px-3 py-1.5">
           <div className="flex items-center gap-3">
             <div className="flex gap-1.5">
-              <span className="size-2.5 rounded-full bg-destructive/45" />
-              <span className="size-2.5 rounded-full bg-secondary/55" />
-              <span className="size-2.5 rounded-full bg-primary/55" />
+              <span className="size-2 rounded-full bg-destructive/45" />
+              <span className="size-2 rounded-full bg-secondary/55" />
+              <span className="size-2 rounded-full bg-primary/55" />
             </div>
             <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-muted-foreground">
               {language ?? (shellPrompt ? "shell" : "plain text")}
             </p>
           </div>
           <Button
-            className="h-7 rounded-md px-2.5 font-mono text-[0.7rem] uppercase tracking-[0.12em]"
+            className={cn(
+              "h-6 rounded-md px-2 font-mono text-[0.7rem] uppercase tracking-[0.12em] transition-colors",
+              copied && "text-primary hover:text-primary"
+            )}
             onClick={() => {
               void handleCopy();
             }}

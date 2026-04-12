@@ -34,16 +34,15 @@ export function TerminalOutput({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-white/8 bg-[linear-gradient(180deg,rgba(10,12,14,0.94),rgba(16,18,20,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
+        "overflow-hidden rounded-lg border border-white/8 bg-[linear-gradient(180deg,rgba(10,12,14,0.94),rgba(16,18,20,0.98))] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)]",
         className
       )}
     >
-      <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-[linear-gradient(90deg,rgba(255,255,255,0.04),rgba(78,222,163,0.05))] px-3 py-2.5">
+      <div className="flex items-center justify-between gap-3 border-b border-white/6 bg-[linear-gradient(90deg,rgba(255,255,255,0.04),rgba(78,222,163,0.05))] px-3 py-1.5">
         <div>
           <p className="font-mono text-[0.7rem] uppercase tracking-[0.18em] text-primary/85">
             Terminal output
           </p>
-          <p className="text-xs text-muted-foreground">Live command log with ANSI color support</p>
         </div>
       </div>
       <div className="overflow-x-auto p-4">
