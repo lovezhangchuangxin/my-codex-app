@@ -21,9 +21,11 @@ export type WorkspaceFilePreviewState =
   | { status: "ready"; path: string; response: WorkspaceReadFileResponse };
 
 export function WorkspaceFilePreview({
+  highlightLine,
   onRetry,
   state
 }: {
+  highlightLine?: number | null;
   onRetry: (path: string) => void;
   state: WorkspaceFilePreviewState;
 }) {
@@ -95,6 +97,7 @@ export function WorkspaceFilePreview({
       {state.response.kind === "text" ? (
         <CodeBlock
           className="min-h-[18rem] rounded-2xl border border-subtle/8 bg-code-bg"
+          highlightLine={highlightLine}
           {...(language ? { language } : {})}
         >
           {state.response.content ?? ""}

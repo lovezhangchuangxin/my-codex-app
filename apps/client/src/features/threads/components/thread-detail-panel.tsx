@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   ArrowLeft,
   Brain,
@@ -229,10 +229,12 @@ function ReadyThreadDetail({
   const [workspaceBrowserState, setWorkspaceBrowserState] = useState<{
     open: boolean;
     requestedPath: string | null;
+    requestedLine: number | null;
     requestKey: number;
   }>({
     open: false,
     requestedPath: null,
+    requestedLine: null,
     requestKey: 0
   });
 
@@ -240,13 +242,27 @@ function ReadyThreadDetail({
     return toWorkspaceRelativePath(thread.cwd, candidatePath);
   }
 
-  function openWorkspaceBrowser(requestedPath: string | null = null) {
+  function openWorkspaceBrowser(requestedPath: string | null = null, requestedLine: number | null = null) {
     setWorkspaceBrowserState((current) => ({
       open: true,
       requestedPath,
+      requestedLine,
       requestKey: current.requestKey + 1
     }));
   }
+
+  const handleFilePathClick = useCallback((href: string) => {
+    const { path, line } = parseFilePathWithLine(href);
+    const workspacePath = toWorkspaceRelativePath(thread.cwd, path);
+    if (workspacePath) {
+      setWorkspaceBrowserState((current) => ({
+        open: true,
+        requestedPath: workspacePath,
+        requestedLine: line,
+        requestKey: current.requestKey + 1
+      }));
+    }
+  }, [thread.cwd]);
 
   return (
     <Card className="flex h-full flex-col overflow-hidden rounded-none bg-card/68 py-0 gap-0">
@@ -368,6 +384,7 @@ function ReadyThreadDetail({
               <FlatItemRenderer
                 item={item}
                 key={`${item.turnId}-${item.id}`}
+                onFilePathClick={handleFilePathClick}
                 onOpenWorkspacePath={(path) => {
                   openWorkspaceBrowser(path);
                 }}
@@ -450,6 +467,7 @@ function ReadyThreadDetail({
         }}
         open={workspaceBrowserState.open}
         requestKey={workspaceBrowserState.requestKey}
+        requestedLine={workspaceBrowserState.requestedLine}
         requestedPath={workspaceBrowserState.requestedPath}
         threadId={thread.id}
       />
@@ -463,10 +481,12 @@ function ReadyThreadDetail({
 
 function FlatItemRenderer({
   item,
+  onFilePathClick,
   onOpenWorkspacePath,
   resolveWorkspacePath
 }: {
   item: FlatThreadItem;
+  onFilePathClick?: ((href: string) => void) | undefined;
   onOpenWorkspacePath: (path: string) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
 }) {
@@ -477,7 +497,7 @@ function FlatItemRenderer({
       return (
         <UserMessageBubble>
           {item.content.map((input, index) => (
-            <UserInputRenderer input={input} key={`${item.id}-${index}`} />
+            <UserInputRenderer input={input} key={`${item.id}-${index}`} onFilePathClick={onFilePathClick} />
           ))}
         </UserMessageBubble>
       );
@@ -485,7 +505,7 @@ function FlatItemRenderer({
       return (
         <AgentMessageBlock>
           {item.text ? (
-            <RichMarkdown content={item.text} />
+            <RichMarkdown content={item.text} onFilePathClick={onFilePathClick} />
           ) : (
             <p className="text-sm leading-6 text-muted-foreground">
               {t("detail.agent.noTextReturned")}
@@ -965,15 +985,17 @@ function connectionBanner(
 }
 
 function UserInputRenderer({
-  input
+  input,
+  onFilePathClick
 }: {
   input: Extract<ThreadItem, { type: "userMessage" }>["content"][number];
+  onFilePathClick?: ((href: string) => void) | undefined;
 }) {
   const { t } = useI18n();
 
   switch (input.type) {
     case "text":
-      return <RichMarkdown content={input.text} />;
+      return <RichMarkdown content={input.text} onFilePathClick={onFilePathClick} />;
     case "image":
       return <StructuredUserInput label={t("detail.userInput.image")} value={input.url} />;
     case "localImage":
@@ -1001,14 +1023,16 @@ function formatExecutionStatus(
 
 function RichMarkdown({
   className,
-  content
+  content,
+  onFilePathClick
 }: {
   className?: string | undefined;
   content: string;
+  onFilePathClick?: ((href: string) => void) | undefined;
 }) {
   return (
     <Suspense fallback={<PlainTextFallback className={className} content={content} />}>
-      <LazyMarkdownContent {...(className ? { className } : {})} content={content} />
+      <LazyMarkdownContent {...(className ? { className } : {})} content={content} onFilePathClick={onFilePathClick} />
     </Suspense>
   );
 }
@@ -1192,6 +1216,14 @@ function looksLikeMarkdownContent(content: string) {
     /\[[^\]]+\]\([^)]+\)/.test(trimmed) ||
     /\|.+\|/.test(trimmed)
   );
+}
+
+function parseFilePathWithLine(href: string): { path: string; line: number | null } {
+  const match = href.match(/^(.+?)#L(\d+)$/i);
+  if (match?.[1] != null && match[2] != null) {
+    return { path: match[1], line: parseInt(match[2], 10) };
+  }
+  return { path: href, line: null };
 }
 
 function getCommandDisplay(command: string): string {

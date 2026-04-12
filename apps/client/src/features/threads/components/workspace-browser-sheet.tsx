@@ -33,6 +33,7 @@ export function WorkspaceBrowserSheet({
   onOpenChange,
   open,
   requestKey,
+  requestedLine,
   requestedPath,
   threadId
 }: {
@@ -40,6 +41,7 @@ export function WorkspaceBrowserSheet({
   onOpenChange: (open: boolean) => void;
   open: boolean;
   requestKey: number;
+  requestedLine: number | null;
   requestedPath: string | null;
   threadId: string;
 }) {
@@ -353,6 +355,7 @@ export function WorkspaceBrowserSheet({
                 <Separator />
                 <ScrollArea className="min-h-0 flex-1">
                   <WorkspaceFilePreview
+                    highlightLine={requestedLine}
                     onRetry={(path) => {
                       void loadFile(path);
                     }}
@@ -428,6 +431,7 @@ export function WorkspaceBrowserSheet({
                 <Separator />
                 <ScrollArea className="min-h-0 flex-1">
                   <WorkspaceFilePreview
+                    highlightLine={requestedLine}
                     onRetry={(path) => {
                       void loadFile(path);
                     }}

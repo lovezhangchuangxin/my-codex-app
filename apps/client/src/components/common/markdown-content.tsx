@@ -12,26 +12,40 @@ type MarkdownCodeProps = ComponentPropsWithoutRef<"code"> & {
 
 export function MarkdownContent({
   className,
-  content
+  content,
+  onFilePathClick
 }: {
   className?: string;
   content: string;
+  onFilePathClick?: ((href: string) => void) | undefined;
 }) {
   return (
     <div className={cn("markdown-content", className)}>
       <ReactMarkdown
         components={{
-          a: ({ children, href, ...props }) => (
-            <a
-              {...props}
-              className="font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:text-primary/80"
-              href={href}
-              rel="noreferrer"
-              target="_blank"
-            >
-              {children}
-            </a>
-          ),
+          a: ({ children, href, ...props }) => {
+            function handleClick(e: React.MouseEvent<HTMLAnchorElement>) {
+              if (!href || /^(https?|mailto|tel|data|#)/i.test(href)) {
+                return;
+              }
+              if (onFilePathClick) {
+                e.preventDefault();
+                onFilePathClick(href);
+              }
+            }
+            return (
+              <a
+                {...props}
+                className="font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:text-primary/80"
+                href={href}
+                onClick={handleClick}
+                rel="noreferrer"
+                target="_blank"
+              >
+                {children}
+              </a>
+            );
+          },
           code: ({ children, className: codeClassName, inline }: MarkdownCodeProps) => {
             const renderedChildren = toCodeContent(children);
             const language = parseCodeLanguage(codeClassName);

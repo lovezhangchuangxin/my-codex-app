@@ -1,5 +1,5 @@
 import { Check, Copy } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PrismAsyncLight as SyntaxHighlighter } from "react-syntax-highlighter";
 import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
 import diff from "react-syntax-highlighter/dist/esm/languages/prism/diff";
@@ -51,19 +51,40 @@ export function CodeBlock({
   children,
   className,
   chrome = true,
+  highlightLine,
   language,
   shellPrompt = false
 }: {
   children: string;
   className?: string | undefined;
   chrome?: boolean;
+  highlightLine?: number | null | undefined;
   language?: string | undefined;
   shellPrompt?: boolean;
 }) {
   const { t } = useI18n();
   const { theme } = useTheme();
   const [copied, setCopied] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const content = useMemo(() => children.replace(/\n$/, ""), [children]);
+
+  useEffect(() => {
+    if (highlightLine == null || !containerRef.current) return;
+    const codeEl = containerRef.current.querySelector("code");
+    if (!codeEl) return;
+    const lines = codeEl.children;
+    const targetIndex = highlightLine - 1;
+    if (targetIndex >= 0 && targetIndex < lines.length) {
+      const targetEl = lines[targetIndex] as HTMLElement;
+      targetEl.style.background = "rgba(78, 222, 163, 0.12)";
+      targetEl.style.borderRadius = "3px";
+      targetEl.scrollIntoView({ block: "center", behavior: "smooth" });
+      return () => {
+        targetEl.style.background = "";
+        targetEl.style.borderRadius = "";
+      };
+    }
+  }, [highlightLine, content]);
 
   async function handleCopy() {
     if (typeof navigator === "undefined" || !navigator.clipboard) {
@@ -115,7 +136,7 @@ export function CodeBlock({
         </div>
       ) : null}
 
-      <div className="relative">
+      <div className="relative" ref={containerRef}>
         {shellPrompt ? (
           <span className="pointer-events-none absolute top-4 left-4 z-10 font-mono text-xs text-primary">
             $
