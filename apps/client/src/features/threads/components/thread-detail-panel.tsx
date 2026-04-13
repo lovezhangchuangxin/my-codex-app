@@ -38,6 +38,13 @@ import {
   PopoverTitle,
   PopoverTrigger
 } from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PendingRequestList } from "@/features/requests/components/pending-request-list";
 import type { PendingRequestEntry } from "@/features/requests/lib/request-utils";
@@ -534,6 +541,18 @@ function ThreadComposer({
 
   const selectedModel = findModelDefinition(modelsState.models, settingsDraft.model);
 
+  const modelSelectValue = modelsState.models.find(
+    (m) => m.model === settingsDraft.model || m.id === settingsDraft.model
+  )?.id ?? modelsState.models[0]?.id ?? "";
+
+  const selectedReasoningOption = selectedModel?.supportedReasoningEfforts.find(
+    (opt) => opt.reasoningEffort === settingsDraft.reasoningEffort
+  );
+
+  const selectedPermissionOption = getPermissionPresetOptions(t).find(
+    (opt) => opt.id === settingsDraft.permissionsPreset
+  );
+
   const canSend =
     actionsEnabled && !sendMessagePending && composerText.trim().length > 0;
 
@@ -663,29 +682,39 @@ function ThreadComposer({
                   ) : null}
 
                   {modelsState.models.length > 0 ? (
-                    <div className="space-y-2">
-                      {modelsState.models.map((model) => {
-                        const isSelected =
-                          settingsDraft.model === model.model || settingsDraft.model === model.id;
-                        return (
-                          <ComposerSettingsOption
-                            description={model.description}
-                            key={model.id}
-                            onClick={() => {
-                              setSettingsDraft((current) => ({
-                                ...current,
-                                model: model.model,
-                                reasoningEffort: normalizeReasoningEffortSelection(
-                                  model,
-                                  current.reasoningEffort
-                                )
-                              }));
-                            }}
-                            selected={isSelected}
-                            title={model.displayName}
-                          />
-                        );
-                      })}
+                    <div className="space-y-1.5">
+                      <Select
+                        value={modelSelectValue}
+                        onValueChange={(id) => {
+                          const model = modelsState.models.find((m) => m.id === id);
+                          if (model) {
+                            setSettingsDraft((current) => ({
+                              ...current,
+                              model: model.model,
+                              reasoningEffort: normalizeReasoningEffortSelection(
+                                model,
+                                current.reasoningEffort
+                              )
+                            }));
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {modelsState.models.map((model) => (
+                            <SelectItem key={model.id} value={model.id}>
+                              {model.displayName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedModel ? (
+                        <p className="px-1 text-xs leading-relaxed text-muted-foreground/70">
+                          {selectedModel.description}
+                        </p>
+                      ) : null}
                     </div>
                   ) : null}
                 </ComposerSettingsSection>
@@ -695,21 +724,32 @@ function ThreadComposer({
                   title={t("detail.composer.settings.reasoning")}
                 >
                   {selectedModel && selectedModel.supportedReasoningEfforts.length > 0 ? (
-                    <div className="space-y-2">
-                      {selectedModel.supportedReasoningEfforts.map((option) => (
-                        <ComposerSettingsOption
-                          description={option.description}
-                          key={option.reasoningEffort}
-                          onClick={() => {
-                            setSettingsDraft((current) => ({
-                              ...current,
-                              reasoningEffort: option.reasoningEffort
-                            }));
-                          }}
-                          selected={settingsDraft.reasoningEffort === option.reasoningEffort}
-                          title={formatReasoningEffortLabel(option.reasoningEffort, t)}
-                        />
-                      ))}
+                    <div className="space-y-1.5">
+                      <Select
+                        value={settingsDraft.reasoningEffort ?? selectedModel.defaultReasoningEffort}
+                        onValueChange={(value) => {
+                          setSettingsDraft((current) => ({
+                            ...current,
+                            reasoningEffort: value as ReasoningEffort
+                          }));
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedModel.supportedReasoningEfforts.map((option) => (
+                            <SelectItem key={option.reasoningEffort} value={option.reasoningEffort}>
+                              {formatReasoningEffortLabel(option.reasoningEffort, t)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {selectedReasoningOption ? (
+                        <p className="px-1 text-xs leading-relaxed text-muted-foreground/70">
+                          {selectedReasoningOption.description}
+                        </p>
+                      ) : null}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">
@@ -722,21 +762,32 @@ function ThreadComposer({
                   description={t("detail.composer.settings.permissionsDescription")}
                   title={t("detail.composer.settings.permissions")}
                 >
-                  <div className="space-y-2">
-                    {getPermissionPresetOptions(t).map((option) => (
-                      <ComposerSettingsOption
-                        description={option.description}
-                        key={option.id}
-                        onClick={() => {
-                          setSettingsDraft((current) => ({
-                            ...current,
-                            permissionsPreset: option.id
-                          }));
-                        }}
-                        selected={settingsDraft.permissionsPreset === option.id}
-                        title={option.label}
-                      />
-                    ))}
+                  <div className="space-y-1.5">
+                    <Select
+                      value={settingsDraft.permissionsPreset ?? "auto"}
+                      onValueChange={(value) => {
+                        setSettingsDraft((current) => ({
+                          ...current,
+                          permissionsPreset: value as ThreadPermissionPresetId
+                        }));
+                      }}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {getPermissionPresetOptions(t).map((option) => (
+                          <SelectItem key={option.id} value={option.id}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {selectedPermissionOption ? (
+                      <p className="px-1 text-xs leading-relaxed text-muted-foreground/70">
+                        {selectedPermissionOption.description}
+                      </p>
+                    ) : null}
                   </div>
                 </ComposerSettingsSection>
               </div>
@@ -887,37 +938,6 @@ function ComposerSettingsSection({
       </div>
       {children}
     </section>
-  );
-}
-
-function ComposerSettingsOption({
-  description,
-  onClick,
-  selected,
-  title
-}: {
-  description: string;
-  onClick: () => void;
-  selected: boolean;
-  title: string;
-}) {
-  return (
-    <button
-      className={cn(
-        "flex w-full items-start gap-3 rounded-2xl border px-3 py-3 text-left transition-colors",
-        selected
-          ? "border-primary/30 bg-primary/8"
-          : "border-subtle/8 bg-background/55 hover:border-primary/18 hover:bg-primary/4"
-      )}
-      onClick={onClick}
-      type="button"
-    >
-      <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-foreground">{title}</div>
-        <div className="mt-1 text-sm text-muted-foreground">{description}</div>
-      </div>
-      <div className="pt-0.5 text-primary">{selected ? <Check className="size-4" /> : null}</div>
-    </button>
   );
 }
 
