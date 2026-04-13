@@ -7,7 +7,7 @@
 :root {
   color-scheme: dark;
   --subtle: oklch(1 0 0);
-  --code-bg: oklch(0.145 0.01 285);
+  --code-bg: oklch(0.16 0.018 265);
   --background: oklch(0.17 0.008 285);
   --foreground: oklch(0.93 0.01 95);
   --card: oklch(0.205 0.01 285);
@@ -45,7 +45,7 @@
 [data-theme='light'] {
   color-scheme: light;
   --subtle: oklch(0 0 0);
-  --code-bg: oklch(0.96 0.003 285);
+  --code-bg: oklch(0.975 0.008 265);
   --background: oklch(0.985 0.002 285);
   --foreground: oklch(0.155 0.008 285);
   --card: oklch(0.995 0.001 285);
