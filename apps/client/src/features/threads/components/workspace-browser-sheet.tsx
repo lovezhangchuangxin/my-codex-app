@@ -1,6 +1,5 @@
 import { FolderOpen, X } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Sheet,
@@ -17,7 +16,6 @@ import {
   WorkspaceBrowserPreviewPane,
   WorkspaceBrowserTreePane,
 } from '@/features/threads/components/workspace-browser-panes';
-import { getWorkspaceLabel } from '@/features/threads/lib/thread-utils';
 import { useI18n } from '@/lib/i18n/use-i18n';
 
 export function WorkspaceBrowserSheet({
@@ -49,7 +47,6 @@ export function WorkspaceBrowserSheet({
     handleToggleDirectory,
     loadFile,
     mobileMode,
-    rootDirectoryLoading,
     selectedDirectoryPath,
     selectedFilePath,
     selectedPreviewPath,
@@ -71,22 +68,12 @@ export function WorkspaceBrowserSheet({
         side={isDesktop ? 'right' : 'bottom'}
       >
         <SheetHeader className="gap-2 border-b border-subtle/6 bg-background/45 px-4 py-4 md:px-5">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-start gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <div className="flex size-10 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <FolderOpen className="size-4" />
               </div>
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <SheetTitle>{t('detail.workspace.sheetTitle')}</SheetTitle>
-                  <Badge
-                    className="border-0 bg-background/80 font-mono text-[0.68rem] uppercase text-muted-foreground"
-                    variant="outline"
-                  >
-                    {getWorkspaceLabel(cwd, t)}
-                  </Badge>
-                </div>
-              </div>
+              <SheetTitle>{t('detail.workspace.sheetTitle')}</SheetTitle>
             </div>
             <Button
               onClick={() => {
@@ -116,7 +103,6 @@ export function WorkspaceBrowserSheet({
                   void loadFile(path);
                 }}
                 onToggleDirectory={handleToggleDirectory}
-                rootDirectoryLoading={rootDirectoryLoading}
                 scrollRequestKey={requestKey}
                 scrollTargetPath={requestedPath}
                 selectedDirectoryPath={selectedDirectoryPath}
@@ -130,7 +116,6 @@ export function WorkspaceBrowserSheet({
                 onRetry={(path) => {
                   void loadFile(path);
                 }}
-                selectedPreviewPath={selectedPreviewPath}
                 state={filePreviewState}
               />
             </div>
@@ -171,7 +156,6 @@ export function WorkspaceBrowserSheet({
                     void loadFile(path);
                   }}
                   onToggleDirectory={handleToggleDirectory}
-                  rootDirectoryLoading={rootDirectoryLoading}
                   scrollRequestKey={requestKey}
                   scrollTargetPath={requestedPath}
                   selectedDirectoryPath={selectedDirectoryPath}
@@ -185,7 +169,6 @@ export function WorkspaceBrowserSheet({
                   onRetry={(path) => {
                     void loadFile(path);
                   }}
-                  selectedPreviewPath={selectedPreviewPath}
                   state={filePreviewState}
                 />
               </div>

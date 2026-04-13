@@ -402,8 +402,6 @@ export function useWorkspaceBrowser({
     handleToggleDirectory,
     loadFile,
     mobileMode,
-    rootDirectoryLoading:
-      !directories[''] || directories[''].status === 'loading',
     selectedDirectoryPath,
     selectedFilePath,
     selectedPreviewPath,
