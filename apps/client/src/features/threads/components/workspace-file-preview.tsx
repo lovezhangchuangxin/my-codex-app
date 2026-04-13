@@ -3,7 +3,7 @@ import { FileCode2, FileWarning, LoaderCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CodeBlock } from '@/components/common/code-block';
+import { CodeViewer } from '@/components/common/code-viewer';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import type { MessageParams } from '@/lib/i18n/types';
 import type { WorkspaceReadFileResponse } from '@my-codex-app/protocol';
@@ -102,13 +102,13 @@ export function WorkspaceFilePreview({
       />
 
       {state.response.kind === 'text' ? (
-        <CodeBlock
+        <CodeViewer
           className="min-h-[18rem] rounded-2xl border border-subtle/8 bg-code-bg"
           highlightLine={highlightLine}
           {...(language ? { language } : {})}
         >
           {state.response.content ?? ''}
-        </CodeBlock>
+        </CodeViewer>
       ) : (
         <div className="rounded-2xl border border-subtle/8 bg-background/55 p-4">
           <div className="flex items-start gap-3">

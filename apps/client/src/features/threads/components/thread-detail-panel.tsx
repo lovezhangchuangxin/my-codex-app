@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -15,7 +15,6 @@ import { ThreadSwitcherSheet } from '@/features/threads/components/thread-switch
 import { parseFilePathWithLine } from '@/features/threads/components/thread-detail-utils';
 import type { WorkspaceBrowserRequestedTargetKind } from '@/features/threads/components/use-workspace-browser';
 import { useThreadDetailBanner } from '@/features/threads/components/use-thread-detail-banner';
-import { WorkspaceBrowserSheet } from '@/features/threads/components/workspace-browser-sheet';
 import { useAutoScroll } from '@/features/threads/lib/use-auto-scroll';
 import { flattenTurnItems } from '@/features/threads/lib/thread-utils';
 import { toWorkspaceRelativePath } from '@/features/threads/lib/workspace-utils';
@@ -29,6 +28,12 @@ import type {
   ThreadReviewRequest,
   ThreadTurnSettingsOverrides,
 } from '@my-codex-app/protocol';
+
+const LazyWorkspaceBrowserSheet = lazy(async () => {
+  const module =
+    await import('@/features/threads/components/workspace-browser-sheet');
+  return { default: module.WorkspaceBrowserSheet };
+});
 
 export function ThreadDetailPanel({
   connectionState,
@@ -377,21 +382,25 @@ function ReadyThreadDetail({
         threadsState={threadsState}
       />
 
-      <WorkspaceBrowserSheet
-        cwd={thread.cwd}
-        onOpenChange={(nextOpen) => {
-          setWorkspaceBrowserState((current) => ({
-            ...current,
-            open: nextOpen,
-          }));
-        }}
-        open={workspaceBrowserState.open}
-        requestKey={workspaceBrowserState.requestKey}
-        requestedLine={workspaceBrowserState.requestedLine}
-        requestedPath={workspaceBrowserState.requestedPath}
-        requestedTargetKind={workspaceBrowserState.requestedTargetKind}
-        threadId={thread.id}
-      />
+      {workspaceBrowserState.requestKey > 0 ? (
+        <Suspense fallback={null}>
+          <LazyWorkspaceBrowserSheet
+            cwd={thread.cwd}
+            onOpenChange={(nextOpen) => {
+              setWorkspaceBrowserState((current) => ({
+                ...current,
+                open: nextOpen,
+              }));
+            }}
+            open={workspaceBrowserState.open}
+            requestKey={workspaceBrowserState.requestKey}
+            requestedLine={workspaceBrowserState.requestedLine}
+            requestedPath={workspaceBrowserState.requestedPath}
+            requestedTargetKind={workspaceBrowserState.requestedTargetKind}
+            threadId={thread.id}
+          />
+        </Suspense>
+      ) : null}
     </Card>
   );
 }
