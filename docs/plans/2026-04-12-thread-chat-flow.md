@@ -52,9 +52,9 @@ function flattenTurnItems(turns: Turn[]): FlatThreadItem[]
 - All summarization helpers
 - `StatusBadge` component
 
-### Task 3: Simplify message input
+### Task 3: Simplify thread detail composer
 
-**File**: `apps/client/src/components/threads/message-input.tsx`
+**File**: `apps/client/src/features/threads/components/thread-detail-composer.tsx`
 
 - Remove "Send message" text button, replace with send icon button
 - Replace "Interrupt turn" text button with Stop square icon button (compact)
@@ -76,7 +76,7 @@ Simple hook:
 
 - Wire `useAutoScroll` into `MessageStream`
 - Ensure `ReadyThreadDetail` uses the new message stream
-- Remove inline composer from `ReadyThreadDetail`, use simplified `MessageInput`
+- Remove inline composer from `ReadyThreadDetail`, use the simplified thread detail composer
 - Type check: `pnpm build`
 - Manual visual verification
 
@@ -87,7 +87,7 @@ Simple hook:
 | `apps/client/src/features/threads/lib/thread-utils.ts` | Add `flattenTurnItems` and `FlatThreadItem` type |
 | `apps/client/src/features/threads/lib/use-auto-scroll.ts` | New — auto-scroll hook |
 | `apps/client/src/features/threads/components/thread-detail-panel.tsx` | Major rewrite — new message stream components, remove Accordion |
-| `apps/client/src/components/threads/message-input.tsx` | Simplify — icon buttons, remove labels |
+| `apps/client/src/features/threads/components/thread-detail-composer.tsx` | Simplify — icon buttons, remove labels |
 
 ## Execution order
 

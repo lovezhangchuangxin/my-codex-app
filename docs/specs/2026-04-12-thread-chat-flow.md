@@ -12,7 +12,7 @@ The goal is to flatten the Turn structure into a continuous message stream, simi
 
 - Rewrite `thread-detail-panel.tsx` to render a flat, continuous message stream
 - Add `flattenTurnItems()` utility to `thread-utils.ts`
-- Simplify `message-input.tsx` composer styling
+- Simplify the thread detail composer styling
 
 ### Out of scope
 

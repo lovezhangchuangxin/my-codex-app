@@ -15,6 +15,21 @@ It also stays aligned with:
 - `docs/specs/2026-04-10-codex-mobile-web-platform.md`
 - `docs/specs/2026-04-11-local-pairing-device-trust-session-auth.md`
 
+## Historical Status
+
+This plan remains the historical implementation plan for the mobile-first UI
+rewrite, but detailed file ownership and component extraction were later
+refined by:
+
+- `docs/specs/2026-04-13-client-modular-refactor.md`
+- `docs/plans/2026-04-13-client-modular-refactor.md`
+
+Current implementation rule:
+
+- thread and request business UI lives under `features/*`
+- older `components/threads/*` and `components/requests/*` references below
+  should be read as historical unless explicitly updated
+
 ## Implementation Strategy
 
 This is an in-place refactor of `apps/client/src/`. The bridge, SDK, and protocol packages are not modified. The work replaces the current routing, layout, and page components while preserving the existing runtime provider, bridge client, and feature logic.
@@ -236,10 +251,10 @@ Extract from current `features/threads/components/thread-list-panel.tsx`:
 
 | New component | Responsibility |
 |---------------|----------------|
-| `components/threads/thread-list-panel.tsx` | Container: status tabs, workspace groups, thread cards |
-| `components/threads/thread-status-tabs.tsx` | Tab bar: `[All] [Active] [Pending] [Idle]` — replaces the current search + dropdown filter |
-| `components/threads/thread-card.tsx` | Single thread row: title, preview, model badge, status badge, pending count |
-| `components/threads/workspace-group.tsx` | Collapsible section: workspace name + thread count + list of thread cards |
+| `features/threads/components/thread-list-panel.tsx` | Container: status tabs, workspace groups, thread cards |
+| `features/threads/components/thread-status-tabs.tsx` | Tab bar: `[All] [Active] [Pending] [Idle]` — replaces the current search + dropdown filter |
+| `features/threads/components/thread-card.tsx` | Single thread row: title, preview, model badge, status badge, pending count |
+| `features/threads/components/workspace-group.tsx` | Collapsible section: workspace name + thread count + list of thread cards |
 
 Filter logic: status tabs filter threads by `statusBadge` field. Workspace grouping logic moves from inline to `workspace-group.tsx`. Search moves to Header (wired later).
 
@@ -249,10 +264,10 @@ Extract from current `features/threads/components/thread-detail-panel.tsx`:
 
 | New component | Responsibility |
 |---------------|----------------|
-| `components/threads/thread-detail-panel.tsx` | Container: composes sub-components |
-| `components/threads/thread-header.tsx` | Top bar: thread title, workspace, status, action menu (copy ID, interrupt) |
-| `components/threads/message-stream.tsx` | Message list: user/assistant messages, code blocks, terminal output |
-| `components/threads/message-input.tsx` | Bottom bar: text input + send button + interrupt button |
+| `features/threads/components/thread-detail-panel.tsx` | Container shell: composes sub-components |
+| `features/threads/components/thread-detail-header.tsx` | Top bar: thread title, workspace, status, action menu |
+| `features/threads/components/thread-detail-messages.tsx` | Message list: user/assistant messages, code blocks, terminal output |
+| `features/threads/components/thread-detail-composer.tsx` | Bottom composer: text input + send button + interrupt button |
 
 The existing rendering logic for messages, code blocks, and terminal output is moved without modification. Only the structural wrapping changes.
 
@@ -274,11 +289,12 @@ Delete `app/layouts/threads-shell.tsx`. Its responsibilities move to `threads-la
 
 **Goal:** Replace Inbox page and Connection page with sheet/drawer components.
 
-### 4.1 Create `RequestCard`
+### 4.1 Create Pending Request Card Shell
 
-New file: `components/requests/request-card.tsx`
+New file: `features/requests/components/pending-request-card.tsx`
 
-Shared request card component used in both the request sheet and inline request display.
+Shared request card shell used in both the request sheet and thread-detail
+request display.
 
 Props: `request`, `onApprove`, `onDeny`, `onSubmitInput`, `showThreadName`.
 
@@ -292,22 +308,30 @@ Reuses the request resolution logic from current `features/requests/lib/request-
 
 ### 4.2 Create `RequestSheet`
 
-New file: `components/requests/request-sheet.tsx`
+New file: `features/requests/components/request-sheet.tsx`
 
 Container component for all pending requests.
 
 - Mobile: `Sheet` (bottom sheet, full-screen).
-- Desktop: `Popover` anchored to the bell icon.
+- Desktop: `Sheet` from the bottom edge in the current implementation.
 
-Shows all pending requests from the runtime snapshot, grouped by thread. Each request rendered with `RequestCard`. Includes a "View thread" link per request.
+Shows all pending requests from the runtime snapshot, grouped by thread. Each
+request is rendered by the pending-request card flow. Includes a "View thread"
+link per request.
 
 State: open/close managed by `NotificationBell` click handler (lift state to `Header` or use a simple context).
 
-### 4.3 Create `InlineRequestCard`
+### 4.3 Create Pending Request Rendering Submodules
 
-New file: `components/requests/inline-request-card.tsx`
+New files:
 
-Wrapper around `RequestCard` for use inside `ThreadDetailPanel`. Shows requests specific to the currently viewed thread. Renders below the message stream, above the input bar.
+- `features/requests/components/pending-request-list.tsx`
+- `features/requests/components/pending-request-body.tsx`
+- `features/requests/components/pending-request-actions.tsx`
+
+These modules render requests specific to the currently viewed thread and also
+support the request sheet, without requiring a separate `inline-request-card`
+wrapper.
 
 ### 4.4 Create `SettingsSheet`
 
@@ -361,7 +385,7 @@ Update any remaining imports.
 
 - `pnpm typecheck` passes
 - Bell icon shows correct pending request count
-- Clicking bell opens request sheet (bottom sheet on mobile, popover on desktop)
+- Clicking bell opens request sheet (bottom sheet in the current implementation)
 - Requests can be approved/denied from the sheet
 - Settings icon opens settings sheet
 - Connection status displays correctly
@@ -395,13 +419,13 @@ If the Header search input is wired in Phase 3 or 4, verify it filters threads b
   2. Enter pairing code → redirected to `/threads`
   3. See thread list with status tabs and workspace groups
   4. Tap a thread → full-screen detail with messages
-  5. See inline pending request → approve/deny
+  5. See pending requests in thread detail → approve/deny
   6. Tap bell → see all pending requests
   7. Tap settings → see connection status and devices
   8. Tap back → return to thread list
 - Manual walkthrough on desktop viewport:
   1. Side-by-side thread list + detail
-  2. Bell popover opens and works
+  2. Bell request sheet opens and works
   3. Settings drawer opens and works
   4. Connection indicator shows correct state
 
@@ -419,7 +443,7 @@ If the Header search input is wired in Phase 3 or 4, verify it filters threads b
 | 1 | Auth gate + pairing | `device-info.ts`, `pairing-screen.tsx`, `auth-guard.tsx`, `router.tsx` | — |
 | 2 | Header + app shell | `header.tsx`, `connection-indicator.tsx`, `notification-bell.tsx`, `app-shell.tsx` | Phase 1 |
 | 3 | Threads layout | `threads-layout.tsx`, `use-mobile-panel.ts`, split thread components | Phase 2 |
-| 4 | Request + settings sheets | `request-sheet.tsx`, `request-card.tsx`, `inline-request-card.tsx`, `settings-sheet.tsx`, `connection-section.tsx`, `devices-section.tsx` | Phase 3 |
+| 4 | Request + settings sheets | `request-sheet.tsx`, `pending-request-list.tsx`, `pending-request-card.tsx`, `settings-sheet.tsx`, `connection-section.tsx`, `devices-section.tsx` | Phase 3 |
 | 5 | Cleanup + verification | Remove old files, update docs | Phase 4 |
 
 ## Implementation Approach

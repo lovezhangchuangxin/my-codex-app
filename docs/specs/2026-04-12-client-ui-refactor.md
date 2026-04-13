@@ -12,6 +12,21 @@ The approved design proposal lives at:
 
 - `docs/proposals/2026-04-12-client-ui-refactor.md`
 
+## Historical Status
+
+This document remains the product-level UI refactor spec, but detailed module
+ownership and file layout were later refined by:
+
+- `docs/specs/2026-04-12-thread-chat-flow.md`
+- `docs/specs/2026-04-13-thread-detail-composer-controls.md`
+- `docs/specs/2026-04-13-client-modular-refactor.md`
+
+Current implementation rule:
+
+- thread and request business UI lives under `features/*`
+- `components/*` is reserved for app chrome, pairing, settings, common
+  renderers, and UI primitives
+
 ## Background
 
 The current client has three top-level routes (`/threads`, `/inbox`, `/connection`) with a desktop-first layout (272px sidebar + bottom tab bar). This creates several problems:
@@ -112,7 +127,7 @@ Full-screen, centered card layout. Same design on mobile and desktop.
 
 **Desktop layout** — side-by-side panels:
 
-- Left panel: thread list (280px, resizable 240–400px)
+- Left panel: thread list (about 280px)
 - Right panel: thread detail
 
 **Thread list panel:**
@@ -124,7 +139,8 @@ Full-screen, centered card layout. Same design on mobile and desktop.
 **Thread detail panel:**
 - Header: thread title, workspace name, status, action menu (copy ID, interrupt)
 - Message stream: user/assistant messages, code blocks, terminal output (reuses existing components)
-- Inline request cards: when the thread has pending requests, they appear at the bottom of the message stream
+- Pending requests remain visible within thread detail without leaving the page.
+  The current implementation renders them above the message stream.
 - Input bar: fixed at bottom, message text input + send button
 
 ### Header
@@ -133,7 +149,7 @@ Replaces the current sidebar and bottom tab bar.
 
 | Element | Mobile | Desktop |
 |---------|--------|---------|
-| Left | App name "Codex" | App name "Codex" + collapse button |
+| Left | App name "Codex" | App name "Codex" |
 | Center | — | Search input |
 | Right | Bell icon + Settings icon | Bell icon + Settings icon + Connection indicator |
 
@@ -146,7 +162,7 @@ Replaces the current sidebar and bottom tab bar.
 Triggered by the bell icon in the header.
 
 - Mobile: full-screen bottom sheet
-- Desktop: dropdown popover from the bell icon
+- Desktop: bottom sheet in the current implementation
 
 Shows all pending requests grouped by thread. Each request card includes:
 - Thread name (clickable to navigate)
@@ -186,15 +202,15 @@ Triggered by the settings icon in the header.
 | `Header` | `components/layout/` | Global top navigation bar |
 | `ConnectionIndicator` | `components/layout/` | Connection state dot + label |
 | `NotificationBell` | `components/layout/` | Bell icon with request count badge |
-| `ThreadCard` | `components/threads/` | Single thread item in list |
-| `ThreadStatusTabs` | `components/threads/` | Status filter tab bar |
-| `WorkspaceGroup` | `components/threads/` | Collapsible workspace section |
-| `ThreadHeader` | `components/threads/` | Detail panel top bar |
-| `MessageStream` | `components/threads/` | Conversation message list |
-| `MessageInput` | `components/threads/` | Bottom input bar |
-| `InlineRequestCard` | `components/requests/` | Request card inside thread detail |
-| `RequestSheet` | `components/requests/` | Global request panel (replaces Inbox) |
-| `RequestCard` | `components/requests/` | Shared request card component |
+| `ThreadCard` | `features/threads/components/` | Single thread item in list |
+| `ThreadStatusTabs` | `features/threads/components/` | Status filter tab bar |
+| `WorkspaceGroup` | `features/threads/components/` | Collapsible workspace section |
+| `ThreadDetailHeader` | `features/threads/components/` | Detail panel top bar |
+| `ThreadDetailMessages` | `features/threads/components/` | Conversation message list and item renderers |
+| `ThreadComposer` | `features/threads/components/` | Bottom composer and settings controls |
+| `RequestSheet` | `features/requests/components/` | Global request panel (replaces Inbox) |
+| `PendingRequestList` | `features/requests/components/` | Request list used in thread detail and request sheet |
+| `PendingRequestCard` | `features/requests/components/` | Shared request card shell |
 | `SettingsSheet` | `components/settings/` | Settings panel container |
 | `ConnectionSection` | `components/settings/` | Connection status in settings |
 | `DevicesSection` | `components/settings/` | Trusted device list in settings |
@@ -237,19 +253,6 @@ apps/client/src/
 │   ├── pairing/
 │   │   ├── pairing-screen.tsx
 │   │   └── device-info.ts
-│   ├── threads/
-│   │   ├── thread-list-panel.tsx
-│   │   ├── thread-card.tsx
-│   │   ├── thread-detail-panel.tsx
-│   │   ├── thread-header.tsx
-│   │   ├── message-stream.tsx
-│   │   ├── message-input.tsx
-│   │   ├── thread-status-tabs.tsx
-│   │   └── workspace-group.tsx
-│   ├── requests/
-│   │   ├── request-sheet.tsx
-│   │   ├── inline-request-card.tsx
-│   │   └── request-card.tsx
 │   ├── settings/
 │   │   ├── settings-sheet.tsx
 │   │   ├── connection-section.tsx
@@ -260,9 +263,26 @@ apps/client/src/
 │   │   └── terminal-output.tsx
 │   └── ui/
 ├── features/
-│   ├── connection/
 │   ├── requests/
+│   │   └── components/
+│   │       ├── request-sheet.tsx
+│   │       ├── pending-request-list.tsx
+│   │       ├── pending-request-card.tsx
+│   │       ├── pending-request-body.tsx
+│   │       └── pending-request-actions.tsx
 │   └── threads/
+│       ├── components/
+│       │   ├── thread-list-panel.tsx
+│       │   ├── thread-card.tsx
+│       │   ├── thread-status-tabs.tsx
+│       │   ├── workspace-group.tsx
+│       │   ├── thread-detail-panel.tsx
+│       │   ├── thread-detail-header.tsx
+│       │   ├── thread-detail-messages.tsx
+│       │   ├── thread-detail-composer.tsx
+│       │   ├── workspace-browser-sheet.tsx
+│       │   └── use-workspace-browser.ts
+│       └── lib/
 ├── hooks/
 │   ├── use-media-query.ts
 │   └── use-mobile-panel.ts

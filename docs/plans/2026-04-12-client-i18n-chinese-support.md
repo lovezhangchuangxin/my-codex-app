@@ -104,7 +104,7 @@ Primary targets:
 - `src/components/pairing/pairing-screen.tsx`
 - `src/components/layout/header.tsx`
 - `src/components/layout/connection-indicator.tsx`
-- `src/components/requests/request-sheet.tsx`
+- `src/features/requests/components/request-sheet.tsx`
 - `src/components/settings/connection-section.tsx`
 - `src/components/settings/devices-section.tsx`
 - `src/components/settings/settings-sheet.tsx`
