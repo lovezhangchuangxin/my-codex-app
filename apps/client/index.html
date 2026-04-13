@@ -3,7 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#0b0b0d" />
+    <meta name="theme-color" content="#0b0b0d" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f8f9fa" media="(prefers-color-scheme: light)" />
     <meta name="description" content="Codex access platform" />
     <title>My Codex App</title>
     <link rel="icon" type="image/png" sizes="64x64" href="/icon.png" />
@@ -15,8 +16,12 @@
           var theme = localStorage.getItem('theme');
           if (theme === 'light') {
             document.documentElement.setAttribute('data-theme', 'light');
-            var meta = document.querySelector('meta[name="theme-color"]');
-            if (meta) meta.setAttribute('content', '#f8f9fa');
+            var metas = document.querySelectorAll('meta[name="theme-color"]');
+            metas.forEach(function (m) {
+              if (m.getAttribute('media') === '(prefers-color-scheme: dark)') {
+                m.setAttribute('media', 'not all');
+              }
+            });
           }
         } catch (e) {}
       })();
