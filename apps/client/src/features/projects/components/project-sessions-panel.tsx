@@ -130,10 +130,10 @@ export function ProjectSessionsPanel({
         </div>
 
         <div className="space-y-3">
-          <div className="relative min-w-0">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="group relative min-w-0">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground/60" />
             <Input
-              className="w-full min-w-0 bg-accent pl-9 font-mono text-sm tracking-[0.02em]"
+              className="h-9 w-full min-w-0 rounded-xl border-subtle/10 bg-accent/60 pl-9 text-sm tracking-[0.02em] placeholder:text-muted-foreground/60 focus-visible:border-subtle/20 focus-visible:bg-accent/80 focus-visible:ring-1 focus-visible:ring-subtle/15"
               onChange={(event) => {
                 setSearch(event.target.value);
               }}
