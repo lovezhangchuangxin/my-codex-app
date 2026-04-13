@@ -17,6 +17,9 @@ export function WorkspaceBrowserTreePane({
   onSelectFile,
   onToggleDirectory,
   rootDirectoryLoading,
+  scrollRequestKey,
+  scrollTargetPath,
+  selectedDirectoryPath,
   selectedFilePath
 }: {
   directories: Record<string, WorkspaceDirectoryState>;
@@ -25,6 +28,9 @@ export function WorkspaceBrowserTreePane({
   onSelectFile: (path: string) => void;
   onToggleDirectory: (directoryPath: string) => void;
   rootDirectoryLoading: boolean;
+  scrollRequestKey: number;
+  scrollTargetPath: string | null;
+  selectedDirectoryPath: string | null;
   selectedFilePath: string | null;
 }) {
   const { t } = useI18n();
@@ -48,6 +54,9 @@ export function WorkspaceBrowserTreePane({
           onRetryDirectory={onRetryDirectory}
           onSelectFile={onSelectFile}
           onToggleDirectory={onToggleDirectory}
+          scrollRequestKey={scrollRequestKey}
+          scrollTargetPath={scrollTargetPath}
+          selectedDirectoryPath={selectedDirectoryPath}
           selectedFilePath={selectedFilePath}
         />
       </ScrollArea>

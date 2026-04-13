@@ -4,29 +4,35 @@ import type { WorkspaceFilePreviewState } from "@/features/threads/components/wo
 import type { WorkspaceDirectoryState } from "@/features/threads/components/workspace-tree";
 import {
   getAncestorDirectoryPaths,
+  getParentDirectoryPath,
   normalizeWorkspacePath
 } from "@/features/threads/lib/workspace-utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { useBridgeClient } from "@/lib/runtime/runtime-provider";
 import type { WorkspaceEntry } from "@my-codex-app/protocol";
 
+export type WorkspaceBrowserRequestedTargetKind = "file" | "directory" | "auto";
+
 export function useWorkspaceBrowser({
   isDesktop,
   open,
   requestKey,
   requestedPath,
+  requestedTargetKind,
   threadId
 }: {
   isDesktop: boolean;
   open: boolean;
   requestKey: number;
   requestedPath: string | null;
+  requestedTargetKind: WorkspaceBrowserRequestedTargetKind;
   threadId: string;
 }) {
   const bridgeClient = useBridgeClient();
   const { t } = useI18n();
   const [directories, setDirectories] = useState<Record<string, WorkspaceDirectoryState>>({});
   const [expandedPaths, setExpandedPaths] = useState<Record<string, boolean>>({});
+  const [selectedDirectoryPath, setSelectedDirectoryPath] = useState<string | null>(null);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(null);
   const [mobileMode, setMobileMode] = useState<"files" | "preview">("files");
   const [filePreviewState, setFilePreviewState] = useState<WorkspaceFilePreviewState>({
@@ -36,6 +42,26 @@ export function useWorkspaceBrowser({
   const directoryRequestRef = useRef(new Map<string, Promise<WorkspaceEntry[]>>());
   const fileRequestIdRef = useRef(0);
   const openStateRef = useRef(open);
+
+  const probeDirectory = useCallback(
+    async (directoryPath: string): Promise<boolean> => {
+      const normalizedPath = normalizeWorkspacePath(directoryPath);
+      if (normalizedPath === null) {
+        return false;
+      }
+
+      try {
+        await bridgeClient.readWorkspaceDirectory({
+          threadId,
+          ...(normalizedPath.length > 0 ? { path: normalizedPath } : {})
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [bridgeClient, threadId]
+  );
 
   const ensureDirectory = useCallback(async (directoryPath: string, force = false): Promise<WorkspaceEntry[]> => {
     const normalizedPath = normalizeWorkspacePath(directoryPath);
@@ -116,6 +142,7 @@ export function useWorkspaceBrowser({
 
     const nextRequestId = fileRequestIdRef.current + 1;
     fileRequestIdRef.current = nextRequestId;
+    setSelectedDirectoryPath(null);
     setSelectedFilePath(normalizedPath);
     setFilePreviewState({
       status: "loading",
@@ -149,37 +176,104 @@ export function useWorkspaceBrowser({
     }
   }, [bridgeClient, isDesktop, t, threadId]);
 
-  const openRequestedPath = useCallback(async (pathToOpen: string) => {
-    const normalizedPath = normalizeWorkspacePath(pathToOpen);
-    if (normalizedPath === null || normalizedPath.length === 0) {
+  const expandDirectoryChain = useCallback(async (directoryPaths: string[]) => {
+    if (directoryPaths.length === 0) {
       return;
     }
 
+    setExpandedPaths((current) => {
+      const nextState = { ...current };
+      for (const directoryPath of directoryPaths) {
+        nextState[directoryPath] = true;
+      }
+      return nextState;
+    });
+
+    for (const directoryPath of directoryPaths) {
+      await ensureDirectory(directoryPath);
+    }
+  }, [ensureDirectory]);
+
+  const openDirectory = useCallback(async (directoryPath: string, clearPreview: boolean) => {
+    const normalizedPath = normalizeWorkspacePath(directoryPath);
+    if (normalizedPath === null) {
+      return;
+    }
+
+    await ensureDirectory("");
+    const directoryPathsToExpand =
+      normalizedPath.length > 0
+        ? [...getAncestorDirectoryPaths(normalizedPath), normalizedPath]
+        : [];
+    await expandDirectoryChain(directoryPathsToExpand);
+
+    fileRequestIdRef.current += 1;
+    setSelectedDirectoryPath(normalizedPath.length > 0 ? normalizedPath : null);
+    setSelectedFilePath(null);
+
     if (!isDesktop) {
-      setMobileMode("preview");
+      setMobileMode("files");
+    }
+
+    if (clearPreview) {
+      setFilePreviewState({
+        status: "idle"
+      });
+    }
+  }, [ensureDirectory, expandDirectoryChain, isDesktop]);
+
+  const resolveRequestedTargetKind = useCallback(async (
+    normalizedPath: string,
+    targetKind: WorkspaceBrowserRequestedTargetKind
+  ): Promise<Exclude<WorkspaceBrowserRequestedTargetKind, "auto">> => {
+    if (targetKind !== "auto") {
+      return targetKind;
+    }
+
+    const parentDirectoryPath = getParentDirectoryPath(normalizedPath);
+    const parentEntries = await ensureDirectory(parentDirectoryPath);
+    const targetEntry = parentEntries.find((entry) => entry.path === normalizedPath);
+
+    if (targetEntry) {
+      return targetEntry.isDirectory ? "directory" : "file";
+    }
+
+    if (await probeDirectory(normalizedPath)) {
+      return "directory";
+    }
+
+    return "file";
+  }, [ensureDirectory, probeDirectory]);
+
+  const openRequestedPath = useCallback(async (
+    pathToOpen: string,
+    targetKind: WorkspaceBrowserRequestedTargetKind
+  ) => {
+    const normalizedPath = normalizeWorkspacePath(pathToOpen);
+    if (normalizedPath === null) {
+      return;
+    }
+
+    if (normalizedPath.length === 0) {
+      await openDirectory("", true);
+      return;
     }
 
     await ensureDirectory("");
 
-    const ancestorDirectories = getAncestorDirectoryPaths(normalizedPath);
-    if (ancestorDirectories.length > 0) {
-      setExpandedPaths((current) => {
-        const nextState = { ...current };
-        for (const directoryPath of ancestorDirectories) {
-          nextState[directoryPath] = true;
-        }
-        return nextState;
-      });
-
-      for (const directoryPath of ancestorDirectories) {
-        await ensureDirectory(directoryPath);
-      }
+    const resolvedTargetKind = await resolveRequestedTargetKind(normalizedPath, targetKind);
+    if (resolvedTargetKind === "directory") {
+      await openDirectory(normalizedPath, true);
+      return;
     }
 
+    await expandDirectoryChain(getAncestorDirectoryPaths(normalizedPath));
     await loadFile(normalizedPath);
-  }, [ensureDirectory, isDesktop, loadFile]);
+  }, [ensureDirectory, expandDirectoryChain, loadFile, openDirectory, resolveRequestedTargetKind]);
 
   const handleToggleDirectory = useCallback((directoryPath: string) => {
+    setSelectedDirectoryPath(directoryPath);
+    setSelectedFilePath(null);
     const nextExpanded = expandedPaths[directoryPath] !== true;
     setExpandedPaths((current) => ({
       ...current,
@@ -212,11 +306,11 @@ export function useWorkspaceBrowser({
     }
 
     const timer = setTimeout(() => {
-      setMobileMode(requestedPath ? "preview" : "files");
+      setMobileMode(requestedPath && requestedTargetKind === "file" ? "preview" : "files");
     }, 0);
 
     return () => clearTimeout(timer);
-  }, [isDesktop, open, requestedPath]);
+  }, [isDesktop, open, requestedPath, requestedTargetKind]);
 
   useEffect(() => {
     if (!open) {
@@ -236,11 +330,11 @@ export function useWorkspaceBrowser({
     }
 
     queueMicrotask(() => {
-      void openRequestedPath(requestedPath).catch(() => {
+      void openRequestedPath(requestedPath, requestedTargetKind).catch(() => {
         // Per-path load failures are reflected in local preview/tree state.
       });
     });
-  }, [open, openRequestedPath, requestKey, requestedPath]);
+  }, [open, openRequestedPath, requestKey, requestedPath, requestedTargetKind]);
 
   const selectedPreviewPath =
     filePreviewState.status === "idle" ? selectedFilePath : filePreviewState.path;
@@ -254,6 +348,7 @@ export function useWorkspaceBrowser({
     loadFile,
     mobileMode,
     rootDirectoryLoading: !directories[""] || directories[""].status === "loading",
+    selectedDirectoryPath,
     selectedFilePath,
     selectedPreviewPath,
     setMobileMode

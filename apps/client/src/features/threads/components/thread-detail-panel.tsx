@@ -12,6 +12,7 @@ import { ThreadDetailEmptyState } from "@/features/threads/components/thread-det
 import { ThreadDetailHeader } from "@/features/threads/components/thread-detail-header";
 import { ThreadMessageStream } from "@/features/threads/components/thread-detail-messages";
 import { parseFilePathWithLine } from "@/features/threads/components/thread-detail-utils";
+import type { WorkspaceBrowserRequestedTargetKind } from "@/features/threads/components/use-workspace-browser";
 import { useThreadDetailBanner } from "@/features/threads/components/use-thread-detail-banner";
 import { WorkspaceBrowserSheet } from "@/features/threads/components/workspace-browser-sheet";
 import { useAutoScroll } from "@/features/threads/lib/use-auto-scroll";
@@ -201,11 +202,13 @@ function ReadyThreadDetail({
     open: boolean;
     requestedPath: string | null;
     requestedLine: number | null;
+    requestedTargetKind: WorkspaceBrowserRequestedTargetKind;
     requestKey: number;
   }>({
     open: false,
     requestedLine: null,
     requestedPath: null,
+    requestedTargetKind: "auto",
     requestKey: 0
   });
 
@@ -213,11 +216,16 @@ function ReadyThreadDetail({
     return toWorkspaceRelativePath(thread.cwd, candidatePath);
   }
 
-  function openWorkspaceBrowser(requestedPath: string | null = null, requestedLine: number | null = null) {
+  function openWorkspaceBrowser(
+    requestedPath: string | null = null,
+    requestedLine: number | null = null,
+    requestedTargetKind: WorkspaceBrowserRequestedTargetKind = "auto"
+  ) {
     setWorkspaceBrowserState((current) => ({
       open: true,
       requestedLine,
       requestedPath,
+      requestedTargetKind,
       requestKey: current.requestKey + 1
     }));
   }
@@ -226,11 +234,12 @@ function ReadyThreadDetail({
     (href: string) => {
       const { line, path } = parseFilePathWithLine(href);
       const workspacePath = toWorkspaceRelativePath(thread.cwd, path);
-      if (workspacePath) {
+      if (workspacePath !== null) {
         setWorkspaceBrowserState((current) => ({
           open: true,
           requestedLine: line,
           requestedPath: workspacePath,
+          requestedTargetKind: line !== null ? "file" : "auto",
           requestKey: current.requestKey + 1
         }));
       }
@@ -302,8 +311,8 @@ function ReadyThreadDetail({
         <ThreadMessageStream
           flatItems={flatItems}
           onFilePathClick={handleFilePathClick}
-          onOpenWorkspacePath={(path) => {
-            openWorkspaceBrowser(path);
+          onOpenWorkspacePath={(path, requestedTargetKind) => {
+            openWorkspaceBrowser(path, null, requestedTargetKind);
           }}
           resolveWorkspacePath={resolveWorkspacePath}
           scrollRef={scrollRef}
@@ -338,6 +347,7 @@ function ReadyThreadDetail({
         requestKey={workspaceBrowserState.requestKey}
         requestedLine={workspaceBrowserState.requestedLine}
         requestedPath={workspaceBrowserState.requestedPath}
+        requestedTargetKind={workspaceBrowserState.requestedTargetKind}
         threadId={thread.id}
       />
     </Card>

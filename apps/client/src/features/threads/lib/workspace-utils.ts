@@ -85,6 +85,16 @@ export function getAncestorDirectoryPaths(filePath: string): string[] {
   return ancestors;
 }
 
+export function getParentDirectoryPath(workspacePath: string): string {
+  const normalized = normalizeWorkspacePath(workspacePath);
+  if (normalized === null || normalized.length === 0) {
+    return "";
+  }
+
+  const segments = normalized.split("/");
+  return segments.slice(0, -1).join("/");
+}
+
 export function getFileName(workspacePath: string): string {
   const normalized = workspacePath.replace(/\\/g, "/");
   const segments = normalized.split("/").filter(Boolean);

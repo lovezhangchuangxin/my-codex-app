@@ -10,7 +10,10 @@ import {
   SheetTitle
 } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/use-media-query";
-import { useWorkspaceBrowser } from "@/features/threads/components/use-workspace-browser";
+import {
+  useWorkspaceBrowser,
+  type WorkspaceBrowserRequestedTargetKind
+} from "@/features/threads/components/use-workspace-browser";
 import {
   WorkspaceBrowserPreviewPane,
   WorkspaceBrowserTreePane
@@ -25,6 +28,7 @@ export function WorkspaceBrowserSheet({
   requestKey,
   requestedLine,
   requestedPath,
+  requestedTargetKind,
   threadId
 }: {
   cwd: string;
@@ -33,6 +37,7 @@ export function WorkspaceBrowserSheet({
   requestKey: number;
   requestedLine: number | null;
   requestedPath: string | null;
+  requestedTargetKind: WorkspaceBrowserRequestedTargetKind;
   threadId: string;
 }) {
   const { t } = useI18n();
@@ -46,6 +51,7 @@ export function WorkspaceBrowserSheet({
     loadFile,
     mobileMode,
     rootDirectoryLoading,
+    selectedDirectoryPath,
     selectedFilePath,
     selectedPreviewPath,
     setMobileMode
@@ -54,6 +60,7 @@ export function WorkspaceBrowserSheet({
     open,
     requestKey,
     requestedPath,
+    requestedTargetKind,
     threadId
   });
 
@@ -110,6 +117,9 @@ export function WorkspaceBrowserSheet({
                 }}
                 onToggleDirectory={handleToggleDirectory}
                 rootDirectoryLoading={rootDirectoryLoading}
+                scrollRequestKey={requestKey}
+                scrollTargetPath={requestedPath}
+                selectedDirectoryPath={selectedDirectoryPath}
                 selectedFilePath={selectedFilePath}
               />
             </div>
@@ -162,6 +172,9 @@ export function WorkspaceBrowserSheet({
                   }}
                   onToggleDirectory={handleToggleDirectory}
                   rootDirectoryLoading={rootDirectoryLoading}
+                  scrollRequestKey={requestKey}
+                  scrollTargetPath={requestedPath}
+                  selectedDirectoryPath={selectedDirectoryPath}
                   selectedFilePath={selectedFilePath}
                 />
               </div>

@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { StatusBadge } from "@/features/threads/components/status-badge";
+import type { WorkspaceBrowserRequestedTargetKind } from "@/features/threads/components/use-workspace-browser";
 import {
   getCommandDisplay,
   looksLikeMarkdownContent
@@ -51,7 +52,7 @@ export function ThreadMessageStream({
 }: {
   flatItems: FlatThreadItem[];
   onFilePathClick?: ((href: string) => void) | undefined;
-  onOpenWorkspacePath: (path: string) => void;
+  onOpenWorkspacePath: (path: string, targetKind: WorkspaceBrowserRequestedTargetKind) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
   scrollRef: RefObject<HTMLDivElement | null>;
 }) {
@@ -86,7 +87,7 @@ function FlatItemRenderer({
   item: FlatThreadItem;
   nextItem: FlatThreadItem | null;
   onFilePathClick?: ((href: string) => void) | undefined;
-  onOpenWorkspacePath: (path: string) => void;
+  onOpenWorkspacePath: (path: string, targetKind: WorkspaceBrowserRequestedTargetKind) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
 }) {
   const { t } = useI18n();
@@ -333,7 +334,7 @@ function FileChangeCard({
   resolveWorkspacePath
 }: {
   item: Extract<ThreadItem, { type: "fileChange" }>;
-  onOpenWorkspacePath: (path: string) => void;
+  onOpenWorkspacePath: (path: string, targetKind: WorkspaceBrowserRequestedTargetKind) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
 }) {
   const { t } = useI18n();
@@ -362,7 +363,7 @@ function FileChangeCard({
                   if (!workspacePath) {
                     return;
                   }
-                  onOpenWorkspacePath(workspacePath);
+                  onOpenWorkspacePath(workspacePath, "file");
                 }}
                 size="xs"
                 type="button"

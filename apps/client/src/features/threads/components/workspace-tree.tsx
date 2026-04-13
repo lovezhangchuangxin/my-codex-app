@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef } from "react";
 import { ChevronRight, FileCode2, Folder, FolderOpen, LoaderCircle, TriangleAlert } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,9 @@ export function WorkspaceTree({
   onRetryDirectory,
   onSelectFile,
   onToggleDirectory,
+  scrollRequestKey,
+  scrollTargetPath,
+  selectedDirectoryPath,
   selectedFilePath
 }: {
   directories: Record<string, WorkspaceDirectoryState>;
@@ -24,10 +28,48 @@ export function WorkspaceTree({
   onRetryDirectory: (path: string) => void;
   onSelectFile: (path: string) => void;
   onToggleDirectory: (path: string) => void;
+  scrollRequestKey: number;
+  scrollTargetPath: string | null;
+  selectedDirectoryPath: string | null;
   selectedFilePath: string | null;
 }) {
   const { t } = useI18n();
   const rootState = directories[""];
+  const entryNodeRefs = useRef(new Map<string, HTMLButtonElement>());
+  const lastScrolledRequestKeyRef = useRef<number | null>(null);
+
+  const registerEntryNode = useCallback((path: string, node: HTMLButtonElement | null) => {
+    if (node) {
+      entryNodeRefs.current.set(path, node);
+      return;
+    }
+
+    entryNodeRefs.current.delete(path);
+  }, []);
+
+  useEffect(() => {
+    if (!scrollTargetPath || scrollTargetPath.length === 0) {
+      return;
+    }
+
+    if (lastScrolledRequestKeyRef.current === scrollRequestKey) {
+      return;
+    }
+
+    const targetNode = entryNodeRefs.current.get(scrollTargetPath);
+    if (!targetNode) {
+      return;
+    }
+
+    const frameId = requestAnimationFrame(() => {
+      targetNode.scrollIntoView({
+        block: "center"
+      });
+      lastScrolledRequestKeyRef.current = scrollRequestKey;
+    });
+
+    return () => cancelAnimationFrame(frameId);
+  }, [directories, expandedPaths, scrollRequestKey, scrollTargetPath]);
 
   if (!rootState || rootState.status === "idle" || rootState.status === "loading") {
     return <TreeStateMessage icon={<LoaderCircle className="size-4 animate-spin" />} message={t("detail.workspace.loading.directory")} />;
@@ -67,6 +109,8 @@ export function WorkspaceTree({
         onRetryDirectory={onRetryDirectory}
         onSelectFile={onSelectFile}
         onToggleDirectory={onToggleDirectory}
+        registerEntryNode={registerEntryNode}
+        selectedDirectoryPath={selectedDirectoryPath}
         selectedFilePath={selectedFilePath}
       />
     </div>
@@ -81,6 +125,8 @@ function WorkspaceTreeEntries({
   onRetryDirectory,
   onSelectFile,
   onToggleDirectory,
+  registerEntryNode,
+  selectedDirectoryPath,
   selectedFilePath
 }: {
   depth: number;
@@ -90,6 +136,8 @@ function WorkspaceTreeEntries({
   onRetryDirectory: (path: string) => void;
   onSelectFile: (path: string) => void;
   onToggleDirectory: (path: string) => void;
+  registerEntryNode: (path: string, node: HTMLButtonElement | null) => void;
+  selectedDirectoryPath: string | null;
   selectedFilePath: string | null;
 }) {
   const { t } = useI18n();
@@ -99,7 +147,9 @@ function WorkspaceTreeEntries({
       {entries.map((entry) => {
         const expanded = entry.isDirectory ? expandedPaths[entry.path] === true : false;
         const childState = entry.isDirectory ? directories[entry.path] : null;
-        const selected = !entry.isDirectory && selectedFilePath === entry.path;
+        const selected = entry.isDirectory
+          ? selectedDirectoryPath === entry.path
+          : selectedFilePath === entry.path;
 
         return (
           <div key={entry.path} className="space-y-1">
@@ -115,6 +165,9 @@ function WorkspaceTreeEntries({
                 }
 
                 onSelectFile(entry.path);
+              }}
+              ref={(node) => {
+                registerEntryNode(entry.path, node);
               }}
               style={{ paddingLeft: `${depth * 16 + 8}px` }}
               type="button"
@@ -181,6 +234,8 @@ function WorkspaceTreeEntries({
                     onRetryDirectory={onRetryDirectory}
                     onSelectFile={onSelectFile}
                     onToggleDirectory={onToggleDirectory}
+                    registerEntryNode={registerEntryNode}
+                    selectedDirectoryPath={selectedDirectoryPath}
                     selectedFilePath={selectedFilePath}
                   />
                 )}
