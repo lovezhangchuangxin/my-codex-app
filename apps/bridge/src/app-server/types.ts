@@ -87,13 +87,13 @@ export type AppServerSandboxPolicy =
 
 export interface ThreadListParams {
   limit?: number;
-  cursor?: string;
-  cwd?: string;
+  cursor?: string | null;
+  cwd?: string | null;
 }
 
 export interface ThreadListResult {
   data: AppServerThread[];
-  nextCursor?: string;
+  nextCursor?: string | null;
 }
 
 export interface AppServerTurnError {
@@ -151,6 +151,13 @@ export interface ThreadStartResult {
   sandbox: AppServerSandboxPolicy;
   reasoningEffort: AppServerReasoningEffort | null;
 }
+
+export interface ThreadSetNameParams {
+  threadId: string;
+  name: string;
+}
+
+export interface ThreadSetNameResult {}
 
 export interface ThreadResumeParams {
   threadId: string;

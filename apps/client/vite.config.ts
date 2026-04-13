@@ -6,6 +6,9 @@ import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  optimizeDeps: {
+    exclude: ["@my-codex-app/protocol", "@my-codex-app/sdk"]
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -55,7 +58,13 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url))
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      "@my-codex-app/protocol": fileURLToPath(
+        new URL("../../packages/protocol/src/index.ts", import.meta.url)
+      ),
+      "@my-codex-app/sdk": fileURLToPath(
+        new URL("../../packages/sdk/src/index.ts", import.meta.url)
+      )
     }
   },
   server: {

@@ -112,6 +112,15 @@ export function updateThreadSummaryState(
           )
         )
       };
+    case "threadNameUpdated":
+      return {
+        kind: "ready",
+        threads: sortThreads(
+          state.threads.map((thread) =>
+            thread.id === event.threadId ? applyThreadName(thread, event.threadName) : thread
+          )
+        )
+      };
     case "turnStarted":
       return {
         kind: "ready",
@@ -195,6 +204,8 @@ export function applyThreadEvent(thread: ThreadDetail, event: BridgeEvent): Thre
         ...thread,
         status: event.status
       };
+    case "threadNameUpdated":
+      return applyThreadName(thread, event.threadName);
     case "turnStarted":
       return {
         ...thread,
@@ -308,6 +319,18 @@ function appendAgentMessageDelta(items: ThreadItem[], itemId: string, delta: str
       ? { ...item, text: `${item.text}${delta}` }
       : item
   );
+}
+
+function applyThreadName<T extends { name?: string }>(thread: T, threadName: string | null): T {
+  const { name: _currentName, ...rest } = thread;
+  if (threadName === null) {
+    return rest as T;
+  }
+
+  return {
+    ...rest,
+    name: threadName
+  } as T;
 }
 
 function sortThreads(threads: ThreadSummary[]): ThreadSummary[] {

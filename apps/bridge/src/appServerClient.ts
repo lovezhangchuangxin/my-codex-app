@@ -22,6 +22,8 @@ import type {
   ThreadReadResult,
   ThreadResumeParams,
   ThreadResumeResult,
+  ThreadSetNameParams,
+  ThreadSetNameResult,
   ThreadStartParams,
   ThreadStartResult,
   ThreadUnsubscribeParams,
@@ -108,6 +110,14 @@ export class AppServerClient extends EventEmitter {
   async startThread(params: ThreadStartParams): Promise<ThreadStartResult> {
     this.#assertInitialized();
     return this.#transport.sendRequest<ThreadStartParams, ThreadStartResult>("thread/start", params);
+  }
+
+  async setThreadName(params: ThreadSetNameParams): Promise<ThreadSetNameResult> {
+    this.#assertInitialized();
+    return this.#transport.sendRequest<ThreadSetNameParams, ThreadSetNameResult>(
+      "thread/name/set",
+      params
+    );
   }
 
   async resumeThread(threadId: string): Promise<ThreadResumeResult> {

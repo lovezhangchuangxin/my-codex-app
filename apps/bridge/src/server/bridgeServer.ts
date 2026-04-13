@@ -12,6 +12,7 @@ import type {
   SessionRefreshRequest,
   ThreadCompactRequest,
   ThreadListRequest,
+  ThreadRenameRequest,
   ThreadReviewRequest,
   ThreadStartRequest,
   TurnInterruptRequest,
@@ -466,6 +467,35 @@ export class BridgeServer {
       try {
         const payload = await readJsonBody<ThreadStartRequest>(request);
         const result = await this.services.threadService.startThread(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return true;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/threads/rename") {
+      try {
+        const payload = await readJsonBody<ThreadRenameRequest>(request);
+        if (
+          !isRecord(payload) ||
+          typeof payload.threadId !== "string" ||
+          typeof payload.name !== "string"
+        ) {
+          writeJson(response, 400, { error: { message: "Invalid thread/rename payload" } });
+          return true;
+        }
+
+        const normalizedName = payload.name.trim();
+        if (normalizedName.length === 0) {
+          writeJson(response, 400, { error: { message: "Thread name cannot be empty" } });
+          return true;
+        }
+
+        const result = await this.services.threadService.renameThread({
+          ...payload,
+          name: normalizedName
+        });
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));

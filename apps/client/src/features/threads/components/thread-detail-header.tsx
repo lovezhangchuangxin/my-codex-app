@@ -14,14 +14,6 @@ import {
   PopoverContent,
   PopoverTrigger
 } from "@/components/ui/popover";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger
-} from "@/components/ui/sheet";
 import { StatusBadge } from "@/features/threads/components/status-badge";
 import {
   buildThreadTitle,
@@ -29,26 +21,20 @@ import {
   getStatusTone
 } from "@/features/threads/lib/thread-utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
-import { cn } from "@/lib/utils";
-import type { ThreadListState } from "@my-codex-app/sdk";
 import type { ThreadDetail } from "@my-codex-app/protocol";
 
 export function ThreadDetailHeader({
   isDesktop,
   onBack,
-  onOpenThread,
+  onOpenThreadSwitcher,
   onOpenWorkspace,
-  selectedThreadId,
-  thread,
-  threadsState
+  thread
 }: {
   isDesktop: boolean;
   onBack: () => void;
-  onOpenThread: (threadId: string, requestKey?: string) => void;
+  onOpenThreadSwitcher: () => void;
   onOpenWorkspace: () => void;
-  selectedThreadId: string | null;
   thread: ThreadDetail;
-  threadsState: ThreadListState;
 }) {
   const { t } = useI18n();
 
@@ -80,11 +66,10 @@ export function ThreadDetailHeader({
 
         <div className="flex min-w-0 items-center gap-2 md:self-start">
           {!isDesktop ? (
-            <MobileThreadSwitcher
-              onOpenThread={onOpenThread}
-              selectedThreadId={selectedThreadId}
-              threadsState={threadsState}
-            />
+            <Button onClick={onOpenThreadSwitcher} size="icon-sm" variant="outline">
+              <PanelLeftOpen className="size-4" />
+              <span className="sr-only">{t("detail.switcher.open")}</span>
+            </Button>
           ) : null}
           <Button onClick={onOpenWorkspace} size="sm" variant="outline">
             <FolderOpen className="size-3.5" />
@@ -103,65 +88,6 @@ export function ThreadDetailHeader({
         </div>
       ) : null}
     </div>
-  );
-}
-
-function MobileThreadSwitcher({
-  onOpenThread,
-  selectedThreadId,
-  threadsState
-}: {
-  onOpenThread: (threadId: string) => void;
-  selectedThreadId: string | null;
-  threadsState: ThreadListState;
-}) {
-  const { t } = useI18n();
-
-  if (threadsState.kind !== "ready") {
-    return null;
-  }
-
-  return (
-    <Sheet>
-      <SheetTrigger asChild>
-        <Button size="icon-sm" variant="outline">
-          <PanelLeftOpen className="size-4" />
-          <span className="sr-only">{t("detail.switcher.open")}</span>
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="max-w-sm border-l border-subtle/6 bg-card/95" side="right">
-        <SheetHeader>
-          <SheetTitle>{t("detail.switcher.title")}</SheetTitle>
-          <SheetDescription>{t("detail.switcher.description")}</SheetDescription>
-        </SheetHeader>
-        <div className="max-h-[calc(100svh-7rem)] space-y-2 overflow-y-auto px-4 pb-4">
-          {threadsState.threads.map((threadItem) => (
-            <Button
-              className={cn(
-                "h-auto w-full justify-start rounded-[12px] border border-subtle/8 bg-card/76 px-4 py-3 text-left",
-                selectedThreadId === threadItem.id
-                  ? "border-primary/20 bg-card shadow-[inset_0_0_0_1px_rgba(78,222,163,0.14)]"
-                  : ""
-              )}
-              key={threadItem.id}
-              onClick={() => {
-                onOpenThread(threadItem.id);
-              }}
-              variant="ghost"
-            >
-              <span className="min-w-0">
-                <span className="block truncate font-medium text-foreground">
-                  {buildThreadTitle(threadItem, t)}
-                </span>
-                <span className="block truncate font-mono text-xs text-muted-foreground">
-                  {threadItem.cwd}
-                </span>
-              </span>
-            </Button>
-          ))}
-        </div>
-      </SheetContent>
-    </Sheet>
   );
 }
 

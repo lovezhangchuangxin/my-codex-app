@@ -1,4 +1,8 @@
 export type SupportedComposerCommandId =
+  | "rename"
+  | "new"
+  | "clear"
+  | "resume"
   | "compact"
   | "review"
   | "mention"
@@ -30,6 +34,30 @@ const SUPPORTED_COMPOSER_COMMANDS: SupportedComposerCommand[] = [
     command: "review",
     descriptionKey: "detail.composer.command.review",
     supportsInlineArgs: true
+  },
+  {
+    id: "rename",
+    command: "rename",
+    descriptionKey: "detail.composer.command.rename",
+    supportsInlineArgs: true
+  },
+  {
+    id: "new",
+    command: "new",
+    descriptionKey: "detail.composer.command.new",
+    supportsInlineArgs: false
+  },
+  {
+    id: "clear",
+    command: "clear",
+    descriptionKey: "detail.composer.command.clear",
+    supportsInlineArgs: false
+  },
+  {
+    id: "resume",
+    command: "resume",
+    descriptionKey: "detail.composer.command.resume",
+    supportsInlineArgs: false
   },
   {
     id: "mention",

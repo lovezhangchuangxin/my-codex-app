@@ -58,6 +58,18 @@ export class ThreadEventTranslator {
             }
           : null;
       }
+      case "thread/name/updated": {
+        const threadId = asString(payload.threadId);
+        if (!threadId) {
+          return null;
+        }
+
+        return {
+          type: "threadNameUpdated",
+          threadId,
+          threadName: payload.threadName === null ? null : asString(payload.threadName)
+        };
+      }
       case "turn/started": {
         const threadId = asString(payload.threadId);
         const turn = toTurnDetail(payload.turn as AppServerTurn);

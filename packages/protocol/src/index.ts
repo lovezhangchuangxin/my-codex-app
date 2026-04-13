@@ -361,6 +361,13 @@ export interface ThreadStartResponse {
   thread: ThreadDetail;
 }
 
+export interface ThreadRenameRequest {
+  threadId: string;
+  name: string;
+}
+
+export interface ThreadRenameResponse {}
+
 export interface ThreadTurnSettingsOverrides {
   model?: string | null;
   reasoningEffort?: ReasoningEffort | null;
@@ -511,6 +518,11 @@ export type BridgeEvent =
       type: "threadStatusChanged";
       threadId: string;
       status: ThreadRuntimeStatus;
+    }
+  | {
+      type: "threadNameUpdated";
+      threadId: string;
+      threadName: string | null;
     }
   | {
       type: "turnStarted";

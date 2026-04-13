@@ -9,6 +9,8 @@ import type {
   ThreadCompactResponse,
   ThreadListRequest,
   ThreadListResponse,
+  ThreadRenameRequest,
+  ThreadRenameResponse,
   ThreadReadResponse,
   ThreadReviewRequest,
   ThreadReviewResponse,
@@ -63,7 +65,7 @@ export class ThreadService {
           this.#cache.setThreadCwd(thread.id, thread.cwd);
           return toThreadSummary(thread, this.#cache.listPendingRequests(thread.id));
         }),
-        ...(result.nextCursor !== undefined ? { nextCursor: result.nextCursor } : {})
+        ...(result.nextCursor != null ? { nextCursor: result.nextCursor } : {})
       };
     }
 
@@ -104,16 +106,26 @@ export class ThreadService {
 
   async #collectAllThreads() {
     const threads = [];
-    let cursor: string | undefined;
+    const seenCursors = new Set<string>();
+    let cursor: string | null | undefined;
 
     do {
       const result = await this.appServerClient.listThreads({
-        ...(cursor !== undefined ? { cursor } : {}),
+        ...(cursor != null ? { cursor } : {}),
         limit: ThreadService.ALL_THREADS_PAGE_SIZE
       });
       threads.push(...result.data);
-      cursor = result.nextCursor;
-    } while (cursor !== undefined);
+
+      const nextCursor = result.nextCursor ?? null;
+      if (nextCursor !== null) {
+        if (seenCursors.has(nextCursor)) {
+          throw new Error("app-server thread/list returned a duplicate pagination cursor");
+        }
+        seenCursors.add(nextCursor);
+      }
+
+      cursor = nextCursor;
+    } while (cursor !== null);
 
     return threads;
   }
@@ -152,6 +164,15 @@ export class ThreadService {
         toThreadDetail(result.thread, this.#cache.listPendingRequests(result.thread.id))
       )
     };
+  }
+
+  async renameThread(request: ThreadRenameRequest): Promise<ThreadRenameResponse> {
+    await this.appServerClient.setThreadName({
+      threadId: request.threadId,
+      name: request.name
+    });
+
+    return {};
   }
 
   async resumeThread(threadId: string): Promise<void> {

@@ -15,6 +15,7 @@ import {
   PopoverTitle,
   PopoverTrigger
 } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -70,7 +71,10 @@ export function ThreadComposer({
   interruptPending,
   isDesktop,
   onCompactThread,
+  onCreateThread,
   onInterrupt,
+  onOpenThreadSwitcher,
+  onRenameThread,
   onSendMessage,
   onStartReview,
   sendMessagePending,
@@ -82,7 +86,10 @@ export function ThreadComposer({
   interruptPending: boolean;
   isDesktop: boolean;
   onCompactThread: (threadId: string) => Promise<boolean>;
+  onCreateThread: (projectPath: string) => Promise<boolean>;
   onInterrupt: (threadId: string, turnId: string) => Promise<void>;
+  onOpenThreadSwitcher: () => void;
+  onRenameThread: (threadId: string, name: string) => Promise<boolean>;
   onSendMessage: (
     threadId: string,
     text: string,
@@ -122,6 +129,8 @@ export function ThreadComposer({
   const [reviewSheetOpen, setReviewSheetOpen] = useState(false);
   const [reviewSheetMode, setReviewSheetMode] = useState<"menu" | "custom">("menu");
   const [reviewInstructions, setReviewInstructions] = useState("");
+  const [renameSheetOpen, setRenameSheetOpen] = useState(false);
+  const [renameDraft, setRenameDraft] = useState(thread.name ?? "");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsDraftState, setSettingsDraftState] = useState<{
     sourceKey: string;
@@ -137,6 +146,7 @@ export function ThreadComposer({
   });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
   const fileSearchRequestIdRef = useRef(0);
   const focusRafRef = useRef(0);
   const settingsDraft =
@@ -157,6 +167,10 @@ export function ThreadComposer({
   const slashToken = matchedCommands.length > 0 ? rawSlashToken : null;
   const commandPopupOpen = slashToken !== null && matchedCommands.length > 0;
   const filePopupOpen = mentionToken !== null;
+
+  useEffect(() => {
+    setRenameDraft(thread.name ?? "");
+  }, [thread.id, thread.name]);
 
   function resetSettingsDraft() {
     setSettingsDraftState({
@@ -209,6 +223,12 @@ export function ThreadComposer({
     const nextText = stripSlashCommandPrefix(composerText);
     clearCommandDraft(nextText, 0);
     setSettingsOpen(true);
+  }
+
+  function openRenameFromCommand() {
+    clearCommandDraft();
+    setRenameDraft(thread.name ?? "");
+    setRenameSheetOpen(true);
   }
 
   function insertMentionPrefix() {
@@ -304,6 +324,47 @@ export function ThreadComposer({
         }
         return;
       }
+      case "rename": {
+        if (!actionsEnabled) {
+          return;
+        }
+        if (args.trim().length === 0) {
+          openRenameFromCommand();
+          return;
+        }
+        setCommandActionPending(true);
+        try {
+          const completed = await onRenameThread(thread.id, args.trim());
+          if (completed) {
+            clearCommandDraft();
+            focusComposer(0);
+          }
+        } finally {
+          setCommandActionPending(false);
+        }
+        return;
+      }
+      case "new":
+      case "clear": {
+        if (!actionsEnabled) {
+          return;
+        }
+        setCommandActionPending(true);
+        try {
+          const completed = await onCreateThread(thread.cwd);
+          if (completed) {
+            clearCommandDraft();
+            focusComposer(0);
+          }
+        } finally {
+          setCommandActionPending(false);
+        }
+        return;
+      }
+      case "resume":
+        clearCommandDraft();
+        onOpenThreadSwitcher();
+        return;
       case "mention":
         insertMentionPrefix();
         return;
@@ -329,6 +390,25 @@ export function ThreadComposer({
         setReviewSheetOpen(false);
         setReviewSheetMode("menu");
         setReviewInstructions("");
+        focusComposer(0);
+      }
+    } finally {
+      setCommandActionPending(false);
+    }
+  }
+
+  async function submitRename() {
+    const nextName = renameDraft.trim();
+    if (!actionsEnabled || commandActionPending || nextName.length === 0) {
+      return;
+    }
+
+    setCommandActionPending(true);
+    try {
+      const completed = await onRenameThread(thread.id, nextName);
+      if (completed) {
+        setRenameSheetOpen(false);
+        setRenameDraft(nextName);
         focusComposer(0);
       }
     } finally {
@@ -885,6 +965,75 @@ export function ThreadComposer({
           </div>
         </div>
       </div>
+
+      <Sheet
+        onOpenChange={(nextOpen) => {
+          setRenameSheetOpen(nextOpen);
+          if (!nextOpen) {
+            setRenameDraft(thread.name ?? "");
+          }
+        }}
+        open={renameSheetOpen}
+      >
+        <SheetContent
+          className={cn(
+            "gap-0 overflow-hidden border-subtle/10 bg-popover",
+            !isDesktop ? "max-h-[82vh] rounded-t-[1.5rem]" : ""
+          )}
+          onOpenAutoFocus={(event) => {
+            event.preventDefault();
+            renameInputRef.current?.focus();
+            renameInputRef.current?.select();
+          }}
+          side={isDesktop ? "right" : "bottom"}
+        >
+          <SheetHeader className="border-b border-subtle/6 pb-3">
+            <SheetTitle>
+              {thread.name ? t("detail.composer.rename.title") : t("detail.composer.rename.titleUnnamed")}
+            </SheetTitle>
+            <SheetDescription>{t("detail.composer.rename.description")}</SheetDescription>
+          </SheetHeader>
+
+          <div className="space-y-3 px-4 py-4">
+            <Input
+              onChange={(event) => {
+                setRenameDraft(event.target.value);
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  void submitRename();
+                }
+              }}
+              placeholder={t("detail.composer.rename.placeholder")}
+              ref={renameInputRef}
+              value={renameDraft}
+            />
+            <div className="flex items-center gap-2">
+              <Button
+                disabled={commandActionPending}
+                onClick={() => {
+                  setRenameSheetOpen(false);
+                }}
+                type="button"
+                variant="outline"
+              >
+                {t("common.cancel")}
+              </Button>
+              <Button
+                className="ml-auto"
+                disabled={commandActionPending || renameDraft.trim().length === 0}
+                onClick={() => {
+                  void submitRename();
+                }}
+                type="button"
+              >
+                {t("detail.composer.rename.submit")}
+              </Button>
+            </div>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Sheet
         onOpenChange={(nextOpen) => {

@@ -11,6 +11,7 @@ import { ThreadComposer } from "@/features/threads/components/thread-detail-comp
 import { ThreadDetailEmptyState } from "@/features/threads/components/thread-detail-empty-state";
 import { ThreadDetailHeader } from "@/features/threads/components/thread-detail-header";
 import { ThreadMessageStream } from "@/features/threads/components/thread-detail-messages";
+import { ThreadSwitcherSheet } from "@/features/threads/components/thread-switcher-sheet";
 import { parseFilePathWithLine } from "@/features/threads/components/thread-detail-utils";
 import type { WorkspaceBrowserRequestedTargetKind } from "@/features/threads/components/use-workspace-browser";
 import { useThreadDetailBanner } from "@/features/threads/components/use-thread-detail-banner";
@@ -39,7 +40,9 @@ export function ThreadDetailPanel({
   lastError,
   onBack,
   onCompactThread,
+  onCreateThread,
   onOpenThread,
+  onRenameThread,
   onRespondToRequest,
   onSendMessage,
   onInterrupt,
@@ -58,7 +61,9 @@ export function ThreadDetailPanel({
   lastError: string | null;
   onBack: () => void;
   onCompactThread: (threadId: string) => Promise<boolean>;
+  onCreateThread: (projectPath: string) => Promise<boolean>;
   onOpenThread: (threadId: string, requestKey?: string) => void;
+  onRenameThread: (threadId: string, name: string) => Promise<boolean>;
   onRespondToRequest: (request: RequestRespondRequest) => Promise<boolean>;
   onSendMessage: (
     threadId: string,
@@ -130,8 +135,10 @@ export function ThreadDetailPanel({
       lastError={lastError}
       onBack={onBack}
       onCompactThread={onCompactThread}
+      onCreateThread={onCreateThread}
       onInterrupt={onInterrupt}
       onOpenThread={onOpenThread}
+      onRenameThread={onRenameThread}
       onRespondToRequest={onRespondToRequest}
       onSendMessage={onSendMessage}
       onStartReview={onStartReview}
@@ -153,8 +160,10 @@ function ReadyThreadDetail({
   lastError,
   onBack,
   onCompactThread,
+  onCreateThread,
   onInterrupt,
   onOpenThread,
+  onRenameThread,
   onRespondToRequest,
   onSendMessage,
   onStartReview,
@@ -172,8 +181,10 @@ function ReadyThreadDetail({
   lastError: string | null;
   onBack: () => void;
   onCompactThread: (threadId: string) => Promise<boolean>;
+  onCreateThread: (projectPath: string) => Promise<boolean>;
   onInterrupt: (threadId: string, turnId: string) => Promise<void>;
   onOpenThread: (threadId: string, requestKey?: string) => void;
+  onRenameThread: (threadId: string, name: string) => Promise<boolean>;
   onRespondToRequest: (request: RequestRespondRequest) => Promise<boolean>;
   onSendMessage: (
     threadId: string,
@@ -198,6 +209,7 @@ function ReadyThreadDetail({
   }));
   const flatItems = flattenTurnItems(thread.turns);
   const scrollRef = useAutoScroll<HTMLDivElement>([flatItems.length, thread.updatedAt]);
+  const [threadSwitcherOpen, setThreadSwitcherOpen] = useState(false);
   const [workspaceBrowserState, setWorkspaceBrowserState] = useState<{
     open: boolean;
     requestedPath: string | null;
@@ -252,13 +264,13 @@ function ReadyThreadDetail({
       <ThreadDetailHeader
         isDesktop={isDesktop}
         onBack={onBack}
-        onOpenThread={onOpenThread}
+        onOpenThreadSwitcher={() => {
+          setThreadSwitcherOpen(true);
+        }}
         onOpenWorkspace={() => {
           openWorkspaceBrowser();
         }}
-        selectedThreadId={selectedThreadId}
         thread={thread}
-        threadsState={threadsState}
       />
 
       {banner ? (
@@ -327,13 +339,29 @@ function ReadyThreadDetail({
           interruptPending={interruptPending}
           isDesktop={isDesktop}
           onCompactThread={onCompactThread}
+          onCreateThread={onCreateThread}
           onInterrupt={onInterrupt}
+          onOpenThreadSwitcher={() => {
+            setThreadSwitcherOpen(true);
+          }}
+          onRenameThread={onRenameThread}
           onSendMessage={onSendMessage}
           onStartReview={onStartReview}
           sendMessagePending={sendMessagePending}
           thread={thread}
         />
       </div>
+
+      <ThreadSwitcherSheet
+        isDesktop={isDesktop}
+        onOpenChange={setThreadSwitcherOpen}
+        onOpenThread={(threadId) => {
+          onOpenThread(threadId);
+        }}
+        open={threadSwitcherOpen}
+        selectedThreadId={selectedThreadId}
+        threadsState={threadsState}
+      />
 
       <WorkspaceBrowserSheet
         cwd={thread.cwd}

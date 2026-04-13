@@ -12,10 +12,11 @@ import { useMediaQuery } from "@/hooks/use-media-query";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
-import type { ThreadDetailState } from "@my-codex-app/sdk";
+import type { ThreadDetailState, ThreadListState } from "@my-codex-app/sdk";
 import type {
   LocalConnectionState,
   ThreadReviewRequest,
+  ThreadSummary,
   ThreadTurnSettingsOverrides
 } from "@my-codex-app/protocol";
 
@@ -57,6 +58,9 @@ export function ThreadsLayout() {
       : snapshot.selectedThreadId === activeThreadId
         ? snapshot.detail
         : unresolvedRouteDetailState(activeThreadId, snapshot.connection, t);
+  const detailThreadsState = routeProjectPath
+    ? filterThreadsStateByProject(snapshot.threads, routeProjectPath)
+    : snapshot.threads;
 
   useEffect(() => {
     void runtime.selectThread(isDesktop ? routeThreadId : mobilePanel.selectedThreadId);
@@ -92,23 +96,26 @@ export function ThreadsLayout() {
     }
   }
 
+  async function createThreadInProject(projectPath: string) {
+    try {
+      const nextThreadId = await runtime.startThread({ cwd: projectPath });
+      projectHome.refreshProjects();
+      startTransition(() => {
+        if (isDesktop) {
+          navigate(`/threads/${encodeURIComponent(nextThreadId)}`);
+        } else {
+          mobilePanel.openThread(nextThreadId, projectPath);
+        }
+      });
+      return true;
+    } catch (error) {
+      toast.error(toErrorMessage(error, t));
+      return false;
+    }
+  }
+
   function handleCreateThread(projectPath: string) {
-    void (async () => {
-      try {
-        const nextThreadId = await runtime.startThread({ cwd: projectPath });
-        projectHome.refreshProjects();
-        projectHome.refreshSessions();
-        startTransition(() => {
-          if (isDesktop) {
-            navigate(`/threads/${encodeURIComponent(nextThreadId)}`);
-          } else {
-            mobilePanel.openThread(nextThreadId, projectPath);
-          }
-        });
-      } catch (error) {
-        toast.error(toErrorMessage(error, t));
-      }
-    })();
+    void createThreadInProject(projectPath);
   }
 
   function handleOpenThread(nextThreadId: string) {
@@ -118,6 +125,16 @@ export function ThreadsLayout() {
       });
     } else {
       mobilePanel.openThread(nextThreadId, selectedProjectPath);
+    }
+  }
+
+  async function handleRenameThread(threadId: string, name: string) {
+    try {
+      await runtime.renameThread(threadId, name);
+      return true;
+    } catch (error) {
+      toast.error(toErrorMessage(error, t));
+      return false;
     }
   }
 
@@ -201,7 +218,9 @@ export function ThreadsLayout() {
             lastError={snapshot.mutations.lastError}
             onBack={mobilePanel.backFromDetail}
             onCompactThread={handleCompactThread}
+            onCreateThread={createThreadInProject}
             onOpenThread={handleOpenThread}
+            onRenameThread={handleRenameThread}
             onRespondToRequest={handleRespond}
             onSendMessage={handleSendMessage}
             onInterrupt={handleInterrupt}
@@ -209,7 +228,7 @@ export function ThreadsLayout() {
             respondingRequestIds={snapshot.mutations.respondingRequestIds}
             selectedThreadId={mobilePanel.selectedThreadId}
             sendMessagePending={snapshot.mutations.sendMessagePending}
-            threadsState={selectedProjectPath !== null ? projectHome.sessionsState : snapshot.threads}
+            threadsState={selectedProjectPath !== null ? projectHome.sessionsState : detailThreadsState}
           />
         </div>
       );
@@ -302,7 +321,9 @@ export function ThreadsLayout() {
             });
           }}
           onCompactThread={handleCompactThread}
+          onCreateThread={createThreadInProject}
           onOpenThread={handleOpenThread}
+          onRenameThread={handleRenameThread}
           onRespondToRequest={handleRespond}
           onSendMessage={handleSendMessage}
           onInterrupt={handleInterrupt}
@@ -310,7 +331,7 @@ export function ThreadsLayout() {
           respondingRequestIds={snapshot.mutations.respondingRequestIds}
           selectedThreadId={routeThreadId}
           sendMessagePending={snapshot.mutations.sendMessagePending}
-          threadsState={selectedProjectPath !== null ? projectHome.sessionsState : snapshot.threads}
+          threadsState={detailThreadsState}
         />
       </div>
       <ProjectImportSheet
@@ -382,4 +403,22 @@ function resolveThreadProjectPath(
   }
 
   return threadsState.threads.find((thread) => thread.id === threadId)?.cwd ?? null;
+}
+
+function filterThreadsStateByProject(
+  threadsState: ThreadListState,
+  projectPath: string
+): ThreadListState {
+  if (threadsState.kind !== "ready") {
+    return threadsState;
+  }
+
+  return {
+    kind: "ready",
+    threads: threadsState.threads.filter((thread) => isThreadInProject(thread, projectPath))
+  };
+}
+
+function isThreadInProject(thread: ThreadSummary, projectPath: string): boolean {
+  return thread.cwd === projectPath;
 }

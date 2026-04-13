@@ -25,6 +25,8 @@ import type {
   ThreadCompactResponse,
   ThreadListRequest,
   ThreadListResponse,
+  ThreadRenameRequest,
+  ThreadRenameResponse,
   ThreadReadResponse,
   ThreadReviewRequest,
   ThreadReviewResponse,
@@ -92,6 +94,12 @@ export type BridgeSessionEvent =
       code?: BridgeAuthErrorCode;
       message: string;
     };
+
+const BRIDGE_REQUEST_TIMEOUT_MS = 15_000;
+
+interface BridgeRequestOptions {
+  signal?: AbortSignal;
+}
 
 export class BridgeClient {
   readonly #baseUrl: string;
@@ -177,9 +185,13 @@ export class BridgeClient {
     });
   }
 
-  listThreads(request: ThreadListRequest = {}): Promise<ThreadListResponse> {
+  listThreads(
+    request: ThreadListRequest = {},
+    options?: BridgeRequestOptions
+  ): Promise<ThreadListResponse> {
     return this.#requestJson<ThreadListResponse>("/api/threads", {
-      method: "GET"
+      method: "GET",
+      ...(options?.signal ? { signal: options.signal } : {})
     }, request.cursor !== undefined || request.limit !== undefined || request.cwd !== undefined
       ? {
           ...(request.cursor !== undefined ? { cursor: request.cursor } : {}),
@@ -189,8 +201,11 @@ export class BridgeClient {
       : undefined);
   }
 
-  listProjects(): Promise<ProjectListResponse> {
-    return this.#requestJson<ProjectListResponse>("/api/projects", { method: "GET" });
+  listProjects(options?: BridgeRequestOptions): Promise<ProjectListResponse> {
+    return this.#requestJson<ProjectListResponse>("/api/projects", {
+      method: "GET",
+      ...(options?.signal ? { signal: options.signal } : {})
+    });
   }
 
   searchProjects(request: ProjectSearchRequest): Promise<ProjectSearchResponse> {
@@ -275,6 +290,16 @@ export class BridgeClient {
 
   startThread(request: ThreadStartRequest = {}): Promise<ThreadStartResponse> {
     return this.#requestJson<ThreadStartResponse>("/api/threads/start", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  renameThread(request: ThreadRenameRequest): Promise<ThreadRenameResponse> {
+    return this.#requestJson<ThreadRenameResponse>("/api/threads/rename", {
       method: "POST",
       body: JSON.stringify(request),
       headers: {
@@ -446,16 +471,51 @@ export class BridgeClient {
     const retryOnAuthFailure = options?.retryOnAuthFailure ?? true;
     const credentials = requiresAuth ? await this.#getValidCredentials() : null;
     let response: Response;
+    let timedOut = false;
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => {
+      timedOut = true;
+      controller.abort(new Error("Bridge request timed out"));
+    }, BRIDGE_REQUEST_TIMEOUT_MS);
+    const externalSignal = init.signal;
+    const abortFromExternalSignal = () => {
+      controller.abort(
+        externalSignal instanceof AbortSignal && "reason" in externalSignal
+          ? externalSignal.reason
+          : new Error("Bridge request was aborted")
+      );
+    };
+
+    if (externalSignal) {
+      if (externalSignal.aborted) {
+        abortFromExternalSignal();
+      } else {
+        externalSignal.addEventListener("abort", abortFromExternalSignal, { once: true });
+      }
+    }
+
     try {
       response = await fetch(this.#buildUrl(path, searchParams, false), {
         ...init,
+        signal: controller.signal,
         headers: {
           ...(init.headers ? Object.fromEntries(new Headers(init.headers).entries()) : {}),
           ...(credentials ? { Authorization: `Bearer ${credentials.accessToken}` } : {})
         }
       });
     } catch (error) {
-      throw toBridgeClientError(error, "Bridge request failed before receiving a response");
+      const fallbackMessage =
+        timedOut
+          ? "Bridge request timed out"
+          : controller.signal.aborted
+            ? toAbortFallbackMessage(controller.signal.reason)
+          : "Bridge request failed before receiving a response";
+      throw toBridgeClientError(error, fallbackMessage);
+    } finally {
+      window.clearTimeout(timeoutId);
+      if (externalSignal) {
+        externalSignal.removeEventListener("abort", abortFromExternalSignal);
+      }
     }
 
     if (response.status === 401 && requiresAuth && retryOnAuthFailure) {
@@ -659,8 +719,22 @@ function toBridgeClientError(error: unknown, fallbackMessage: string): BridgeCli
     return error;
   }
 
-  const message = error instanceof Error ? error.message : fallbackMessage;
+  const message =
+    error instanceof Error && !isAbortLikeError(error) ? error.message : fallbackMessage;
   return new BridgeClientError(message || fallbackMessage, {
     kind: "network"
   });
+}
+
+function isAbortLikeError(error: Error): boolean {
+  const normalizedMessage = error.message.toLowerCase();
+  return error.name === "AbortError" || normalizedMessage.includes("abort");
+}
+
+function toAbortFallbackMessage(reason: unknown): string {
+  if (reason instanceof Error && reason.message.trim().length > 0) {
+    return reason.message;
+  }
+
+  return "Bridge request was aborted";
 }

@@ -7,6 +7,7 @@ import type {
   ThreadReviewRequest,
   ThreadReviewResponse,
   ThreadDetail,
+  ThreadRenameResponse,
   ThreadSettings,
   ThreadStartRequest,
   ThreadSummary,
@@ -191,6 +192,28 @@ export class BridgeThreadRuntime {
       throw error;
     } finally {
       this.#updateMutations({ startThreadPending: false });
+    }
+  }
+
+  async renameThread(threadId: string, name: string): Promise<ThreadRenameResponse> {
+    this.#updateMutations({ lastError: null });
+
+    try {
+      const response = await this.client.renameThread({ threadId, name });
+      const event: BridgeEvent = {
+        type: "threadNameUpdated",
+        threadId,
+        threadName: name
+      };
+      this.#update((current) => ({
+        ...current,
+        threads: updateThreadSummaryState(current.threads, event),
+        detail: this.#applyEventToDetail(current.detail, current.selectedThreadId, event)
+      }));
+      return response;
+    } catch (error) {
+      this.#setActionError(error);
+      throw error;
     }
   }
 

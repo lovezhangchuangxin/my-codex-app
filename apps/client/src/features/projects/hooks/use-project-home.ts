@@ -53,10 +53,11 @@ export function useProjectHome(
     }
 
     let cancelled = false;
+    const controller = new AbortController();
     setProjectsState((current) => (current.kind === "ready" ? current : { kind: "loading" }));
 
     void bridgeClient
-      .listProjects()
+      .listProjects({ signal: controller.signal })
       .then((response) => {
         if (cancelled) {
           return;
@@ -83,6 +84,7 @@ export function useProjectHome(
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [bridgeClient, connectionKind, projectsReloadToken]);
 
@@ -98,10 +100,11 @@ export function useProjectHome(
     }
 
     let cancelled = false;
+    const controller = new AbortController();
     setSessionsState({ kind: "loading" });
 
     void bridgeClient
-      .listThreads({ cwd: selectedProjectPath })
+      .listThreads({ cwd: selectedProjectPath }, { signal: controller.signal })
       .then((response) => {
         if (cancelled) {
           return;
@@ -128,6 +131,7 @@ export function useProjectHome(
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [bridgeClient, connectionKind, selectedProjectPath, sessionsReloadToken]);
 
