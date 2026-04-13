@@ -26,7 +26,7 @@ export function ThreadStatusTabs({
       }}
       value={value}
     >
-      <div className="max-w-full overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="min-w-0 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <TabsList
           className="h-auto min-w-max max-w-none flex-nowrap justify-start gap-1 rounded-xl bg-background/35 p-1"
           variant="line"

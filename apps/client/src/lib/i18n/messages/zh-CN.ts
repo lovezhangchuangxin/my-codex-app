@@ -258,7 +258,7 @@ export const zhCnMessages: typeof enMessages = {
   'project.list.searchPlaceholder': '按名称或路径筛选项目',
   'project.list.title': '你的项目',
   'project.sessions.action.back': '返回项目列表',
-  'project.sessions.action.new': '新建会话',
+  'project.sessions.action.new': '新建',
   'project.sessions.eyebrow': '会话',
   'project.sessions.empty.noMatches.message':
     '调整搜索或状态筛选，以查找该项目中的会话。',
@@ -270,6 +270,9 @@ export const zhCnMessages: typeof enMessages = {
     '在这个项目里开启第一个会话，即可开始工作。',
   'project.sessions.empty.noSessions.title': '还没有会话',
   'project.sessions.error.loadTitle': '无法加载会话列表',
+  'project.sessions.action.copyPath': '复制路径',
+  'project.sessions.toast.copyPathSuccess': '路径已复制',
+  'project.sessions.toast.copyPathError': '复制路径失败',
   'project.sessions.searchPlaceholder': '筛选该项目中的会话',
   'project.sessions.unavailable.message':
     '该项目路径在 Bridge 主机上已不可用。',

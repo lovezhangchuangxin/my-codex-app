@@ -281,7 +281,7 @@ export const enMessages = {
   'project.list.searchPlaceholder': 'Filter projects by name or path',
   'project.list.title': 'Your projects',
   'project.sessions.action.back': 'Back to projects',
-  'project.sessions.action.new': 'New session',
+  'project.sessions.action.new': 'New',
   'project.sessions.eyebrow': 'Sessions',
   'project.sessions.empty.noMatches.message':
     'Adjust the search or status filter to find a session in this project.',
@@ -293,6 +293,9 @@ export const enMessages = {
     'Start the first session in this project to begin working here.',
   'project.sessions.empty.noSessions.title': 'No sessions yet',
   'project.sessions.error.loadTitle': 'Unable to load sessions',
+  'project.sessions.action.copyPath': 'Copy path',
+  'project.sessions.toast.copyPathSuccess': 'Path copied',
+  'project.sessions.toast.copyPathError': 'Failed to copy path',
   'project.sessions.searchPlaceholder': 'Filter sessions in this project',
   'project.sessions.unavailable.message':
     'This project path is no longer available on the bridge host.',

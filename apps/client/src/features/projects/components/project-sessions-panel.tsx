@@ -1,16 +1,20 @@
 import { useDeferredValue, useState } from 'react';
-import { ArrowLeft, Folder, Play, Search } from 'lucide-react';
+import { ArrowLeft, Check, Copy, Folder, Play, Search } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThreadCard } from '@/features/threads/components/thread-card';
 import { ThreadStatusTabs } from '@/features/threads/components/thread-status-tabs';
@@ -95,23 +99,34 @@ export function ProjectSessionsPanel({
     >
       <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35 pt-4">
         <div className="flex min-w-0 items-center justify-between gap-3">
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex min-w-0 items-center gap-2">
-              {!isDesktop ? (
-                <Button onClick={onBack} size="icon-sm" variant="ghost">
-                  <ArrowLeft className="size-4" />
-                  <span className="sr-only">
-                    {t('project.sessions.action.back')}
-                  </span>
-                </Button>
-              ) : null}
-              <CardTitle className="min-w-0 truncate text-xl tracking-[-0.04em]">
-                {project.displayName}
-              </CardTitle>
-            </div>
-            <CardDescription className="break-all font-mono text-xs">
-              {project.path}
-            </CardDescription>
+          <div className="flex min-w-0 flex-auto items-center gap-2">
+            {!isDesktop ? (
+              <Button onClick={onBack} size="icon-sm" variant="ghost">
+                <ArrowLeft className="size-4" />
+                <span className="sr-only">
+                  {t('project.sessions.action.back')}
+                </span>
+              </Button>
+            ) : null}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  aria-haspopup="dialog"
+                  className="min-w-0 truncate text-left font-heading text-xl font-medium tracking-[-0.04em] hover:text-muted-foreground"
+                  type="button"
+                >
+                  {project.displayName}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" sideOffset={4}>
+                <div className="space-y-2">
+                  <p className="font-mono text-xs break-all">
+                    {project.path}
+                  </p>
+                  <CopyPathButton path={project.path} />
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
           <Button
             className="shrink-0"
@@ -130,7 +145,7 @@ export function ProjectSessionsPanel({
           </Button>
         </div>
 
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
           <div className="group relative min-w-0">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-foreground/60" />
             <Input
@@ -259,5 +274,37 @@ export function ProjectSessionsPanel({
         </ScrollArea>
       </CardContent>
     </Card>
+  );
+}
+
+function CopyPathButton({ path }: { path: string }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Button
+      className="h-7 w-full"
+      onClick={() => {
+        void navigator.clipboard.writeText(path).then(
+          () => {
+            setCopied(true);
+            toast.success(t('project.sessions.toast.copyPathSuccess'));
+            setTimeout(() => setCopied(false), 2000);
+          },
+          () => {
+            toast.error(t('project.sessions.toast.copyPathError'));
+          },
+        );
+      }}
+      size="sm"
+      variant="outline"
+    >
+      {copied ? (
+        <Check className="size-3.5" />
+      ) : (
+        <Copy className="size-3.5" />
+      )}
+      {t('project.sessions.action.copyPath')}
+    </Button>
   );
 }
