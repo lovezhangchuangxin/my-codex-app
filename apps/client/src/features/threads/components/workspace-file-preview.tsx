@@ -86,7 +86,11 @@ export function WorkspaceFilePreview({
   return (
     <div className="space-y-3 p-4 md:p-5">
       <PreviewHeader
-        badge={workspaceFileKindBadge(state.response.kind, t)}
+        badge={
+          state.response.kind !== 'text'
+            ? workspaceFileKindBadge(state.response.kind, t)
+            : undefined
+        }
         metadata={[
           fileSize,
           state.response.modifiedAtMs
@@ -169,13 +173,13 @@ function PreviewHeader({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-baseline gap-2">
         <h3 className="min-w-0 truncate font-heading text-[1.02rem] tracking-[-0.03em] text-foreground">
           {title}
         </h3>
         {badge ? (
           <Badge
-            className="border-0 bg-background/80 font-mono text-[0.68rem] uppercase text-muted-foreground"
+            className="h-auto border-0 bg-background/80 font-mono text-[0.68rem] uppercase text-muted-foreground"
             variant="outline"
           >
             {badge}
