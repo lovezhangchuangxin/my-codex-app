@@ -3,17 +3,15 @@ import { useI18n } from '@/lib/i18n/use-i18n';
 import { cn } from '@/lib/utils';
 
 const localeOptions = [
-  { key: 'en' as const, labelKey: 'settings.language.english' },
-  { key: 'zh-CN' as const, labelKey: 'settings.language.simplifiedChinese' },
+  { key: 'en' as const, nativeLabel: 'English' },
+  { key: 'zh-CN' as const, nativeLabel: '简体中文' },
 ];
 
 export function LanguageSection() {
   const { locale, setLocale, t } = useI18n();
 
   const currentLanguageLabel =
-    locale === 'zh-CN'
-      ? t('settings.language.simplifiedChinese')
-      : t('settings.language.english');
+    localeOptions.find((o) => o.key === locale)?.nativeLabel ?? locale;
 
   return (
     <div className="space-y-3">
@@ -49,7 +47,7 @@ export function LanguageSection() {
                 size="sm"
                 variant={isActive ? 'secondary' : 'outline'}
               >
-                {t(option.labelKey)}
+                {option.nativeLabel}
               </Button>
             );
           })}
