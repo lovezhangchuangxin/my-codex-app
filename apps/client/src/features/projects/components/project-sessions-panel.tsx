@@ -94,9 +94,9 @@ export function ProjectSessionsPanel({
       )}
     >
       <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-1">
+            <div className="flex min-w-0 items-center gap-2">
               {!isDesktop ? (
                 <Button onClick={onBack} size="icon-sm" variant="ghost">
                   <ArrowLeft className="size-4" />
@@ -105,7 +105,7 @@ export function ProjectSessionsPanel({
                   </span>
                 </Button>
               ) : null}
-              <CardTitle className="truncate text-xl tracking-[-0.04em]">
+              <CardTitle className="min-w-0 truncate text-xl tracking-[-0.04em]">
                 {project.displayName}
               </CardTitle>
             </div>
@@ -114,6 +114,7 @@ export function ProjectSessionsPanel({
             </CardDescription>
           </div>
           <Button
+            className="shrink-0"
             disabled={
               createPending ||
               !project.available ||
