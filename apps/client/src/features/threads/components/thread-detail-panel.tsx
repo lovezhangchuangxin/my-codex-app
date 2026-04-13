@@ -619,7 +619,7 @@ function ThreadComposer({
           >
             <SheetTrigger asChild>
               <Button
-                className="h-9 min-w-0 flex-1 rounded-full border-subtle/10 bg-background/72 px-3 text-left text-sm font-medium"
+                className="h-9 min-w-0 rounded-full border-subtle/10 bg-background/72 px-3 text-left text-sm font-medium"
                 type="button"
                 variant="outline"
               >
@@ -743,12 +743,12 @@ function ThreadComposer({
             </SheetContent>
           </Sheet>
 
-          <ContextUsageButton usage={thread.contextUsage} />
+          <div className="ml-auto flex items-center gap-1">
+            <ContextUsageButton usage={thread.contextUsage} />
 
-          <div className="ml-auto">
             {activeTurnId ? (
               <Button
-                className="size-9 rounded-full"
+                className="size-7 rounded-full"
                 disabled={!actionsEnabled || interruptPending}
                 onClick={() => {
                   void onInterrupt(thread.id, activeTurnId);
@@ -757,17 +757,17 @@ function ThreadComposer({
                 type="button"
                 variant="outline"
               >
-                <Square className="size-3.5" />
+                <Square className="size-3" />
                 <span className="sr-only">{t("detail.action.stop")}</span>
               </Button>
             ) : (
               <Button
-                className="size-9 rounded-full"
+                className="size-7 rounded-full"
                 disabled={!canSend}
                 size="icon"
                 type="submit"
               >
-                <Send className="size-3.5" />
+                <Send className="size-3" />
                 <span className="sr-only">{t("detail.action.send")}</span>
               </Button>
             )}
@@ -791,14 +791,13 @@ function ContextUsageButton({
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button
-          className="size-9 rounded-full border-subtle/10 bg-background/72 p-0"
+        <button
+          className="flex size-8 cursor-pointer items-center justify-center rounded-full transition-opacity hover:opacity-80"
           type="button"
-          variant="outline"
         >
           <ContextUsageRing percentUsed={percentUsed} />
           <span className="sr-only">{t("detail.composer.context.title")}</span>
-        </Button>
+        </button>
       </PopoverTrigger>
 
       <PopoverContent align="start" className="w-80">
@@ -944,51 +943,67 @@ function ContextUsageRing({
 }: {
   percentUsed: number | null;
 }) {
-  const radius = 12.5;
+  const radius = 14;
   const circumference = 2 * Math.PI * radius;
   const clampedPercent =
     percentUsed === null ? null : Math.max(0, Math.min(percentUsed, 100));
   const progress = clampedPercent === null ? 0 : clampedPercent / 100;
   const dashOffset = circumference * (1 - progress);
 
+  // Use theme tokens so colors adapt to dark / light mode automatically
+  const trackColor = "var(--color-border)";
+  const arcColor =
+    clampedPercent === null
+      ? "var(--color-muted-foreground)"
+      : clampedPercent < 50
+        ? "var(--color-primary)"
+        : clampedPercent < 80
+          ? "var(--color-chart-2)"
+          : "var(--color-destructive)";
+
   return (
     <svg
       aria-hidden="true"
-      className="size-6.5"
+      className="size-8"
       viewBox="0 0 36 36"
     >
+      {/* Background track — represents the full context window */}
       <circle
         cx="18"
         cy="18"
         fill="none"
         r={radius}
-        stroke="currentColor"
-        strokeDasharray={clampedPercent === null ? "4 3" : undefined}
-        strokeOpacity={0.18}
+        stroke={trackColor}
+        strokeOpacity={0.55}
         strokeWidth="3"
       />
-      <circle
-        cx="18"
-        cy="18"
-        fill="none"
-        r={radius}
-        stroke="currentColor"
-        strokeDasharray={circumference}
-        strokeDashoffset={dashOffset}
-        strokeLinecap="round"
-        strokeOpacity={clampedPercent === null ? 0 : 0.92}
-        strokeWidth="3"
-        transform="rotate(-90 18 18)"
-      />
+      {/* Progress arc — represents the used portion */}
+      {clampedPercent !== null && clampedPercent > 0 ? (
+        <circle
+          cx="18"
+          cy="18"
+          fill="none"
+          r={radius}
+          stroke={arcColor}
+          strokeDasharray={circumference}
+          strokeDashoffset={dashOffset}
+          strokeLinecap="round"
+          strokeWidth="3"
+          transform="rotate(-90 18 18)"
+          style={{ transition: "stroke-dashoffset 0.4s ease, stroke 0.3s ease" }}
+        />
+      ) : null}
       <text
-        fill="currentColor"
-        fontSize="7"
-        fontWeight="700"
+        dominantBaseline="central"
+        fill={arcColor}
+        fillOpacity={clampedPercent === null ? 0.6 : 0.7}
+        fontSize="13.5"
+        fontWeight="600"
         textAnchor="middle"
         x="18"
-        y="20.4"
+        y="18"
       >
-        {clampedPercent === null ? "?" : Math.round(clampedPercent)}
+        C
       </text>
     </svg>
   );
