@@ -201,6 +201,40 @@ What they give `my-codex-app`:
 - a reference for streamed turn consumption
 - a reference for start/resume/interrupt usage from a client perspective
 
+Important limitation:
+
+- `sdk/typescript/src/thread.ts` is useful for the high-level SDK consumption
+  model, but it is **not** the authority for rich app-server composer behavior
+  such as slash commands, file search, skill references, or structured
+  `mention` items
+- when a task is about browser/TUI-style composer semantics, prefer
+  `app-server-protocol`, `app-server/README.md`, and `codex-rs/tui`
+
+### 7. `codex-rs/tui` for composer and popup behavior
+
+Role:
+
+- the best upstream reference for how Codex's own interactive composer behaves
+- source of truth for slash popup activation, `@` file search popup behavior,
+  skill/app/plugin mention insertion, and composer-local dispatch rules
+
+Read first when the task is about command entry or inline references:
+
+- `codex-rs/tui/src/bottom_pane/chat_composer.rs`
+- `codex-rs/tui/src/bottom_pane/command_popup.rs`
+- `codex-rs/tui/src/bottom_pane/file_search_popup.rs`
+- `codex-rs/tui/src/bottom_pane/skill_popup.rs`
+- `codex-rs/tui/src/chatwidget.rs`
+- `codex-rs/tui/src/file_search.rs`
+
+What it gives `my-codex-app`:
+
+- when `/...` is treated as a command vs plain text
+- when `@...` is treated as file search vs ordinary text
+- how selected mentions are inserted into visible text
+- which behaviors are local client affordances rather than upstream app-server
+  methods
+
 ## Core Architecture For Our Integration
 
 The architecture we actually depend on is:
@@ -335,6 +369,151 @@ Implication for `my-codex-app`:
 - our bridge and client should preserve that ordering contract
 - if our local protocol changes the apparent order, our implementation is wrong
 
+### Structured turn input vs client-side composer affordances
+
+Source:
+
+- `codex-rs/protocol/src/user_input.rs`
+- `codex-rs/app-server/README.md`
+- `codex-rs/tui/src/bottom_pane/chat_composer.rs`
+- `codex-rs/tui/src/chatwidget.rs`
+
+Important points:
+
+- upstream `turn/start.input` supports structured user input items such as:
+  - `text`
+  - `image`
+  - `localImage`
+  - `skill`
+  - `mention`
+- however, not every visible composer affordance becomes a structured item
+- in particular:
+  - `@` file search in the TUI inserts a path into text; it is **not** encoded
+    as a structured `mention`
+  - skill/app/plugin references may use visible `$name` or `@name` tokens in
+    text **plus** extra structured `skill` / `mention` items so Codex receives
+    the exact target identity
+
+Implication for `my-codex-app`:
+
+- do not assume that every special-looking token in the composer maps to a
+  structured app-server input item
+- for file references, it is correct to treat selection as text insertion
+- for skill/app/plugin work, read both the visible-text rules and the hidden
+  structured-item rules before designing the client protocol
+
+### Slash commands are partly UI semantics, not just prompt text
+
+Source:
+
+- `codex-rs/tui/src/slash_command.rs`
+- `codex-rs/tui/src/bottom_pane/slash_commands.rs`
+- `codex-rs/tui/src/bottom_pane/chat_composer.rs`
+- `codex-rs/tui/src/chatwidget.rs`
+
+Important points:
+
+- upstream slash commands are discovered and filtered by the TUI, not by
+  app-server
+- some slash commands dispatch dedicated actions instead of submitting literal
+  `/command` text to `turn/start`
+- examples:
+  - `/compact` dispatches manual context compaction
+  - `/review` opens or dispatches the review flow
+  - `/mention` is only a helper that inserts `@`
+  - `/model` and `/permissions` are local settings affordances
+- if a slash token does not resolve to a supported command, it can still remain
+  ordinary text
+
+Implication for `my-codex-app`:
+
+- when adding slash-command support, first decide whether each command is:
+  - a bridge/app-server action
+  - a local client helper
+  - or just plain text fallback
+- do not blindly forward slash-prefixed text as if upstream guaranteed the same
+  behavior
+
+### File search is a client feature, not an app-server RPC
+
+Source:
+
+- `codex-rs/tui/src/file_search.rs`
+- `codex-rs/tui/src/bottom_pane/chat_composer.rs`
+- `codex-rs/app-server/README.md`
+
+Important points:
+
+- upstream app-server exposes filesystem reads such as:
+  - `fs/readDirectory`
+  - `fs/readFile`
+  - `fs/getMetadata`
+- upstream app-server does **not** expose a dedicated file-search RPC for the
+  TUI `@` flow
+- the TUI implements `@` search on the client side using a local file-search
+  session rooted at the current workspace
+
+Implication for `my-codex-app`:
+
+- if the browser client needs `@` file search, the bridge must provide its own
+  typed search capability rooted at `thread.cwd`
+- do not waste time looking for a native upstream `file/search` app-server
+  method that does not exist
+
+### Review, compaction, and shell-command lifecycle
+
+Source:
+
+- `codex-rs/app-server/README.md`
+- `codex-rs/app-server-protocol/src/protocol/v2.rs`
+
+Important points:
+
+- `thread/compact/start` returns `{}` immediately and then reports progress via
+  normal `turn/*` and `item/*` notifications
+- the item to watch for compaction is `contextCompaction`
+- `review/start` emits:
+  - `enteredReviewMode`
+  - `exitedReviewMode`
+  - and a final assistant `agentMessage` containing the review text
+- `thread/shellCommand` is the app-server surface behind the TUI `!` workflow
+- `thread/shellCommand` runs unsandboxed with full access and also streams
+  normal command/turn items
+
+Implication for `my-codex-app`:
+
+- compaction and review should be integrated into the normal thread event model,
+  not treated as isolated side effects
+- review UIs should account for both review-mode items and the final assistant
+  message so they do not accidentally double-render the same review text
+- exposing `!`-style shell commands requires an explicit product decision
+  because upstream treats them as unsandboxed full-access actions
+
+### Detached review is upstream-capable but only useful if our runtime can follow it
+
+Source:
+
+- `codex-rs/app-server/README.md`
+- `codex-rs/app-server-protocol/src/protocol/v2.rs`
+
+Important points:
+
+- upstream review supports:
+  - `delivery: "inline"`
+  - `delivery: "detached"`
+- detached review runs in a new review thread and emits `thread/started` for
+  that thread before the review stream
+
+Implication for `my-codex-app`:
+
+- do not expose detached review from our shared client-facing protocol unless
+  the bridge, SDK, and client runtime can all:
+  - surface the new `reviewThreadId`
+  - subscribe to that thread's event stream
+  - and update local state coherently
+- upstream support alone is not enough; our mediated runtime must support the
+  full lifecycle too
+
 ## Fast Lookup: Where To Read For Common Questions
 
 ### “What is the official app-server method or payload shape?”
@@ -371,6 +550,32 @@ Read:
 - `codex-rs/app-server/tests/suite/v2/request_permissions.rs`
 - `codex-rs/app-server/tests/suite/v2/request_user_input.rs`
 - `codex-rs/app-server/tests/suite/v2/turn_interrupt.rs`
+
+### “How do slash commands, `@` file search, and mentions actually behave?”
+
+Read:
+
+- `codex-rs/tui/src/bottom_pane/chat_composer.rs`
+- `codex-rs/tui/src/bottom_pane/command_popup.rs`
+- `codex-rs/tui/src/bottom_pane/file_search_popup.rs`
+- `codex-rs/tui/src/bottom_pane/skill_popup.rs`
+- `codex-rs/tui/src/chatwidget.rs`
+- `codex-rs/tui/src/file_search.rs`
+
+Key reminder:
+
+- slash commands are mostly TUI/client behavior
+- `@` file search is client-side search, not app-server protocol
+- structured `mention` items are for exact app/plugin targets, not ordinary file
+  references
+
+### “How do review and manual compaction stream back?”
+
+Read:
+
+- `codex-rs/app-server/README.md`
+- `codex-rs/app-server-protocol/src/protocol/v2.rs`
+- `codex-rs/app-server/tests/suite/v2/turn_start.rs`
 
 ### “How would an official client consume this?”
 
@@ -435,6 +640,8 @@ Unless a task clearly says otherwise, assume:
 - the protocol authority is `codex-rs/app-server-protocol`
 - runtime lifecycle truth is validated by `codex-rs/app-server/tests/suite/v2`
 - `thread/resume`, `thread/read`, `thread/unsubscribe`, approvals, permissions, user input, and `serverRequest/resolved` are the main upstream semantics that affect `my-codex-app`
+- composer behavior involving `/`, `@`, skills, apps, or plugin mentions is
+  usually rooted in `codex-rs/tui`, not in the official SDK helpers
 
 If a future task touches relay, remote control, or upstream auth/account flows,
 expand outward from this guide rather than restarting from the entire Codex

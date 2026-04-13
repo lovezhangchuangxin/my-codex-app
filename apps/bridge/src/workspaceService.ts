@@ -1,4 +1,5 @@
-import { realpath, stat } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { readdir, realpath, stat } from "node:fs/promises";
 import * as path from "node:path";
 
 import type {
@@ -6,12 +7,32 @@ import type {
   WorkspaceReadDirectoryRequest,
   WorkspaceReadDirectoryResponse,
   WorkspaceReadFileRequest,
-  WorkspaceReadFileResponse
+  WorkspaceReadFileResponse,
+  WorkspaceSearchFilesRequest,
+  WorkspaceSearchFilesResponse
 } from "@my-codex-app/protocol";
 
 import { AppServerClient } from "./appServerClient";
 
 const MAX_TEXT_PREVIEW_BYTES = 512 * 1024;
+const DEFAULT_WORKSPACE_SEARCH_LIMIT = 12;
+const MAX_WORKSPACE_SEARCH_LIMIT = 40;
+const MAX_WORKSPACE_SEARCH_ENTRIES = 12_000;
+const WORKSPACE_SEARCH_SKIPPED_DIRECTORIES = new Set([
+  ".git",
+  ".next",
+  ".nuxt",
+  ".svelte-kit",
+  ".turbo",
+  ".cache",
+  ".parcel-cache",
+  "node_modules",
+  "dist",
+  "build",
+  "coverage",
+  "out",
+  "target"
+]);
 
 export class WorkspaceServiceError extends Error {
   readonly statusCode: number;
@@ -87,6 +108,34 @@ export class WorkspaceService {
       sizeBytes,
       modifiedAtMs,
       content: decoded.toString("utf8")
+    };
+  }
+
+  async searchFiles(
+    request: WorkspaceSearchFilesRequest
+  ): Promise<WorkspaceSearchFilesResponse> {
+    const query = normalizeWorkspaceSearchQuery(request.query);
+    const limit = normalizeWorkspaceSearchLimit(request.limit);
+    const rootPath = await this.#resolveWorkspaceRoot(request.threadId);
+
+    if (query.length === 0) {
+      return {
+        root: rootPath,
+        query,
+        matches: []
+      };
+    }
+
+    const matches = await searchWorkspaceEntries(rootPath, query, limit);
+    return {
+      root: rootPath,
+      query,
+      matches: matches.map((match) => ({
+        name: getPathBaseName(match.path),
+        path: match.path,
+        isDirectory: match.isDirectory,
+        isFile: match.isFile
+      }))
     };
   }
 
@@ -189,8 +238,26 @@ function normalizeWorkspacePath(value: string | undefined): string {
   return segments.join("/");
 }
 
+function normalizeWorkspaceSearchQuery(value: string): string {
+  return value.trim().replace(/\\/g, "/");
+}
+
+function normalizeWorkspaceSearchLimit(value: number | undefined): number {
+  if (value === undefined || !Number.isFinite(value)) {
+    return DEFAULT_WORKSPACE_SEARCH_LIMIT;
+  }
+
+  return Math.max(1, Math.min(Math.trunc(value), MAX_WORKSPACE_SEARCH_LIMIT));
+}
+
 function joinWorkspacePath(parentPath: string, entryName: string): string {
   return parentPath.length > 0 ? `${parentPath}/${entryName}` : entryName;
+}
+
+function getPathBaseName(workspacePath: string): string {
+  const normalized = workspacePath.replace(/\\/g, "/");
+  const segments = normalized.split("/").filter(Boolean);
+  return segments.at(-1) ?? workspacePath;
 }
 
 function compareWorkspaceEntries(left: WorkspaceEntry, right: WorkspaceEntry): number {
@@ -247,4 +314,172 @@ function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
 
 function toNumber(value: number | bigint): number {
   return typeof value === "bigint" ? Number(value) : value;
+}
+
+async function searchWorkspaceEntries(
+  rootPath: string,
+  query: string,
+  limit: number
+): Promise<
+  Array<{
+    path: string;
+    isDirectory: boolean;
+    isFile: boolean;
+  }>
+> {
+  const matches: Array<{
+    path: string;
+    isDirectory: boolean;
+    isFile: boolean;
+    score: number;
+  }> = [];
+  const queue = [{ absolutePath: rootPath, relativePath: "" }];
+  let queueIndex = 0;
+  let scannedEntries = 0;
+
+  while (queueIndex < queue.length && scannedEntries < MAX_WORKSPACE_SEARCH_ENTRIES) {
+    const current = queue[queueIndex];
+    queueIndex += 1;
+    if (!current) {
+      break;
+    }
+
+    let entries: Dirent[];
+    try {
+      entries = await readdir(current.absolutePath, {
+        withFileTypes: true
+      });
+    } catch (error) {
+      if (isSkippableWorkspaceSearchError(error)) {
+        continue;
+      }
+      throw error;
+    }
+
+    entries.sort((left, right) => left.name.localeCompare(right.name));
+
+    for (const entry of entries) {
+      if (scannedEntries >= MAX_WORKSPACE_SEARCH_ENTRIES) {
+        break;
+      }
+      scannedEntries += 1;
+
+      if (entry.isSymbolicLink()) {
+        continue;
+      }
+
+      const relativePath = joinWorkspacePath(current.relativePath, entry.name);
+      const isDirectory = entry.isDirectory();
+      const isFile = entry.isFile();
+
+      if (isDirectory && shouldSkipWorkspaceSearchDirectory(entry.name)) {
+        continue;
+      }
+
+      const score = scoreWorkspaceSearchMatch(relativePath, query);
+      if (score !== null) {
+        matches.push({
+          path: relativePath,
+          isDirectory,
+          isFile,
+          score
+        });
+      }
+
+      if (isDirectory) {
+        queue.push({
+          absolutePath: path.join(current.absolutePath, entry.name),
+          relativePath
+        });
+      }
+    }
+  }
+
+  matches.sort((left, right) => {
+    if (left.score !== right.score) {
+      return left.score - right.score;
+    }
+    if (left.isDirectory !== right.isDirectory) {
+      return left.isDirectory ? 1 : -1;
+    }
+    return left.path.localeCompare(right.path);
+  });
+
+  return matches.slice(0, limit).map(({ score: _score, ...match }) => match);
+}
+
+function scoreWorkspaceSearchMatch(pathValue: string, query: string): number | null {
+  const normalizedPath = pathValue.toLocaleLowerCase();
+  const normalizedQuery = query.toLocaleLowerCase();
+  const baseName = getPathBaseName(normalizedPath);
+
+  if (baseName === normalizedQuery) {
+    return 0;
+  }
+  if (normalizedPath === normalizedQuery) {
+    return 1;
+  }
+  if (baseName.startsWith(normalizedQuery)) {
+    return 10 + baseName.length - normalizedQuery.length;
+  }
+  if (normalizedPath.startsWith(normalizedQuery)) {
+    return 20 + normalizedPath.length - normalizedQuery.length;
+  }
+
+  const baseIndex = baseName.indexOf(normalizedQuery);
+  if (baseIndex >= 0) {
+    return 40 + baseIndex;
+  }
+
+  const pathIndex = normalizedPath.indexOf(normalizedQuery);
+  if (pathIndex >= 0) {
+    return 80 + pathIndex;
+  }
+
+  const baseFuzzyScore = getSubsequenceScore(baseName, normalizedQuery);
+  if (baseFuzzyScore !== null) {
+    return 120 + baseFuzzyScore;
+  }
+
+  const pathFuzzyScore = getSubsequenceScore(normalizedPath, normalizedQuery);
+  if (pathFuzzyScore !== null) {
+    return 180 + pathFuzzyScore;
+  }
+
+  return null;
+}
+
+function getSubsequenceScore(value: string, query: string): number | null {
+  if (query.length === 0) {
+    return 0;
+  }
+
+  let queryIndex = 0;
+  let firstMatch = -1;
+  let lastMatch = -1;
+
+  for (let index = 0; index < value.length && queryIndex < query.length; index += 1) {
+    if (value[index] !== query[queryIndex]) {
+      continue;
+    }
+    if (firstMatch < 0) {
+      firstMatch = index;
+    }
+    lastMatch = index;
+    queryIndex += 1;
+  }
+
+  if (queryIndex !== query.length || firstMatch < 0 || lastMatch < 0) {
+    return null;
+  }
+
+  return lastMatch - firstMatch + (value.length - query.length);
+}
+
+function isSkippableWorkspaceSearchError(error: unknown): boolean {
+  return isErrnoException(error) && ["ENOENT", "ENOTDIR", "EACCES", "EPERM"].includes(error.code ?? "");
+}
+
+function shouldSkipWorkspaceSearchDirectory(name: string): boolean {
+  return WORKSPACE_SEARCH_SKIPPED_DIRECTORIES.has(name);
 }

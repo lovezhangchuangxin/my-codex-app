@@ -4,6 +4,8 @@ import type {
   JsonRpcRequestId,
   LocalConnectionState,
   RequestRespondRequest,
+  ThreadReviewRequest,
+  ThreadReviewResponse,
   ThreadDetail,
   ThreadSettings,
   ThreadStartRequest,
@@ -197,6 +199,10 @@ export class BridgeThreadRuntime {
     text: string,
     settings?: ThreadTurnSettingsOverrides
   ): Promise<void> {
+    if (this.#isThreadCompactingPending(threadId)) {
+      throw new Error("Thread compaction is starting. Wait before sending another message.");
+    }
+
     const nextText = text.trim();
     if (nextText.length === 0) {
       return;
@@ -232,6 +238,38 @@ export class BridgeThreadRuntime {
       throw error;
     } finally {
       this.#updateMutations({ sendMessagePending: false });
+    }
+  }
+
+  async compactThread(threadId: string): Promise<void> {
+    if (this.#isThreadCompactingPending(threadId)) {
+      throw new Error("Thread compaction is already pending for this thread.");
+    }
+
+    this.#setThreadCompacting(threadId, true);
+    this.#updateMutations({ lastError: null });
+
+    try {
+      await this.client.compactThread({ threadId });
+    } catch (error) {
+      this.#setThreadCompacting(threadId, false);
+      this.#setActionError(error);
+      throw error;
+    }
+  }
+
+  async startReview(request: ThreadReviewRequest): Promise<ThreadReviewResponse> {
+    this.#updateMutations({ lastError: null });
+
+    try {
+      const response = await this.client.startReview(request);
+      if (response.reviewThreadId === request.threadId) {
+        this.#applyStartedTurn(request.threadId, response.turn);
+      }
+      return response;
+    } catch (error) {
+      this.#setActionError(error);
+      throw error;
     }
   }
 
@@ -593,6 +631,7 @@ export class BridgeThreadRuntime {
       onEvent: (event) => {
         this.#update((current) => ({
           ...current,
+          mutations: clearCompactingThreadOnEvent(current.mutations, event),
           threads: updateThreadSummaryState(current.threads, event),
           detail: this.#applyEventToDetail(current.detail, current.selectedThreadId, event)
         }));
@@ -783,6 +822,28 @@ export class BridgeThreadRuntime {
     this.#updateMutations({ lastError: toErrorMessage(error) });
   }
 
+  #isThreadCompactingPending(threadId: string): boolean {
+    return this.#snapshot.mutations.compactingThreadIds.includes(threadId);
+  }
+
+  #setThreadCompacting(threadId: string, isCompacting: boolean): void {
+    this.#update((current) => {
+      const nextIds = isCompacting
+        ? current.mutations.compactingThreadIds.includes(threadId)
+          ? current.mutations.compactingThreadIds
+          : [...current.mutations.compactingThreadIds, threadId]
+        : current.mutations.compactingThreadIds.filter((id) => id !== threadId);
+
+      return {
+        ...current,
+        mutations: {
+          ...current.mutations,
+          compactingThreadIds: nextIds
+        }
+      };
+    });
+  }
+
   #updateMutations(next: Partial<ThreadRuntimeSnapshot["mutations"]>): void {
     this.#update((current) => ({
       ...current,
@@ -872,6 +933,41 @@ function classifyBridgeFailure(error: unknown): BridgeFailureClassification {
     kind: "disconnected",
     message: toErrorMessage(error)
   };
+}
+
+function clearCompactingThreadOnEvent(
+  mutations: ThreadRuntimeSnapshot["mutations"],
+  event: BridgeEvent
+): ThreadRuntimeSnapshot["mutations"] {
+  switch (event.type) {
+    case "turnStarted":
+    case "turnCompleted":
+      if (!mutations.compactingThreadIds.includes(event.threadId)) {
+        return mutations;
+      }
+      return {
+        ...mutations,
+        compactingThreadIds: mutations.compactingThreadIds.filter(
+          (threadId) => threadId !== event.threadId
+        )
+      };
+    case "itemStarted":
+    case "itemCompleted":
+      if (
+        event.item.type !== "contextCompaction" ||
+        !mutations.compactingThreadIds.includes(event.threadId)
+      ) {
+        return mutations;
+      }
+      return {
+        ...mutations,
+        compactingThreadIds: mutations.compactingThreadIds.filter(
+          (threadId) => threadId !== event.threadId
+        )
+      };
+    default:
+      return mutations;
+  }
 }
 
 function classifyTerminalSessionState(

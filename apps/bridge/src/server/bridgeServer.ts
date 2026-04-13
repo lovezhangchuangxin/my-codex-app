@@ -8,12 +8,15 @@ import type {
   PairingStatusResponse,
   RequestRespondRequest,
   SessionRefreshRequest,
+  ThreadCompactRequest,
   ThreadListRequest,
+  ThreadReviewRequest,
   ThreadStartRequest,
   TurnInterruptRequest,
   TurnStartRequest,
   WorkspaceReadDirectoryRequest,
-  WorkspaceReadFileRequest
+  WorkspaceReadFileRequest,
+  WorkspaceSearchFilesRequest
 } from "@my-codex-app/protocol";
 
 import { authenticateBridgeRequest } from "../auth/authenticate";
@@ -324,6 +327,29 @@ export class BridgeServer {
       return true;
     }
 
+    if (request.method === "GET" && url.pathname === "/api/workspace/search") {
+      try {
+        const threadId = url.searchParams.get("threadId") ?? "";
+        const query = url.searchParams.get("query") ?? "";
+        const limit = parseOptionalInt(url.searchParams.get("limit"));
+        if (threadId.length === 0) {
+          writeJson(response, 400, { error: { message: "Missing threadId" } });
+          return true;
+        }
+
+        const payload: WorkspaceSearchFilesRequest = {
+          threadId,
+          query,
+          ...(limit !== undefined ? { limit } : {})
+        };
+        const result = await this.services.workspaceService.searchFiles(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return true;
+    }
+
     return false;
   }
 
@@ -388,6 +414,22 @@ export class BridgeServer {
       return true;
     }
 
+    if (request.method === "POST" && url.pathname === "/api/threads/compact") {
+      try {
+        const payload = await readJsonBody<ThreadCompactRequest>(request);
+        if (!isRecord(payload) || typeof payload.threadId !== "string") {
+          writeJson(response, 400, { error: { message: "Invalid thread/compact payload" } });
+          return true;
+        }
+
+        const result = await this.services.threadService.compactThread(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return true;
+    }
+
     return false;
   }
 
@@ -421,6 +463,26 @@ export class BridgeServer {
         }
 
         const result = await this.services.threadService.interruptTurn(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return true;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/reviews/start") {
+      try {
+        const payload = await readJsonBody<ThreadReviewRequest>(request);
+        if (
+          !isRecord(payload) ||
+          typeof payload.threadId !== "string" ||
+          !isValidReviewTarget(payload.target)
+        ) {
+          writeJson(response, 400, { error: { message: "Invalid review/start payload" } });
+          return true;
+        }
+
+        const result = await this.services.threadService.startReview(payload);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));
@@ -489,5 +551,28 @@ export class BridgeServer {
     response.setHeader("Access-Control-Allow-Origin", this.config.bridgeOrigin);
     response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
     response.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type");
+  }
+}
+
+function isValidReviewTarget(value: unknown): value is ThreadReviewRequest["target"] {
+  if (!isRecord(value) || typeof value.type !== "string") {
+    return false;
+  }
+
+  switch (value.type) {
+    case "uncommittedChanges":
+      return true;
+    case "baseBranch":
+      return typeof value.branch === "string" && value.branch.trim().length > 0;
+    case "commit":
+      return (
+        typeof value.sha === "string" &&
+        value.sha.trim().length > 0 &&
+        (value.title === undefined || typeof value.title === "string")
+      );
+    case "custom":
+      return typeof value.instructions === "string" && value.instructions.trim().length > 0;
+    default:
+      return false;
   }
 }

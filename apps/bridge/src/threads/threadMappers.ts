@@ -243,6 +243,23 @@ export function toThreadItem(item: AppServerThreadItem): ThreadItem {
         id: item.id,
         path: typeof item.path === "string" ? item.path : ""
       };
+    case "enteredReviewMode":
+      return {
+        type: "enteredReviewMode",
+        id: item.id,
+        review: typeof item.review === "string" ? item.review : ""
+      };
+    case "exitedReviewMode":
+      return {
+        type: "exitedReviewMode",
+        id: item.id,
+        review: typeof item.review === "string" ? item.review : ""
+      };
+    case "contextCompaction":
+      return {
+        type: "contextCompaction",
+        id: item.id
+      };
     default:
       return {
         type: "unknown",

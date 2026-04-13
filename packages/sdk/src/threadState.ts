@@ -27,6 +27,7 @@ export interface ThreadMutationState {
   startThreadPending: boolean;
   sendMessagePending: boolean;
   interruptPending: boolean;
+  compactingThreadIds: string[];
   respondingRequestIds: JsonRpcRequestId[];
   lastError: string | null;
 }
@@ -49,6 +50,7 @@ export function createInitialSnapshot(hasCredentials = false): ThreadRuntimeSnap
       startThreadPending: false,
       sendMessagePending: false,
       interruptPending: false,
+      compactingThreadIds: [],
       respondingRequestIds: [],
       lastError: null
     }

@@ -170,6 +170,31 @@ export interface ThreadUnsubscribeParams {
   threadId: string;
 }
 
+export interface ThreadCompactStartParams {
+  threadId: string;
+}
+
+export interface ThreadCompactStartResult {}
+
+export type AppServerReviewDelivery = "inline" | "detached";
+
+export type AppServerReviewTarget =
+  | { type: "uncommittedChanges" }
+  | { type: "baseBranch"; branch: string }
+  | { type: "commit"; sha: string; title?: string }
+  | { type: "custom"; instructions: string };
+
+export interface ReviewStartParams {
+  threadId: string;
+  target: AppServerReviewTarget;
+  delivery?: AppServerReviewDelivery;
+}
+
+export interface ReviewStartResult {
+  turn: AppServerTurn;
+  reviewThreadId: string;
+}
+
 export interface TurnStartParams {
   threadId: string;
   input: AppServerUserInput[];

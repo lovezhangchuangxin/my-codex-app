@@ -61,10 +61,11 @@ export function ThreadMessageStream({
       ref={scrollRef}
     >
       <div className="mx-auto max-w-3xl space-y-4 pb-4">
-        {flatItems.map((item) => (
+        {flatItems.map((item, index) => (
           <FlatItemRenderer
             item={item}
             key={`${item.turnId}-${item.id}`}
+            nextItem={flatItems[index + 1] ?? null}
             onFilePathClick={onFilePathClick}
             onOpenWorkspacePath={onOpenWorkspacePath}
             resolveWorkspacePath={resolveWorkspacePath}
@@ -77,11 +78,13 @@ export function ThreadMessageStream({
 
 function FlatItemRenderer({
   item,
+  nextItem,
   onFilePathClick,
   onOpenWorkspacePath,
   resolveWorkspacePath
 }: {
   item: FlatThreadItem;
+  nextItem: FlatThreadItem | null;
   onFilePathClick?: ((href: string) => void) | undefined;
   onOpenWorkspacePath: (path: string) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
@@ -142,6 +145,30 @@ function FlatItemRenderer({
           icon={<GalleryHorizontal className="size-3" />}
           label={t("detail.tool.image")}
           value={item.path}
+        />
+      );
+    case "enteredReviewMode":
+      return (
+        <SystemActivityLabel
+          icon={<Search className="size-3" />}
+          label={t("detail.review.inProgress")}
+          value={item.review}
+        />
+      );
+    case "exitedReviewMode":
+      if (
+        nextItem?.type === "agentMessage" &&
+        nextItem.text.trim() === item.review.trim()
+      ) {
+        return null;
+      }
+      return <ReviewResultCard review={item.review} />;
+    case "contextCompaction":
+      return (
+        <SystemActivityLabel
+          icon={<Brain className="size-3" />}
+          label={t("detail.compaction.label")}
+          value={t("detail.compaction.description")}
         />
       );
     case "unknown":
@@ -384,6 +411,48 @@ function ToolLabel({
       <span className="font-mono text-[0.7rem] uppercase tracking-wide">{label}:</span>
       <span className="min-w-0 flex-1 truncate text-xs text-foreground">{value}</span>
     </div>
+  );
+}
+
+function SystemActivityLabel({
+  icon,
+  label,
+  value
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 rounded-lg border border-subtle/8 bg-background/72 px-3 py-2 text-muted-foreground lg:ml-9">
+      {icon}
+      <span className="font-mono text-[0.7rem] uppercase tracking-wide">{label}:</span>
+      <span className="min-w-0 flex-1 truncate text-xs text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function ReviewResultCard({ review }: { review: string }) {
+  const { t } = useI18n();
+
+  return (
+    <Collapsible className="overflow-hidden rounded-xl border border-subtle/8 bg-background/72 lg:ml-9">
+      <div className="flex items-center gap-2 px-3 py-2">
+        <Search className="size-3.5 shrink-0 text-muted-foreground" />
+        <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+          {t("detail.review.completed")}
+        </p>
+        <CollapsibleTrigger asChild>
+          <Button className="text-muted-foreground" size="xs" variant="ghost">
+            <ChevronDown className="mr-0.5 size-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+            {t("detail.review.show")}
+          </Button>
+        </CollapsibleTrigger>
+      </div>
+      <CollapsibleContent className="border-t border-subtle/4 px-3 py-3">
+        <RichMarkdown content={review} />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

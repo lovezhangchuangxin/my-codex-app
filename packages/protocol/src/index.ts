@@ -188,6 +188,9 @@ export type ThreadItem =
     }
   | { type: "webSearch"; id: string; query: string }
   | { type: "imageView"; id: string; path: string }
+  | { type: "enteredReviewMode"; id: string; review: string }
+  | { type: "exitedReviewMode"; id: string; review: string }
+  | { type: "contextCompaction"; id: string }
   | { type: "unknown"; id: string; title: string; raw: unknown };
 
 export interface TurnDetail {
@@ -336,6 +339,28 @@ export interface TurnInterruptRequest {
 
 export interface TurnInterruptResponse {}
 
+export type ReviewTarget =
+  | { type: "uncommittedChanges" }
+  | { type: "baseBranch"; branch: string }
+  | { type: "commit"; sha: string; title?: string }
+  | { type: "custom"; instructions: string };
+
+export interface ThreadCompactRequest {
+  threadId: string;
+}
+
+export interface ThreadCompactResponse {}
+
+export interface ThreadReviewRequest {
+  threadId: string;
+  target: ReviewTarget;
+}
+
+export interface ThreadReviewResponse {
+  turn: TurnDetail;
+  reviewThreadId: string;
+}
+
 export interface WorkspaceEntry {
   name: string;
   path: string;
@@ -368,6 +393,25 @@ export interface WorkspaceReadFileResponse {
   sizeBytes?: number;
   modifiedAtMs?: number;
   content?: string;
+}
+
+export interface WorkspaceSearchFilesRequest {
+  threadId: string;
+  query: string;
+  limit?: number;
+}
+
+export interface WorkspaceSearchMatch {
+  name: string;
+  path: string;
+  isDirectory: boolean;
+  isFile: boolean;
+}
+
+export interface WorkspaceSearchFilesResponse {
+  root: string;
+  query: string;
+  matches: WorkspaceSearchMatch[];
 }
 
 export type RequestRespondRequest =

@@ -4,9 +4,14 @@ import type {
   ModelListResponse,
   RequestRespondRequest,
   RequestRespondResponse,
+  ReviewTarget,
+  ThreadCompactRequest,
+  ThreadCompactResponse,
   ThreadListRequest,
   ThreadListResponse,
   ThreadReadResponse,
+  ThreadReviewRequest,
+  ThreadReviewResponse,
   ThreadStartRequest,
   ThreadStartResponse,
   TurnInterruptRequest,
@@ -16,6 +21,7 @@ import type {
 } from "@my-codex-app/protocol";
 
 import { AppServerClient } from "./appServerClient";
+import type { AppServerReviewTarget } from "./appServerClient";
 import { toAppServerPermissionPreset } from "./threads/permissionPresets";
 import { ThreadEventTranslator } from "./threads/threadEventTranslator";
 import {
@@ -132,6 +138,26 @@ export class ThreadService {
     return {
       turn: toTurnDetail(result.turn),
       settings: nextSettings ?? currentSettings
+    };
+  }
+
+  async compactThread(request: ThreadCompactRequest): Promise<ThreadCompactResponse> {
+    await this.appServerClient.compactThread({
+      threadId: request.threadId
+    });
+
+    return {};
+  }
+
+  async startReview(request: ThreadReviewRequest): Promise<ThreadReviewResponse> {
+    const result = await this.appServerClient.startReview({
+      threadId: request.threadId,
+      target: toAppServerReviewTarget(request.target)
+    });
+
+    return {
+      turn: toTurnDetail(result.turn),
+      reviewThreadId: result.reviewThreadId
     };
   }
 
@@ -265,5 +291,22 @@ export class ThreadService {
           }
         : {})
     };
+  }
+}
+
+function toAppServerReviewTarget(target: ReviewTarget): AppServerReviewTarget {
+  switch (target.type) {
+    case "uncommittedChanges":
+      return { type: "uncommittedChanges" };
+    case "baseBranch":
+      return { type: "baseBranch", branch: target.branch };
+    case "commit":
+      return {
+        type: "commit",
+        sha: target.sha,
+        ...(target.title !== undefined ? { title: target.title } : {})
+      };
+    case "custom":
+      return { type: "custom", instructions: target.instructions };
   }
 }

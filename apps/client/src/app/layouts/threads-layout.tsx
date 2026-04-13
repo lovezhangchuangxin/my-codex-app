@@ -12,7 +12,11 @@ import { useI18n } from "@/lib/i18n/use-i18n";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 import type { ThreadDetailState } from "@my-codex-app/sdk";
-import type { LocalConnectionState, ThreadTurnSettingsOverrides } from "@my-codex-app/protocol";
+import type {
+  LocalConnectionState,
+  ThreadReviewRequest,
+  ThreadTurnSettingsOverrides
+} from "@my-codex-app/protocol";
 
 export function ThreadsLayout() {
   const { t } = useI18n();
@@ -99,6 +103,26 @@ export function ThreadsLayout() {
     }
   }
 
+  async function handleCompactThread(threadId: string) {
+    try {
+      await runtime.compactThread(threadId);
+      return true;
+    } catch (error) {
+      toast.error(toErrorMessage(error, t));
+      return false;
+    }
+  }
+
+  async function handleStartReview(request: ThreadReviewRequest) {
+    try {
+      await runtime.startReview(request);
+      return true;
+    } catch (error) {
+      toast.error(toErrorMessage(error, t));
+      return false;
+    }
+  }
+
   async function handleRespond(request: Parameters<typeof runtime.respondToRequest>[0]) {
     try {
       await runtime.respondToRequest(request);
@@ -116,16 +140,22 @@ export function ThreadsLayout() {
         <div className="h-full">
           <ThreadDetailPanel
           connectionState={snapshot.connection}
+          compactPending={
+            mobilePanel.selectedThreadId !== null &&
+            snapshot.mutations.compactingThreadIds.includes(mobilePanel.selectedThreadId)
+          }
           detailState={displayedDetailState}
           highlightedRequestKey={highlightedRequestKey}
           interruptPending={snapshot.mutations.interruptPending}
           isDesktop={false}
           lastError={snapshot.mutations.lastError}
           onBack={mobilePanel.backToList}
+          onCompactThread={handleCompactThread}
           onOpenThread={handleOpenThread}
           onRespondToRequest={handleRespond}
           onSendMessage={handleSendMessage}
           onInterrupt={handleInterrupt}
+          onStartReview={handleStartReview}
           respondingRequestIds={snapshot.mutations.respondingRequestIds}
           selectedThreadId={mobilePanel.selectedThreadId}
           sendMessagePending={snapshot.mutations.sendMessagePending}
@@ -173,6 +203,10 @@ export function ThreadsLayout() {
       <div className="min-w-0 flex-1">
         <ThreadDetailPanel
           connectionState={snapshot.connection}
+          compactPending={
+            routeThreadId !== null &&
+            snapshot.mutations.compactingThreadIds.includes(routeThreadId)
+          }
           detailState={displayedDetailState}
           highlightedRequestKey={highlightedRequestKey}
           interruptPending={snapshot.mutations.interruptPending}
@@ -183,10 +217,12 @@ export function ThreadsLayout() {
               navigate("/threads");
             });
           }}
+          onCompactThread={handleCompactThread}
           onOpenThread={handleOpenThread}
           onRespondToRequest={handleRespond}
           onSendMessage={handleSendMessage}
           onInterrupt={handleInterrupt}
+          onStartReview={handleStartReview}
           respondingRequestIds={snapshot.mutations.respondingRequestIds}
           selectedThreadId={routeThreadId}
           sendMessagePending={snapshot.mutations.sendMessagePending}

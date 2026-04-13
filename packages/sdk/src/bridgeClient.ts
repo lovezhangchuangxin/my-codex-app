@@ -16,9 +16,13 @@ import type {
   RequestRespondResponse,
   SessionRefreshRequest,
   SessionRefreshResponse,
+  ThreadCompactRequest,
+  ThreadCompactResponse,
   ThreadListRequest,
   ThreadListResponse,
   ThreadReadResponse,
+  ThreadReviewRequest,
+  ThreadReviewResponse,
   ThreadStartRequest,
   ThreadStartResponse,
   TurnInterruptRequest,
@@ -28,7 +32,9 @@ import type {
   WorkspaceReadDirectoryRequest,
   WorkspaceReadDirectoryResponse,
   WorkspaceReadFileRequest,
-  WorkspaceReadFileResponse
+  WorkspaceReadFileResponse,
+  WorkspaceSearchFilesRequest,
+  WorkspaceSearchFilesResponse
 } from "@my-codex-app/protocol";
 
 export interface BridgeClientConfig {
@@ -220,6 +226,22 @@ export class BridgeClient {
     );
   }
 
+  searchWorkspaceFiles(
+    request: WorkspaceSearchFilesRequest
+  ): Promise<WorkspaceSearchFilesResponse> {
+    return this.#requestJson<WorkspaceSearchFilesResponse>(
+      "/api/workspace/search",
+      {
+        method: "GET"
+      },
+      {
+        threadId: request.threadId,
+        query: request.query,
+        ...(request.limit !== undefined ? { limit: String(request.limit) } : {})
+      }
+    );
+  }
+
   startThread(request: ThreadStartRequest = {}): Promise<ThreadStartResponse> {
     return this.#requestJson<ThreadStartResponse>("/api/threads/start", {
       method: "POST",
@@ -242,6 +264,26 @@ export class BridgeClient {
 
   interruptTurn(request: TurnInterruptRequest): Promise<TurnInterruptResponse> {
     return this.#requestJson<TurnInterruptResponse>("/api/turns/interrupt", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  compactThread(request: ThreadCompactRequest): Promise<ThreadCompactResponse> {
+    return this.#requestJson<ThreadCompactResponse>("/api/threads/compact", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
+  }
+
+  startReview(request: ThreadReviewRequest): Promise<ThreadReviewResponse> {
+    return this.#requestJson<ThreadReviewResponse>("/api/reviews/start", {
       method: "POST",
       body: JSON.stringify(request),
       headers: {

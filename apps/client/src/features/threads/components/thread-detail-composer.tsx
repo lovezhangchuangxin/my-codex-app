@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import {
   ChevronDown,
   Send,
@@ -30,6 +30,18 @@ import {
   SheetTrigger
 } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  findSupportedComposerCommand,
+  matchSupportedComposerCommands,
+  type SupportedComposerCommand
+} from "@/features/threads/lib/composer-command-utils";
+import {
+  findMentionToken,
+  findSlashCommandToken,
+  formatPathInsertion,
+  parseSlashCommandSubmission,
+  replaceComposerToken
+} from "@/features/threads/lib/composer-input-utils";
 import { formatTokenCount } from "@/features/threads/components/thread-detail-utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { useBridgeClient } from "@/lib/runtime/runtime-provider";
@@ -39,9 +51,11 @@ import type {
   ReasoningEffort,
   ThreadDetail,
   ThreadPermissionPresetId,
+  ThreadReviewRequest,
   ThreadSettings,
   ThreadTurnSettingsOverrides
 } from "@my-codex-app/protocol";
+import type { WorkspaceSearchMatch } from "@my-codex-app/protocol";
 
 type ComposerModelsState =
   | { kind: "loading"; models: AvailableModel[]; message: string | null }
@@ -51,23 +65,29 @@ type ComposerModelsState =
 export function ThreadComposer({
   actionsEnabled,
   activeTurnId,
+  compactPending,
   interruptPending,
   isDesktop,
+  onCompactThread,
   onInterrupt,
   onSendMessage,
+  onStartReview,
   sendMessagePending,
   thread
 }: {
   actionsEnabled: boolean;
   activeTurnId: string | null;
+  compactPending: boolean;
   interruptPending: boolean;
   isDesktop: boolean;
+  onCompactThread: (threadId: string) => Promise<boolean>;
   onInterrupt: (threadId: string, turnId: string) => Promise<void>;
   onSendMessage: (
     threadId: string,
     text: string,
     settings?: ThreadTurnSettingsOverrides
   ) => Promise<boolean>;
+  onStartReview: (request: ThreadReviewRequest) => Promise<boolean>;
   sendMessagePending: boolean;
   thread: ThreadDetail;
 }) {
@@ -81,6 +101,25 @@ export function ThreadComposer({
     thread.settings?.permissionsPreset ?? ""
   ].join(":");
   const [composerText, setComposerText] = useState("");
+  const [caretPosition, setCaretPosition] = useState(0);
+  const [commandActionPending, setCommandActionPending] = useState(false);
+  const [dismissedSlashToken, setDismissedSlashToken] = useState<string | null>(null);
+  const [dismissedMentionToken, setDismissedMentionToken] = useState<string | null>(null);
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+  const [selectedFileIndex, setSelectedFileIndex] = useState(0);
+  const [fileSearchState, setFileSearchState] = useState<{
+    status: "idle" | "loading" | "ready" | "error";
+    query: string;
+    matches: WorkspaceSearchMatch[];
+    message?: string;
+  }>({
+    status: "idle",
+    query: "",
+    matches: []
+  });
+  const [reviewSheetOpen, setReviewSheetOpen] = useState(false);
+  const [reviewSheetMode, setReviewSheetMode] = useState<"menu" | "custom">("menu");
+  const [reviewInstructions, setReviewInstructions] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [settingsDraftState, setSettingsDraftState] = useState<{
     sourceKey: string;
@@ -94,8 +133,26 @@ export function ThreadComposer({
     models: [],
     message: null
   });
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileSearchRequestIdRef = useRef(0);
   const settingsDraft =
     settingsDraftState.sourceKey === settingsKey ? settingsDraftState.value : committedSettings;
+  const rawSlashToken = findSlashCommandToken(composerText, caretPosition);
+  const rawMentionToken = findMentionToken(composerText, caretPosition);
+  const mentionToken =
+    rawMentionToken && rawMentionToken.token !== dismissedMentionToken ? rawMentionToken : null;
+  const mentionTokenText = mentionToken?.token ?? null;
+  const mentionQuery = mentionToken?.query ?? null;
+  const hasSlashCommandContext =
+    rawSlashToken !== null &&
+    rawSlashToken.token !== dismissedSlashToken &&
+    rawMentionToken === null;
+  const slashCommandQuery = hasSlashCommandContext ? rawSlashToken.query : null;
+  const matchedCommands =
+    slashCommandQuery !== null ? matchSupportedComposerCommands(slashCommandQuery) : [];
+  const slashToken = matchedCommands.length > 0 ? rawSlashToken : null;
+  const commandPopupOpen = slashToken !== null && matchedCommands.length > 0;
+  const filePopupOpen = mentionToken !== null;
 
   function resetSettingsDraft() {
     setSettingsDraftState({
@@ -113,6 +170,165 @@ export function ThreadComposer({
         value
       };
     });
+  }
+
+  function focusComposer(nextCaret?: number) {
+    requestAnimationFrame(() => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        return;
+      }
+      textarea.focus();
+      if (nextCaret !== undefined) {
+        textarea.setSelectionRange(nextCaret, nextCaret);
+        setCaretPosition(nextCaret);
+      }
+    });
+  }
+
+  function clearCommandDraft(nextText = "", nextCaret = 0) {
+    setComposerText(nextText);
+    setCaretPosition(nextCaret);
+    setDismissedSlashToken(null);
+    setDismissedMentionToken(null);
+    setSelectedCommandIndex(0);
+    setSelectedFileIndex(0);
+    setFileSearchState({
+      status: "idle",
+      query: "",
+      matches: []
+    });
+  }
+
+  function openSettingsFromCommand() {
+    const nextText = stripSlashCommandPrefix(composerText);
+    clearCommandDraft(nextText, 0);
+    setSettingsOpen(true);
+  }
+
+  function insertMentionPrefix() {
+    setDismissedSlashToken(null);
+    setDismissedMentionToken(null);
+    setComposerText("@");
+    focusComposer(1);
+  }
+
+  function autocompleteCommand(command: SupportedComposerCommand) {
+    if (!slashToken) {
+      return;
+    }
+
+    const { nextCaret, nextText } = replaceComposerToken(
+      composerText,
+      slashToken,
+      `/${command.command}`
+    );
+    setComposerText(nextText);
+    setDismissedSlashToken(null);
+    setSelectedCommandIndex(0);
+    focusComposer(nextCaret);
+  }
+
+  function insertWorkspaceMatch(match: WorkspaceSearchMatch) {
+    if (!mentionToken) {
+      return;
+    }
+
+    const { nextCaret, nextText } = replaceComposerToken(
+      composerText,
+      mentionToken,
+      formatPathInsertion(match.path)
+    );
+    setComposerText(nextText);
+    setDismissedMentionToken(null);
+    setSelectedFileIndex(0);
+    focusComposer(nextCaret);
+  }
+
+  async function executeSupportedCommand(
+    command: SupportedComposerCommand,
+    args: string
+  ) {
+    if (commandActionPending) {
+      return;
+    }
+
+    switch (command.id) {
+      case "compact": {
+        if (!actionsEnabled) {
+          return;
+        }
+        setCommandActionPending(true);
+        try {
+          const completed = await onCompactThread(thread.id);
+          if (completed) {
+            clearCommandDraft();
+            focusComposer(0);
+          }
+        } finally {
+          setCommandActionPending(false);
+        }
+        return;
+      }
+      case "review": {
+        if (!actionsEnabled) {
+          return;
+        }
+        if (args.trim().length === 0) {
+          clearCommandDraft();
+          setReviewSheetMode("menu");
+          setReviewInstructions("");
+          setReviewSheetOpen(true);
+          return;
+        }
+        setCommandActionPending(true);
+        try {
+          const completed = await onStartReview({
+            threadId: thread.id,
+            target: {
+              type: "custom",
+              instructions: args.trim()
+            }
+          });
+          if (completed) {
+            clearCommandDraft();
+            focusComposer(0);
+          }
+        } finally {
+          setCommandActionPending(false);
+        }
+        return;
+      }
+      case "mention":
+        insertMentionPrefix();
+        return;
+      case "model":
+      case "permissions":
+        openSettingsFromCommand();
+        return;
+    }
+  }
+
+  async function submitSlashReview(target: ThreadReviewRequest["target"]) {
+    if (commandActionPending || !actionsEnabled) {
+      return;
+    }
+
+    setCommandActionPending(true);
+    try {
+      const completed = await onStartReview({
+        threadId: thread.id,
+        target
+      });
+      if (completed) {
+        setReviewSheetOpen(false);
+        setReviewSheetMode("menu");
+        setReviewInstructions("");
+        focusComposer(0);
+      }
+    } finally {
+      setCommandActionPending(false);
+    }
   }
 
   useEffect(() => {
@@ -152,6 +368,85 @@ export function ThreadComposer({
     };
   }, [bridgeClient, t, thread.id]);
 
+  useEffect(() => {
+    setSelectedCommandIndex(0);
+  }, [slashToken?.token]);
+
+  useEffect(() => {
+    setSelectedFileIndex(0);
+  }, [mentionTokenText]);
+
+  useEffect(() => {
+    if (!filePopupOpen) {
+      setFileSearchState({
+        status: "idle",
+        query: "",
+        matches: []
+      });
+      return;
+    }
+
+    if (!actionsEnabled || mentionQuery === null) {
+      setFileSearchState({
+        status: "error",
+        query: mentionQuery ?? "",
+        matches: [],
+        message: t("detail.composer.popup.filesUnavailable")
+      });
+      return;
+    }
+
+    if (mentionQuery.length === 0) {
+      setFileSearchState({
+        status: "ready",
+        query: "",
+        matches: []
+      });
+      return;
+    }
+
+    const requestId = fileSearchRequestIdRef.current + 1;
+    fileSearchRequestIdRef.current = requestId;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        setFileSearchState((current) => ({
+          status: "loading",
+          query: mentionQuery,
+          matches: current.query === mentionQuery ? current.matches : []
+        }));
+
+        try {
+          const response = await bridgeClient.searchWorkspaceFiles({
+            threadId: thread.id,
+            query: mentionQuery
+          });
+          if (fileSearchRequestIdRef.current !== requestId) {
+            return;
+          }
+          setFileSearchState({
+            status: "ready",
+            query: response.query,
+            matches: response.matches
+          });
+        } catch (error) {
+          if (fileSearchRequestIdRef.current !== requestId) {
+            return;
+          }
+          setFileSearchState({
+            status: "error",
+            query: mentionQuery,
+            matches: [],
+            message: error instanceof Error ? error.message : t("common.unknownClientError")
+          });
+        }
+      })();
+    }, 120);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [actionsEnabled, bridgeClient, filePopupOpen, mentionQuery, t, thread.id]);
+
   const selectedModel = findModelDefinition(modelsState.models, settingsDraft.model);
   const modelSelectValue =
     modelsState.models.find(
@@ -165,12 +460,25 @@ export function ThreadComposer({
   const selectedPermissionOption = getPermissionPresetOptions(t).find(
     (option) => option.id === settingsDraft.permissionsPreset
   );
-  const canSend = actionsEnabled && !sendMessagePending && composerText.trim().length > 0;
+  const canSend =
+    actionsEnabled &&
+    !sendMessagePending &&
+    !commandActionPending &&
+    !compactPending &&
+    composerText.trim().length > 0;
   const selectedModelSummary = formatModelTriggerText(
     committedSettings,
     modelsState.models,
     t("common.notAvailable")
   );
+  const selectedCommand =
+    matchedCommands[selectedCommandIndex] ??
+    matchedCommands[0] ??
+    null;
+  const selectedFileMatch =
+    fileSearchState.matches[selectedFileIndex] ??
+    fileSearchState.matches[0] ??
+    null;
 
   async function reloadModels() {
     setModelsState((current) => ({
@@ -195,12 +503,101 @@ export function ThreadComposer({
     }
   }
 
+  function handleTextareaKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (filePopupOpen) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedFileIndex((current) =>
+          fileSearchState.matches.length === 0
+            ? 0
+            : (current + 1) % fileSearchState.matches.length
+        );
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedFileIndex((current) =>
+          fileSearchState.matches.length === 0
+            ? 0
+            : (current - 1 + fileSearchState.matches.length) % fileSearchState.matches.length
+        );
+        return;
+      }
+      if (event.key === "Enter" || event.key === "Tab") {
+        if (selectedFileMatch) {
+          event.preventDefault();
+          insertWorkspaceMatch(selectedFileMatch);
+          return;
+        }
+      }
+      if (event.key === "Escape" && mentionToken) {
+        event.preventDefault();
+        setDismissedMentionToken(mentionToken.token);
+        return;
+      }
+    }
+
+    if (commandPopupOpen) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSelectedCommandIndex((current) =>
+          matchedCommands.length === 0 ? 0 : (current + 1) % matchedCommands.length
+        );
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSelectedCommandIndex((current) =>
+          matchedCommands.length === 0
+            ? 0
+            : (current - 1 + matchedCommands.length) % matchedCommands.length
+        );
+        return;
+      }
+      if (event.key === "Tab" && selectedCommand) {
+        event.preventDefault();
+        autocompleteCommand(selectedCommand);
+        return;
+      }
+      if (event.key === "Enter" && !event.shiftKey && selectedCommand) {
+        event.preventDefault();
+        void executeSupportedCommand(selectedCommand, "");
+        return;
+      }
+      if (event.key === "Escape" && slashToken) {
+        event.preventDefault();
+        setDismissedSlashToken(slashToken.token);
+        return;
+      }
+    }
+
+    if (!isDesktop) {
+      return;
+    }
+    if (event.key === "Enter" && !event.shiftKey) {
+      event.preventDefault();
+      event.currentTarget.form?.requestSubmit();
+    }
+  }
+
   return (
     <form
       className="space-y-3"
       onSubmit={(event) => {
         event.preventDefault();
-        if (thread.id.length === 0) {
+        if (thread.id.length === 0 || commandActionPending) {
+          return;
+        }
+
+        const slashSubmission = parseSlashCommandSubmission(composerText);
+        const supportedCommand = slashSubmission
+          ? findSupportedComposerCommand(slashSubmission.commandName)
+          : null;
+        if (
+          supportedCommand &&
+          (supportedCommand.supportsInlineArgs || slashSubmission?.args.length === 0)
+        ) {
+          void executeSupportedCommand(supportedCommand, slashSubmission?.args ?? "");
           return;
         }
 
@@ -219,22 +616,44 @@ export function ThreadComposer({
           autoFocus
           className="min-h-[52px] max-h-[32vh] resize-none border-0 bg-transparent px-1 py-0.5 font-mono text-sm leading-6 shadow-none transition-shadow duration-200 placeholder:text-muted-foreground/45 focus-visible:ring-0"
           id="thread-composer"
+          onClick={(event) => {
+            setCaretPosition(event.currentTarget.selectionStart ?? event.currentTarget.value.length);
+          }}
           onChange={(event) => {
             setComposerText(event.target.value);
+            setCaretPosition(event.target.selectionStart ?? event.target.value.length);
+            setDismissedSlashToken(null);
+            setDismissedMentionToken(null);
           }}
-          onKeyDown={(event) => {
-            if (!isDesktop) {
-              return;
-            }
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              event.currentTarget.form?.requestSubmit();
-            }
+          onKeyDown={handleTextareaKeyDown}
+          onSelect={(event) => {
+            setCaretPosition(event.currentTarget.selectionStart ?? event.currentTarget.value.length);
           }}
           placeholder={t("detail.composer.placeholder")}
+          ref={textareaRef}
           rows={2}
           value={composerText}
         />
+
+        {commandPopupOpen ? (
+          <ComposerCommandPopup
+            commands={matchedCommands}
+            onExecuteCommand={(command) => {
+              void executeSupportedCommand(command, "");
+            }}
+            selectedCommand={selectedCommand}
+            t={t}
+          />
+        ) : null}
+
+        {filePopupOpen ? (
+          <ComposerFilePopup
+            fileSearchState={fileSearchState}
+            onSelectMatch={insertWorkspaceMatch}
+            selectedMatch={selectedFileMatch}
+            t={t}
+          />
+        ) : null}
 
         <div className="mt-2 flex items-center gap-1.5">
           <Sheet
@@ -430,6 +849,94 @@ export function ThreadComposer({
           </div>
         </div>
       </div>
+
+      <Sheet
+        onOpenChange={(nextOpen) => {
+          setReviewSheetOpen(nextOpen);
+          if (!nextOpen) {
+            setReviewSheetMode("menu");
+            setReviewInstructions("");
+          }
+        }}
+        open={reviewSheetOpen}
+      >
+        <SheetContent
+          className={cn(
+            "gap-0 overflow-hidden border-subtle/10 bg-popover",
+            !isDesktop ? "max-h-[82vh] rounded-t-[1.5rem]" : ""
+          )}
+          side={isDesktop ? "right" : "bottom"}
+        >
+          <SheetHeader className="border-b border-subtle/6 pb-3">
+            <SheetTitle>{t("detail.composer.review.title")}</SheetTitle>
+            <SheetDescription>{t("detail.composer.review.description")}</SheetDescription>
+          </SheetHeader>
+
+          {reviewSheetMode === "menu" ? (
+            <div className="space-y-3 px-4 py-4">
+              <Button
+                className="w-full justify-start"
+                disabled={commandActionPending}
+                onClick={() => {
+                  void submitSlashReview({ type: "uncommittedChanges" });
+                }}
+                type="button"
+                variant="outline"
+              >
+                {t("detail.composer.review.uncommitted")}
+              </Button>
+              <Button
+                className="w-full justify-start"
+                disabled={commandActionPending}
+                onClick={() => {
+                  setReviewSheetMode("custom");
+                }}
+                type="button"
+                variant="outline"
+              >
+                {t("detail.composer.review.custom")}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3 px-4 py-4">
+              <Textarea
+                className="min-h-28 resize-y text-sm leading-6"
+                onChange={(event) => {
+                  setReviewInstructions(event.target.value);
+                }}
+                placeholder={t("detail.composer.review.customPlaceholder")}
+                rows={5}
+                value={reviewInstructions}
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  disabled={commandActionPending}
+                  onClick={() => {
+                    setReviewSheetMode("menu");
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  {t("detail.composer.review.back")}
+                </Button>
+                <Button
+                  className="ml-auto"
+                  disabled={commandActionPending || reviewInstructions.trim().length === 0}
+                  onClick={() => {
+                    void submitSlashReview({
+                      type: "custom",
+                      instructions: reviewInstructions.trim()
+                    });
+                  }}
+                  type="button"
+                >
+                  {t("detail.composer.review.submit")}
+                </Button>
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </form>
   );
 }
@@ -523,6 +1030,124 @@ function ContextUsageButton({
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+function ComposerCommandPopup({
+  commands,
+  onExecuteCommand,
+  selectedCommand,
+  t
+}: {
+  commands: SupportedComposerCommand[];
+  onExecuteCommand: (command: SupportedComposerCommand) => void;
+  selectedCommand: SupportedComposerCommand | null;
+  t: (key: string) => string;
+}) {
+  return (
+    <div className="mt-2 overflow-hidden rounded-2xl border border-subtle/8 bg-background/78">
+      <div className="border-b border-subtle/6 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+        {t("detail.composer.popup.commands")}
+      </div>
+      <div className="max-h-56 overflow-y-auto py-1">
+        {commands.map((command) => {
+          const selected = selectedCommand?.id === command.id;
+          return (
+            <button
+              className={cn(
+                "flex w-full items-center gap-3 px-3 py-2 text-left transition-colors",
+                selected ? "bg-accent/70" : "hover:bg-accent/40"
+              )}
+              key={command.id}
+              onClick={() => {
+                onExecuteCommand(command);
+              }}
+              type="button"
+            >
+              <span className="rounded-md border border-subtle/8 bg-background/72 px-2 py-0.5 font-mono text-xs text-foreground">
+                /{command.command}
+              </span>
+              <span className="min-w-0 flex-1 text-sm text-muted-foreground">
+                {t(command.descriptionKey)}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                Tab
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ComposerFilePopup({
+  fileSearchState,
+  onSelectMatch,
+  selectedMatch,
+  t
+}: {
+  fileSearchState: {
+    status: "idle" | "loading" | "ready" | "error";
+    query: string;
+    matches: WorkspaceSearchMatch[];
+    message?: string;
+  };
+  onSelectMatch: (match: WorkspaceSearchMatch) => void;
+  selectedMatch: WorkspaceSearchMatch | null;
+  t: (key: string) => string;
+}) {
+  let body: ReactNode = null;
+
+  if (fileSearchState.status === "loading") {
+    body = <p className="px-3 py-3 text-sm text-muted-foreground">{t("detail.composer.popup.loadingFiles")}</p>;
+  } else if (fileSearchState.status === "error") {
+    body = (
+      <p className="px-3 py-3 text-sm text-destructive">
+        {fileSearchState.message ?? t("detail.workspace.error.directory")}
+      </p>
+    );
+  } else if (fileSearchState.query.length === 0) {
+    body = <p className="px-3 py-3 text-sm text-muted-foreground">{t("detail.composer.popup.typeToSearchFiles")}</p>;
+  } else if (fileSearchState.matches.length === 0) {
+    body = <p className="px-3 py-3 text-sm text-muted-foreground">{t("detail.composer.popup.noFiles")}</p>;
+  } else {
+    body = (
+      <div className="max-h-56 overflow-y-auto py-1">
+        {fileSearchState.matches.map((match) => {
+          const selected = selectedMatch?.path === match.path;
+          return (
+            <button
+              className={cn(
+                "flex w-full items-center gap-3 px-3 py-2 text-left transition-colors",
+                selected ? "bg-accent/70" : "hover:bg-accent/40"
+              )}
+              key={match.path}
+              onClick={() => {
+                onSelectMatch(match);
+              }}
+              type="button"
+            >
+              <span className="rounded-md border border-subtle/8 bg-background/72 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                {match.isDirectory ? "dir" : "file"}
+              </span>
+              <span className="min-w-0 flex-1 truncate font-mono text-sm text-foreground">
+                {match.path}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 overflow-hidden rounded-2xl border border-subtle/8 bg-background/78">
+      <div className="border-b border-subtle/6 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+        {t("detail.composer.popup.files")}
+      </div>
+      {body}
+    </div>
   );
 }
 
@@ -634,6 +1259,20 @@ function buildComposerSettingsDraft(settings: ThreadSettings | null): ThreadSett
       permissionsPreset: null
     }
   );
+}
+
+function stripSlashCommandPrefix(text: string): string {
+  const submission = parseSlashCommandSubmission(text);
+  if (!submission) {
+    return text;
+  }
+
+  const token = `/${submission.commandName}`;
+  if (!text.startsWith(token)) {
+    return text;
+  }
+
+  return text.slice(token.length).replace(/^\s+/, "");
 }
 
 function buildTurnSettingsOverrides(

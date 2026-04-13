@@ -11,7 +11,11 @@ import type {
   ModelListParams,
   ModelListResult,
   NotificationEnvelope,
+  ReviewStartParams,
+  ReviewStartResult,
   RequestEnvelope,
+  ThreadCompactStartParams,
+  ThreadCompactStartResult,
   ThreadListParams,
   ThreadListResult,
   ThreadReadParams,
@@ -30,6 +34,8 @@ export type {
   AppServerApprovalPolicy,
   AppServerModel,
   AppServerModelReasoningEffortOption,
+  AppServerReviewDelivery,
+  AppServerReviewTarget,
   AppServerReasoningEffort,
   AppServerSandboxPolicy,
   AppServerThread,
@@ -42,7 +48,9 @@ export type {
   AppServerUserInput,
   InitializeResult,
   NotificationEnvelope,
+  ReviewStartResult,
   RequestEnvelope,
+  ThreadCompactStartResult,
   ThreadReadResult,
   ThreadResumeResult,
   ThreadStartResult
@@ -114,6 +122,22 @@ export class AppServerClient extends EventEmitter {
     await this.#transport.sendRequest<ThreadUnsubscribeParams, unknown>("thread/unsubscribe", {
       threadId
     });
+  }
+
+  async compactThread(params: ThreadCompactStartParams): Promise<ThreadCompactStartResult> {
+    this.#assertInitialized();
+    return this.#transport.sendRequest<ThreadCompactStartParams, ThreadCompactStartResult>(
+      "thread/compact/start",
+      params
+    );
+  }
+
+  async startReview(params: ReviewStartParams): Promise<ReviewStartResult> {
+    this.#assertInitialized();
+    return this.#transport.sendRequest<ReviewStartParams, ReviewStartResult>(
+      "review/start",
+      params
+    );
   }
 
   async startTurn(params: TurnStartParams): Promise<TurnStartResult> {

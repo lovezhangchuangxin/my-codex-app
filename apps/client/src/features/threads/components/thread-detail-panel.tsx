@@ -24,33 +24,39 @@ import type {
   LocalConnectionState,
   RequestRespondRequest,
   ThreadDetail,
+  ThreadReviewRequest,
   ThreadTurnSettingsOverrides
 } from "@my-codex-app/protocol";
 
 export function ThreadDetailPanel({
   connectionState,
+  compactPending,
   detailState,
   highlightedRequestKey,
   interruptPending,
   isDesktop,
   lastError,
   onBack,
+  onCompactThread,
   onOpenThread,
   onRespondToRequest,
   onSendMessage,
   onInterrupt,
+  onStartReview,
   respondingRequestIds,
   selectedThreadId,
   sendMessagePending,
   threadsState
 }: {
   connectionState: LocalConnectionState;
+  compactPending: boolean;
   detailState: ThreadDetailState;
   highlightedRequestKey: string | null | undefined;
   interruptPending: boolean;
   isDesktop: boolean;
   lastError: string | null;
   onBack: () => void;
+  onCompactThread: (threadId: string) => Promise<boolean>;
   onOpenThread: (threadId: string, requestKey?: string) => void;
   onRespondToRequest: (request: RequestRespondRequest) => Promise<boolean>;
   onSendMessage: (
@@ -59,6 +65,7 @@ export function ThreadDetailPanel({
     settings?: ThreadTurnSettingsOverrides
   ) => Promise<boolean>;
   onInterrupt: (threadId: string, turnId: string) => Promise<void>;
+  onStartReview: (request: ThreadReviewRequest) => Promise<boolean>;
   respondingRequestIds: Array<string | number>;
   selectedThreadId: string | null;
   sendMessagePending: boolean;
@@ -114,16 +121,19 @@ export function ThreadDetailPanel({
   return (
     <ReadyThreadDetail
       connectionState={connectionState}
+      compactPending={compactPending}
       highlightedRequestKey={highlightedRequestKey}
       interruptPending={interruptPending}
       isDesktop={isDesktop}
       key={detailState.thread.id}
       lastError={lastError}
       onBack={onBack}
+      onCompactThread={onCompactThread}
       onInterrupt={onInterrupt}
       onOpenThread={onOpenThread}
       onRespondToRequest={onRespondToRequest}
       onSendMessage={onSendMessage}
+      onStartReview={onStartReview}
       respondingRequestIds={respondingRequestIds}
       selectedThreadId={selectedThreadId}
       sendMessagePending={sendMessagePending}
@@ -135,15 +145,18 @@ export function ThreadDetailPanel({
 
 function ReadyThreadDetail({
   connectionState,
+  compactPending,
   highlightedRequestKey,
   interruptPending,
   isDesktop,
   lastError,
   onBack,
+  onCompactThread,
   onInterrupt,
   onOpenThread,
   onRespondToRequest,
   onSendMessage,
+  onStartReview,
   respondingRequestIds,
   selectedThreadId,
   sendMessagePending,
@@ -151,11 +164,13 @@ function ReadyThreadDetail({
   threadsState
 }: {
   connectionState: LocalConnectionState;
+  compactPending: boolean;
   highlightedRequestKey: string | null | undefined;
   interruptPending: boolean;
   isDesktop: boolean;
   lastError: string | null;
   onBack: () => void;
+  onCompactThread: (threadId: string) => Promise<boolean>;
   onInterrupt: (threadId: string, turnId: string) => Promise<void>;
   onOpenThread: (threadId: string, requestKey?: string) => void;
   onRespondToRequest: (request: RequestRespondRequest) => Promise<boolean>;
@@ -164,6 +179,7 @@ function ReadyThreadDetail({
     text: string,
     settings?: ThreadTurnSettingsOverrides
   ) => Promise<boolean>;
+  onStartReview: (request: ThreadReviewRequest) => Promise<boolean>;
   respondingRequestIds: Array<string | number>;
   selectedThreadId: string | null;
   sendMessagePending: boolean;
@@ -298,10 +314,13 @@ function ReadyThreadDetail({
         <ThreadComposer
           actionsEnabled={actionsEnabled}
           activeTurnId={activeTurnId}
+          compactPending={compactPending}
           interruptPending={interruptPending}
           isDesktop={isDesktop}
+          onCompactThread={onCompactThread}
           onInterrupt={onInterrupt}
           onSendMessage={onSendMessage}
+          onStartReview={onStartReview}
           sendMessagePending={sendMessagePending}
           thread={thread}
         />
