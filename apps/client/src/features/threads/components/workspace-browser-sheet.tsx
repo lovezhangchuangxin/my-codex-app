@@ -17,6 +17,7 @@ import {
   WorkspaceBrowserTreePane,
 } from '@/features/threads/components/workspace-browser-panes';
 import { useI18n } from '@/lib/i18n/use-i18n';
+import { cn } from '@/lib/utils';
 
 export function WorkspaceBrowserSheet({
   cwd,
@@ -122,11 +123,15 @@ export function WorkspaceBrowserSheet({
           </div>
         ) : (
           <div className="min-h-0 flex flex-1 flex-col">
-            <div className="flex items-center gap-2 border-b border-subtle/6 px-4 py-3">
+            <div className="flex items-center gap-2 border-b border-subtle/6 px-4 py-3" role="tablist">
               <Button
+                id="workspace-files-tab"
+                aria-controls="workspace-files-panel"
+                aria-selected={mobileMode === 'files'}
                 onClick={() => {
                   setMobileMode('files');
                 }}
+                role="tab"
                 size="sm"
                 type="button"
                 variant={mobileMode === 'files' ? 'secondary' : 'ghost'}
@@ -134,10 +139,14 @@ export function WorkspaceBrowserSheet({
                 {t('detail.workspace.treeTitle')}
               </Button>
               <Button
+                id="workspace-preview-tab"
+                aria-controls="workspace-preview-panel"
+                aria-selected={mobileMode === 'preview'}
                 disabled={!selectedPreviewPath}
                 onClick={() => {
                   setMobileMode('preview');
                 }}
+                role="tab"
                 size="sm"
                 type="button"
                 variant={mobileMode === 'preview' ? 'secondary' : 'ghost'}
@@ -146,33 +155,42 @@ export function WorkspaceBrowserSheet({
               </Button>
             </div>
 
-            {mobileMode === 'files' ? (
-              <div className="min-h-0 flex flex-1 flex-col">
-                <WorkspaceBrowserTreePane
-                  directories={directories}
-                  expandedPaths={expandedPaths}
-                  onRetryDirectory={handleRetryDirectory}
-                  onSelectFile={(path) => {
-                    void loadFile(path);
-                  }}
-                  onToggleDirectory={handleToggleDirectory}
-                  scrollRequestKey={requestKey}
-                  scrollTargetPath={requestedPath}
-                  selectedDirectoryPath={selectedDirectoryPath}
-                  selectedFilePath={selectedFilePath}
-                />
-              </div>
-            ) : (
-              <div className="min-h-0 flex flex-1 flex-col">
-                <WorkspaceBrowserPreviewPane
-                  highlightLine={requestedLine}
-                  onRetry={(path) => {
-                    void loadFile(path);
-                  }}
-                  state={filePreviewState}
-                />
-              </div>
-            )}
+            <div
+              aria-labelledby="workspace-files-tab"
+              className={cn('min-h-0 flex-1 flex-col', mobileMode === 'files' && 'flex')}
+              hidden={mobileMode !== 'files'}
+              id="workspace-files-panel"
+              role="tabpanel"
+            >
+              <WorkspaceBrowserTreePane
+                directories={directories}
+                expandedPaths={expandedPaths}
+                onRetryDirectory={handleRetryDirectory}
+                onSelectFile={(path) => {
+                  void loadFile(path);
+                }}
+                onToggleDirectory={handleToggleDirectory}
+                scrollRequestKey={requestKey}
+                scrollTargetPath={requestedPath}
+                selectedDirectoryPath={selectedDirectoryPath}
+                selectedFilePath={selectedFilePath}
+              />
+            </div>
+            <div
+              aria-labelledby="workspace-preview-tab"
+              className={cn('min-h-0 flex-1 flex-col', mobileMode === 'preview' && 'flex')}
+              hidden={mobileMode !== 'preview'}
+              id="workspace-preview-panel"
+              role="tabpanel"
+            >
+              <WorkspaceBrowserPreviewPane
+                highlightLine={requestedLine}
+                onRetry={(path) => {
+                  void loadFile(path);
+                }}
+                state={filePreviewState}
+              />
+            </div>
           </div>
         )}
       </SheetContent>
