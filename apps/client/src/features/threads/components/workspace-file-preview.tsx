@@ -103,14 +103,14 @@ export function WorkspaceFilePreview({
 
       {state.response.kind === 'text' ? (
         <CodeViewer
-          className="min-h-[18rem] rounded-2xl border border-subtle/8 bg-code-bg"
+          className="min-h-[18rem] rounded-lg border border-subtle/8 bg-code-bg"
           highlightLine={highlightLine}
           {...(language ? { language } : {})}
         >
           {state.response.content ?? ''}
         </CodeViewer>
       ) : (
-        <div className="rounded-2xl border border-subtle/8 bg-background/55 p-4">
+        <div className="rounded-lg border border-subtle/8 bg-background/55 p-4">
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-lg bg-secondary/10 p-2 text-secondary">
               <FileWarning className="size-4" />
