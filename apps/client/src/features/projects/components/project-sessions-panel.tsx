@@ -80,8 +80,8 @@ export function ProjectSessionsPanel({
 
   return (
     <Card className={cn("flex h-full flex-col overflow-hidden bg-card/65", className)}>
-      <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35">
-        <div className="flex items-start justify-between gap-3">
+      <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35 pt-4">
+        <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2">
               {!isDesktop ? (
@@ -90,14 +90,9 @@ export function ProjectSessionsPanel({
                   <span className="sr-only">{t("project.sessions.action.back")}</span>
                 </Button>
               ) : null}
-              <div className="min-w-0">
-                <p className="font-mono text-[0.7rem] tracking-[0.18em] text-primary/85 uppercase">
-                  {t("project.sessions.eyebrow")}
-                </p>
-                <CardTitle className="truncate text-xl tracking-[-0.04em]">
-                  {project.displayName}
-                </CardTitle>
-              </div>
+              <CardTitle className="truncate text-xl tracking-[-0.04em]">
+                {project.displayName}
+              </CardTitle>
             </div>
             <CardDescription className="break-all font-mono text-xs">
               {project.path}
