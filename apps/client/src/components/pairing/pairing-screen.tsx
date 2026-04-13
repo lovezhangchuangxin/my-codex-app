@@ -137,10 +137,11 @@ export function PairingScreen() {
           ) : null}
 
           <Button
-            className="w-full bg-foreground text-background hover:bg-foreground/90"
+            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
             disabled={isSubmitting || pairingCode.trim().length === 0}
             size="lg"
             type="submit"
+            variant="outline"
           >
             {isSubmitting ? t('pairing.connecting') : t('pairing.connect')}
           </Button>
