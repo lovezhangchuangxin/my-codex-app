@@ -10,14 +10,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
   buildThreadTitle,
   formatStatusLabel,
   getStatusTone,
   getWorkspaceLabel,
-  summarizePendingKinds
+  summarizePendingKinds,
 } from "@/features/threads/lib/thread-utils";
 import { formatPendingRequestKind } from "@/features/requests/lib/request-utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
@@ -29,23 +29,27 @@ export function ThreadCard({
   isSelected,
   onOpen,
   showWorkspace = true,
-  thread
+  thread,
 }: {
   isSelected: boolean;
   onOpen: (threadId: string) => void;
   showWorkspace?: boolean;
   thread: ThreadSummary;
 }) {
-  const { formatDateTime, formatRelativeTime: formatLocalizedRelativeTime, t } = useI18n();
+  const {
+    formatDateTime,
+    formatRelativeTime: formatLocalizedRelativeTime,
+    t,
+  } = useI18n();
 
   return (
     <Card
       className={[
         "rounded-lg border border-subtle/8 bg-card/78 transition-all duration-200 hover:border-subtle/12 hover:bg-card/92",
-        isSelected ? "border-primary/22 bg-card" : ""
+        isSelected ? "border-primary/22 bg-card" : "",
       ].join(" ")}
     >
-      <CardContent className="space-y-3 pt-3.5">
+      <CardContent className="space-y-3 pt-1">
         <div className="flex items-start justify-between gap-2.5">
           <button
             className="min-w-0 flex-1 text-left"
@@ -72,7 +76,9 @@ export function ThreadCard({
             <DropdownMenuTrigger asChild>
               <Button size="icon-sm" variant="ghost">
                 <MoreHorizontal className="size-4" />
-                <span className="sr-only">{t("thread.list.action.threadActions")}</span>
+                <span className="sr-only">
+                  {t("thread.list.action.threadActions")}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
@@ -98,17 +104,22 @@ export function ThreadCard({
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
-          <Badge className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
-            {thread.modelProvider}
-          </Badge>
           {showWorkspace ? (
-            <Badge className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
+            <Badge
+              className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground"
+              variant="outline"
+            >
               {getWorkspaceLabel(thread.cwd, t)}
             </Badge>
           ) : null}
           {thread.pendingRequests.length > 0 ? (
-            <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
-              {t("thread.list.badge.pending", { count: thread.pendingRequests.length })}
+            <Badge
+              className="bg-secondary/16 text-secondary pulse-secondary"
+              variant="secondary"
+            >
+              {t("thread.list.badge.pending", {
+                count: thread.pendingRequests.length,
+              })}
             </Badge>
           ) : null}
         </div>
@@ -130,10 +141,12 @@ export function ThreadCard({
         <div className="flex items-center justify-between gap-3 rounded-[10px] border border-subtle/8 bg-background/45 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
           <span>
             {t("thread.list.updated", {
-              relative: formatLocalizedRelativeTime(thread.updatedAt)
+              relative: formatLocalizedRelativeTime(thread.updatedAt),
             })}
           </span>
-          <span className="truncate text-right">{formatDateTime(thread.updatedAt)}</span>
+          <span className="truncate text-right">
+            {formatDateTime(thread.updatedAt)}
+          </span>
         </div>
       </CardContent>
     </Card>
