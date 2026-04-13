@@ -43,8 +43,8 @@ This approach is preferred over class-based switching (`.dark` / `.light`) becau
 
 Introduce a `--subtle` color token to replace all `border-white/*` usages:
 
-| Token | Dark | Light |
-|-------|------|-------|
+| Token      | Dark                   | Light                  |
+| ---------- | ---------------------- | ---------------------- |
 | `--subtle` | `oklch(1 0 0)` (white) | `oklch(0 0 0)` (black) |
 
 Mapped in `@theme inline` as `--color-subtle`, so components use `border-subtle/8`, `border-subtle/12`, etc. This preserves the opacity-modifier pattern while being theme-aware.
@@ -61,13 +61,13 @@ All existing `:root` tokens will have `[data-theme="light"]` overrides. Light th
 
 The following currently hardcoded values will be converted to CSS variables or theme-aware expressions:
 
-| What | Current | Migration |
-|------|---------|-----------|
+| What                     | Current                                                          | Migration                                                           |
+| ------------------------ | ---------------------------------------------------------------- | ------------------------------------------------------------------- |
 | Body gradient background | Hardcoded `#0b0b0d` / `#0f1012` / `#131419` stops + RGBA radials | CSS variables `--bg-gradient-*` or `html[data-theme] body` selector |
-| Scrollbar thumb color | `rgba(71, 71, 78, ...)` | Theme-aware via CSS variable or `color-mix()` |
-| `::selection` background | Hardcoded `oklch(0.82 0.16 158)` at 38% | Use `var(--ring)` with opacity |
-| `.focus-ring` outline | Hardcoded `oklch(0.82 0.16 158 / 0.5)` | Use `var(--ring)` |
-| Shadow colors | `rgba(0, 0, 0, ...)` in components | Acceptable in both themes; no change needed |
+| Scrollbar thumb color    | `rgba(71, 71, 78, ...)`                                          | Theme-aware via CSS variable or `color-mix()`                       |
+| `::selection` background | Hardcoded `oklch(0.82 0.16 158)` at 38%                          | Use `var(--ring)` with opacity                                      |
+| `.focus-ring` outline    | Hardcoded `oklch(0.82 0.16 158 / 0.5)`                           | Use `var(--ring)`                                                   |
+| Shadow colors            | `rgba(0, 0, 0, ...)` in components                               | Acceptable in both themes; no change needed                         |
 
 ## Runtime Architecture
 
@@ -103,8 +103,8 @@ Themes are registered in a central constant:
 
 ```typescript
 const THEMES = [
-  { name: "dark", label: "Dark" },
-  { name: "light", label: "Light" },
+  { name: 'dark', label: 'Dark' },
+  { name: 'light', label: 'Light' },
 ] as const;
 ```
 

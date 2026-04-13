@@ -8,7 +8,9 @@ function randomUUIDFallback(): string {
   crypto.getRandomValues(bytes);
   bytes[6]! = (bytes[6]! & 0x0f) | 0x40; // version 4
   bytes[8]! = (bytes[8]! & 0x3f) | 0x80; // variant 10
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(
+    '',
+  );
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -31,32 +33,32 @@ export function detectDeviceInfo(): {
   let label: string;
 
   if (isIOS) {
-    platform = "ios";
-    browser = ua.includes("CriOS") ? "chrome" : "safari";
-    label = `${isIPhone ? "iPhone" : isIPad ? "iPad" : "iOS"} ${toBrowserLabel(browser)}`;
+    platform = 'ios';
+    browser = ua.includes('CriOS') ? 'chrome' : 'safari';
+    label = `${isIPhone ? 'iPhone' : isIPad ? 'iPad' : 'iOS'} ${toBrowserLabel(browser)}`;
   } else if (isAndroid) {
-    platform = "android";
-    browser = ua.includes("Chrome") ? "chrome" : "browser";
+    platform = 'android';
+    browser = ua.includes('Chrome') ? 'chrome' : 'browser';
     label = `Android ${toBrowserLabel(browser)}`;
   } else if (isMac) {
-    platform = "macos";
-    browser = ua.includes("Chrome")
-      ? "chrome"
-      : ua.includes("Firefox")
-        ? "firefox"
-        : "safari";
+    platform = 'macos';
+    browser = ua.includes('Chrome')
+      ? 'chrome'
+      : ua.includes('Firefox')
+        ? 'firefox'
+        : 'safari';
     label = `macOS ${toBrowserLabel(browser)}`;
   } else if (isWindows) {
-    platform = "windows";
-    browser = ua.includes("Chrome")
-      ? "chrome"
-      : ua.includes("Firefox")
-        ? "firefox"
-        : "edge";
+    platform = 'windows';
+    browser = ua.includes('Chrome')
+      ? 'chrome'
+      : ua.includes('Firefox')
+        ? 'firefox'
+        : 'edge';
     label = `Windows ${toBrowserLabel(browser)}`;
   } else {
-    platform = "linux";
-    browser = "browser";
+    platform = 'linux';
+    browser = 'browser';
     label = `Linux ${toBrowserLabel(browser)}`;
   }
 
@@ -67,15 +69,15 @@ export function detectDeviceInfo(): {
 
 function toBrowserLabel(browser: string) {
   switch (browser) {
-    case "chrome":
-      return "Chrome";
-    case "safari":
-      return "Safari";
-    case "firefox":
-      return "Firefox";
-    case "edge":
-      return "Edge";
+    case 'chrome':
+      return 'Chrome';
+    case 'safari':
+      return 'Safari';
+    case 'firefox':
+      return 'Firefox';
+    case 'edge':
+      return 'Edge';
     default:
-      return "Browser";
+      return 'Browser';
   }
 }

@@ -1,10 +1,10 @@
-import { createHash, randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { createHash, randomBytes } from 'node:crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
-import type { DeviceInfo, DeviceTrustRecord } from "@my-codex-app/protocol";
+import type { DeviceInfo, DeviceTrustRecord } from '@my-codex-app/protocol';
 
-import { createSigningSecret } from "./tokenCodec";
+import { createSigningSecret } from './tokenCodec';
 
 interface StoredPairingChallenge {
   code: string;
@@ -31,11 +31,11 @@ export interface RefreshSessionRecord {
 }
 
 export type RefreshRotationResult =
-  | { status: "notFound" }
-  | { status: "revoked" }
-  | { status: "mismatch" }
-  | { status: "expired" }
-  | { status: "ok"; device: DeviceTrustRecord };
+  | { status: 'notFound' }
+  | { status: 'revoked' }
+  | { status: 'mismatch' }
+  | { status: 'expired' }
+  | { status: 'ok'; device: DeviceTrustRecord };
 
 export class DeviceTrustStore {
   readonly #statePath: string;
@@ -57,7 +57,7 @@ export class DeviceTrustStore {
   setPairingChallenge(challenge: StoredPairingChallenge): void {
     this.#state = {
       ...this.#state,
-      pairingChallenge: challenge
+      pairingChallenge: challenge,
     };
     this.#save();
   }
@@ -69,7 +69,9 @@ export class DeviceTrustStore {
   }
 
   getDevice(deviceId: string): StoredTrustedDevice | null {
-    const device = this.#state.devices.find((entry) => entry.deviceId === deviceId);
+    const device = this.#state.devices.find(
+      (entry) => entry.deviceId === deviceId,
+    );
     return device ? { ...device } : null;
   }
 
@@ -86,7 +88,7 @@ export class DeviceTrustStore {
     deviceInfo: DeviceInfo,
     refreshToken: string,
     refreshTokenExpiresAt: number,
-    nowInSeconds: number
+    nowInSeconds: number,
   ): DeviceTrustRecord {
     if (this.hasDeviceId(deviceInfo.deviceId)) {
       throw new Error(`Device ${deviceInfo.deviceId} already exists`);
@@ -101,12 +103,12 @@ export class DeviceTrustStore {
       updatedAt: nowInSeconds,
       lastSeenAt: nowInSeconds,
       refreshTokenHash,
-      refreshTokenExpiresAt
+      refreshTokenExpiresAt,
     };
 
     this.#state = {
       ...this.#state,
-      devices: [...this.#state.devices, nextDevice]
+      devices: [...this.#state.devices, nextDevice],
     };
     this.#save();
     return this.#toDeviceTrustRecord(nextDevice);
@@ -123,8 +125,8 @@ export class DeviceTrustStore {
       pairingChallenge: {
         code: generatePairingCode(),
         issuedAt: nowInSeconds,
-        expiresAt: nowInSeconds + 10 * 60
-      }
+        expiresAt: nowInSeconds + 10 * 60,
+      },
     };
     this.#save();
     return true;
@@ -135,23 +137,23 @@ export class DeviceTrustStore {
     presentedRefreshToken: string,
     nextRefreshToken: string,
     nextRefreshTokenExpiresAt: number,
-    nowInSeconds: number
+    nowInSeconds: number,
   ): RefreshRotationResult {
     const current = this.getDevice(deviceId);
     if (!current) {
-      return { status: "notFound" };
+      return { status: 'notFound' };
     }
 
     if (current.revokedAt !== undefined) {
-      return { status: "revoked" };
+      return { status: 'revoked' };
     }
 
     if (current.refreshTokenExpiresAt <= nowInSeconds) {
-      return { status: "expired" };
+      return { status: 'expired' };
     }
 
     if (current.refreshTokenHash !== hashToken(presentedRefreshToken)) {
-      return { status: "mismatch" };
+      return { status: 'mismatch' };
     }
 
     const nextDevice: StoredTrustedDevice = {
@@ -159,24 +161,27 @@ export class DeviceTrustStore {
       updatedAt: nowInSeconds,
       lastSeenAt: nowInSeconds,
       refreshTokenHash: hashToken(nextRefreshToken),
-      refreshTokenExpiresAt: nextRefreshTokenExpiresAt
+      refreshTokenExpiresAt: nextRefreshTokenExpiresAt,
     };
 
     this.#state = {
       ...this.#state,
       devices: [
         ...this.#state.devices.filter((entry) => entry.deviceId !== deviceId),
-        nextDevice
-      ]
+        nextDevice,
+      ],
     };
     this.#save();
     return {
-      status: "ok",
-      device: this.#toDeviceTrustRecord(nextDevice)
+      status: 'ok',
+      device: this.#toDeviceTrustRecord(nextDevice),
     };
   }
 
-  markDeviceSeen(deviceId: string, nowInSeconds: number): DeviceTrustRecord | null {
+  markDeviceSeen(
+    deviceId: string,
+    nowInSeconds: number,
+  ): DeviceTrustRecord | null {
     const device = this.getActiveDevice(deviceId);
     if (!device) {
       return null;
@@ -185,21 +190,24 @@ export class DeviceTrustStore {
     const nextDevice: StoredTrustedDevice = {
       ...device,
       updatedAt: nowInSeconds,
-      lastSeenAt: nowInSeconds
+      lastSeenAt: nowInSeconds,
     };
 
     this.#state = {
       ...this.#state,
       devices: [
         ...this.#state.devices.filter((entry) => entry.deviceId !== deviceId),
-        nextDevice
-      ]
+        nextDevice,
+      ],
     };
     this.#save();
     return this.#toDeviceTrustRecord(nextDevice);
   }
 
-  revokeDevice(deviceId: string, nowInSeconds: number): DeviceTrustRecord | null {
+  revokeDevice(
+    deviceId: string,
+    nowInSeconds: number,
+  ): DeviceTrustRecord | null {
     const device = this.getDevice(deviceId);
     if (!device) {
       return null;
@@ -209,15 +217,15 @@ export class DeviceTrustStore {
       ...device,
       updatedAt: nowInSeconds,
       lastSeenAt: nowInSeconds,
-      revokedAt: nowInSeconds
+      revokedAt: nowInSeconds,
     };
 
     this.#state = {
       ...this.#state,
       devices: [
         ...this.#state.devices.filter((entry) => entry.deviceId !== deviceId),
-        nextDevice
-      ]
+        nextDevice,
+      ],
     };
     this.#save();
     return this.#toDeviceTrustRecord(nextDevice);
@@ -231,7 +239,9 @@ export class DeviceTrustStore {
 
     this.#state = {
       ...this.#state,
-      devices: this.#state.devices.filter((entry) => entry.deviceId !== deviceId)
+      devices: this.#state.devices.filter(
+        (entry) => entry.deviceId !== deviceId,
+      ),
     };
     this.#save();
     return true;
@@ -244,11 +254,11 @@ export class DeviceTrustStore {
       return initialState;
     }
 
-    const raw = readFileSync(this.#statePath, "utf8");
+    const raw = readFileSync(this.#statePath, 'utf8');
     const parsed = JSON.parse(raw) as Partial<BridgeAuthState>;
     if (
       parsed.version !== 1 ||
-      typeof parsed.signingSecret !== "string" ||
+      typeof parsed.signingSecret !== 'string' ||
       !parsed.pairingChallenge ||
       !Array.isArray(parsed.devices)
     ) {
@@ -259,7 +269,7 @@ export class DeviceTrustStore {
       version: 1,
       signingSecret: parsed.signingSecret,
       pairingChallenge: parsed.pairingChallenge,
-      devices: parsed.devices as StoredTrustedDevice[]
+      devices: parsed.devices as StoredTrustedDevice[],
     };
   }
 
@@ -280,17 +290,19 @@ export class DeviceTrustStore {
       createdAt: device.createdAt,
       updatedAt: device.updatedAt,
       lastSeenAt: device.lastSeenAt,
-      ...(device.revokedAt !== undefined ? { revokedAt: device.revokedAt } : {})
+      ...(device.revokedAt !== undefined
+        ? { revokedAt: device.revokedAt }
+        : {}),
     };
   }
 }
 
 export function createRefreshToken(): string {
-  return randomBytes(32).toString("base64url");
+  return randomBytes(32).toString('base64url');
 }
 
 export function hashToken(token: string): string {
-  return createHash("sha256").update(token).digest("hex");
+  return createHash('sha256').update(token).digest('hex');
 }
 
 function createInitialState(): BridgeAuthState {
@@ -301,16 +313,16 @@ function createInitialState(): BridgeAuthState {
     pairingChallenge: {
       code: generatePairingCode(),
       issuedAt: now,
-      expiresAt: now + 10 * 60
+      expiresAt: now + 10 * 60,
     },
-    devices: []
+    devices: [],
   };
 }
 
 export function generatePairingCode(): string {
-  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
   const bytes = randomBytes(8);
-  let code = "";
+  let code = '';
   for (let i = 0; i < 8; i++) {
     code += chars[bytes[i]! % chars.length];
   }

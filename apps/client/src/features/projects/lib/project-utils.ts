@@ -1,16 +1,19 @@
-import type { ProjectSummary } from "@my-codex-app/protocol";
+import type { ProjectSummary } from '@my-codex-app/protocol';
 
 export function getProjectDisplayName(projectPath: string): string {
   const trimmedPath = projectPath.trim();
   if (trimmedPath.length === 0) {
-    return "Unknown project";
+    return 'Unknown project';
   }
 
   const segments = trimmedPath.split(/[/\\]+/).filter(Boolean);
   return segments.at(-1) ?? trimmedPath;
 }
 
-export function matchesProjectFilter(project: ProjectSummary, searchTerm: string): boolean {
+export function matchesProjectFilter(
+  project: ProjectSummary,
+  searchTerm: string,
+): boolean {
   const normalizedSearch = searchTerm.trim().toLowerCase();
   if (normalizedSearch.length === 0) {
     return true;
@@ -24,11 +27,13 @@ export function matchesProjectFilter(project: ProjectSummary, searchTerm: string
 
 export function upsertProjectSummary(
   projects: ProjectSummary[],
-  nextProject: ProjectSummary
+  nextProject: ProjectSummary,
 ): ProjectSummary[] {
   const found = projects.some((project) => project.path === nextProject.path);
   const nextProjects = found
-    ? projects.map((project) => (project.path === nextProject.path ? nextProject : project))
+    ? projects.map((project) =>
+        project.path === nextProject.path ? nextProject : project,
+      )
     : [...projects, nextProject];
 
   return sortProjects(nextProjects);

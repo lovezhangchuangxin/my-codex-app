@@ -201,7 +201,7 @@ Pseudo-structure:
 10. Defer rich renderers behind lazy-loaded boundaries to limit thread-detail bundle
     cost.
 11. Run typecheck/build validation and do a focused visual review of the thread detail
-   timeline.
+    timeline.
 
 ## Validation Plan
 

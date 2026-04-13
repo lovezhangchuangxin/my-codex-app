@@ -4,10 +4,10 @@
 
 ### 当前架构（3 个主页面 + 侧边栏导航）
 
-| 路由 | 页面 | 问题 |
-|------|------|------|
-| `/threads` | Threads — 左列线程列表 + 右列线程详情 | 功能核心，但与其他页面割裂 |
-| `/inbox` | Inbox — 所有线程的待审批聚合 | 独立页面导致上下文切换成本高 |
+| 路由          | 页面                                        | 问题                                             |
+| ------------- | ------------------------------------------- | ------------------------------------------------ |
+| `/threads`    | Threads — 左列线程列表 + 右列线程详情       | 功能核心，但与其他页面割裂                       |
+| `/inbox`      | Inbox — 所有线程的待审批聚合                | 独立页面导致上下文切换成本高                     |
 | `/connection` | Connection — 桥连接/配对/设备管理（556 行） | 过于复杂，包含诊断快照、手动字段等开发者调试内容 |
 
 ### 核心痛点
@@ -22,13 +22,13 @@
 
 ## 二、设计原则
 
-| 原则 | 说明 |
-|------|------|
-| **移动优先** | 核心场景是手机连接电脑上的 Codex，移动端体验是第一优先级 |
+| 原则           | 说明                                                                              |
+| -------------- | --------------------------------------------------------------------------------- |
+| **移动优先**   | 核心场景是手机连接电脑上的 Codex，移动端体验是第一优先级                          |
 | **配对是门卫** | 未配对 = 无法使用。配对必须是第一个屏幕，不可跳过（参考 Paseo 的 Welcome Screen） |
-| **线程为核** | 配对之后，用户的核心工作流是「浏览线程 → 查看详情 → 交互」，所有 UI 围绕这一流程 |
-| **单页优先** | 尽量在同一个视图内完成操作，减少页面跳转 |
-| **渐进展示** | 高频功能直接可见，低频功能通过入口折叠 |
+| **线程为核**   | 配对之后，用户的核心工作流是「浏览线程 → 查看详情 → 交互」，所有 UI 围绕这一流程  |
+| **单页优先**   | 尽量在同一个视图内完成操作，减少页面跳转                                          |
+| **渐进展示**   | 高频功能直接可见，低频功能通过入口折叠                                            |
 
 ---
 
@@ -68,6 +68,7 @@
 ```
 
 **变化总结**：
+
 - `/pair` — **新增**，独立的全屏配对页，取代原来 Connection 页面中的配对功能
 - `/inbox` — **移除**，合并到主工作区的 Header 铃铛 + 线程内联
 - `/connection` — **移除**，连接管理收入设置 Drawer，配对提到 /pair
@@ -98,6 +99,7 @@ const router = createBrowserRouter([
 ```
 
 **`<AppRoot />` 逻辑**：
+
 ```typescript
 function AppRoot() {
   const snapshot = useRuntimeSnapshot();
@@ -126,12 +128,14 @@ function AppRoot() {
 ### 5.1 配对页 `/pair`（新增 — 移动优先全屏页面）
 
 这是用户首次打开应用看到的第一个界面。设计要点：
+
 - **极简**：只需要一个输入框和按钮
 - **全屏居中**：移动端和桌面端都是全屏卡片居中布局
 - **品牌感**：展示产品名称和简短说明
 - **自动填充**：Device label / Platform / Device ID 全部自动生成，用户无感
 
 **移动端（主要场景）**：
+
 ```
 ┌────────────────────────────┐
 │                            │
@@ -163,6 +167,7 @@ function AppRoot() {
 ```
 
 **桌面端**：
+
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                                                          │
@@ -219,6 +224,7 @@ function AppRoot() {
 **状态机**：`thread-list ↔ thread-detail`
 
 **Thread List 视图**（默认）：
+
 ```
 ┌────────────────────────────┐
 │ Codex        🔔3    ⚙️    │  ← 精简 Header
@@ -253,7 +259,8 @@ function AppRoot() {
 ```
 
 **Thread Detail 视图**（点击线程卡片后，全屏切换）：
-```
+
+````
 ┌────────────────────────────┐
 │ ← 返回    修复登录 Bug   ⋮ │  ← 导航栏：返回 + 标题 + 菜单
 ├────────────────────────────┤
@@ -279,9 +286,10 @@ function AppRoot() {
 ├────────────────────────────┤
 │ [发送消息...]         [➤]  │  ← 底部固定输入栏
 └────────────────────────────┘
-```
+````
 
 **Header 右侧图标**：
+
 - **铃铛** `🔔3` — 显示所有线程的待处理请求总数。点击弹出 Bottom Sheet，可快速处理所有请求
 - **齿轮** `⚙️` — 打开设置 Bottom Sheet
 
@@ -289,7 +297,7 @@ function AppRoot() {
 
 桌面端是移动端的宽屏扩展，而非独立设计：
 
-```
+````
 ┌─────────────────────────────────────────────────────────────┐
 │ ┌─ Header ───────────────────────────────────────────────┐  │
 │ │  Codex   [搜索框]          🔔3  ⚙️   ● 已连接        │  │
@@ -315,7 +323,7 @@ function AppRoot() {
 │ │                    │ │  └────────────────────────────┘  │  │
 │ └────────────────────┘ └──────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────┘
-```
+````
 
 桌面端与移动端差异：
 | 差异 | 移动端 | 桌面端 |
@@ -388,15 +396,15 @@ function AppRoot() {
 
 **与原 Connection 页面对比 — 移除了什么**：
 
-| 原有内容 | 处理 |
-|---------|------|
-| 健康检查按钮 | 移除 — 连接状态已自动显示，不需要手动检查 |
-| Runtime 快照面板 | 移除 — 这是开发者调试工具，不应暴露给用户 |
-| 配对表单（4个字段）| 移到 `/pair` 页面，字段自动生成 |
-| "Regenerate draft device" 按钮 | 移除 — 用户不需要知道这个 |
-| "Clear local credentials" 按钮 | 移除 — "重新连接" 已覆盖此场景 |
-| 配对码过期提示 | 移到 `/pair` 页面 |
-| 手动配对刷新按钮 | 移除 — 配对成功后不再需要 |
+| 原有内容                       | 处理                                      |
+| ------------------------------ | ----------------------------------------- |
+| 健康检查按钮                   | 移除 — 连接状态已自动显示，不需要手动检查 |
+| Runtime 快照面板               | 移除 — 这是开发者调试工具，不应暴露给用户 |
+| 配对表单（4个字段）            | 移到 `/pair` 页面，字段自动生成           |
+| "Regenerate draft device" 按钮 | 移除 — 用户不需要知道这个                 |
+| "Clear local credentials" 按钮 | 移除 — "重新连接" 已覆盖此场景            |
+| 配对码过期提示                 | 移到 `/pair` 页面                         |
+| 手动配对刷新按钮               | 移除 — 配对成功后不再需要                 |
 
 ---
 
@@ -456,35 +464,35 @@ apps/client/src/
 
 ### 6.2 组件迁移对照表
 
-| 原组件 | 新组件 | 变化 |
-|--------|--------|------|
-| `app-shell.tsx` | `app-shell.tsx` + `header.tsx` | 拆出 Header，去掉侧边栏和底部 Tab |
-| — | `auth-guard.tsx` | **新增**，认证门卫 |
-| — | `pairing-screen.tsx` | **新增**，全屏配对页 |
-| `threads-shell.tsx` | `threads-layout.tsx` | 简化，双栏/单栏自适应 |
-| `thread-list-panel.tsx` | 拆为 `thread-list-panel` + `thread-card` + `thread-status-tabs` + `workspace-group` | 组件拆分 |
-| `thread-detail-panel.tsx` | 拆为 `thread-detail-panel` + `thread-header` + `message-stream` + `message-input` | 组件拆分 |
-| `inbox-panel.tsx` | `request-sheet.tsx` | 独立页面 → 弹出面板 |
-| `connection-route.tsx` (556行) | `pairing-screen` + `settings-sheet` + 子组件 | 拆分到配对页和设置面板 |
-| — | `notification-bell.tsx` | **新增**，Header 全局请求入口 |
-| — | `connection-indicator.tsx` | **新增**，Header 连接状态 |
+| 原组件                         | 新组件                                                                              | 变化                              |
+| ------------------------------ | ----------------------------------------------------------------------------------- | --------------------------------- |
+| `app-shell.tsx`                | `app-shell.tsx` + `header.tsx`                                                      | 拆出 Header，去掉侧边栏和底部 Tab |
+| —                              | `auth-guard.tsx`                                                                    | **新增**，认证门卫                |
+| —                              | `pairing-screen.tsx`                                                                | **新增**，全屏配对页              |
+| `threads-shell.tsx`            | `threads-layout.tsx`                                                                | 简化，双栏/单栏自适应             |
+| `thread-list-panel.tsx`        | 拆为 `thread-list-panel` + `thread-card` + `thread-status-tabs` + `workspace-group` | 组件拆分                          |
+| `thread-detail-panel.tsx`      | 拆为 `thread-detail-panel` + `thread-header` + `message-stream` + `message-input`   | 组件拆分                          |
+| `inbox-panel.tsx`              | `request-sheet.tsx`                                                                 | 独立页面 → 弹出面板               |
+| `connection-route.tsx` (556行) | `pairing-screen` + `settings-sheet` + 子组件                                        | 拆分到配对页和设置面板            |
+| —                              | `notification-bell.tsx`                                                             | **新增**，Header 全局请求入口     |
+| —                              | `connection-indicator.tsx`                                                          | **新增**，Header 连接状态         |
 
 ### 6.3 移动端面板状态机
 
 ```typescript
-type MobilePanelView = "thread-list" | "thread-detail";
+type MobilePanelView = 'thread-list' | 'thread-detail';
 
 function useMobilePanel() {
-  const [view, setView] = useState<MobilePanelView>("thread-list");
+  const [view, setView] = useState<MobilePanelView>('thread-list');
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
 
   const openThread = (id: string) => {
     setSelectedThreadId(id);
-    setView("thread-detail");
+    setView('thread-detail');
   };
 
   const backToList = () => {
-    setView("thread-list");
+    setView('thread-list');
     setSelectedThreadId(null);
   };
 
@@ -496,7 +504,11 @@ function useMobilePanel() {
 
 ```typescript
 // device-info.ts — 自动检测设备信息，替代原来的手动字段
-function detectDeviceInfo(): { label: string; platform: string; deviceId: string } {
+function detectDeviceInfo(): {
+  label: string;
+  platform: string;
+  deviceId: string;
+} {
   const ua = navigator.userAgent;
   const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
   const isIOS = /iPhone|iPad|iPod/i.test(ua);
@@ -506,20 +518,28 @@ function detectDeviceInfo(): { label: string; platform: string; deviceId: string
   let browser: string;
 
   if (isIOS) {
-    platform = "ios";
-    browser = ua.includes("CriOS") ? "chrome" : "safari";
+    platform = 'ios';
+    browser = ua.includes('CriOS') ? 'chrome' : 'safari';
   } else if (isAndroid) {
-    platform = "android";
-    browser = ua.includes("Chrome") ? "chrome" : "browser";
-  } else if (ua.includes("Mac")) {
-    platform = "macos";
-    browser = ua.includes("Chrome") ? "chrome" : ua.includes("Firefox") ? "firefox" : "safari";
-  } else if (ua.includes("Windows")) {
-    platform = "windows";
-    browser = ua.includes("Chrome") ? "chrome" : ua.includes("Firefox") ? "firefox" : "edge";
+    platform = 'android';
+    browser = ua.includes('Chrome') ? 'chrome' : 'browser';
+  } else if (ua.includes('Mac')) {
+    platform = 'macos';
+    browser = ua.includes('Chrome')
+      ? 'chrome'
+      : ua.includes('Firefox')
+        ? 'firefox'
+        : 'safari';
+  } else if (ua.includes('Windows')) {
+    platform = 'windows';
+    browser = ua.includes('Chrome')
+      ? 'chrome'
+      : ua.includes('Firefox')
+        ? 'firefox'
+        : 'edge';
   } else {
-    platform = "linux";
-    browser = "browser";
+    platform = 'linux';
+    browser = 'browser';
   }
 
   const label = `${platform} ${browser}`; // e.g. "ios safari", "macos chrome"
@@ -539,13 +559,13 @@ Tailwind + shadcn + Radix UI + Lucide Icons 完全保留。
 
 ### 7.2 布局参数调整
 
-| 属性 | 当前 | 调整后 | 原因 |
-|------|------|--------|------|
-| 侧边栏 | 272px 固定（桌面端） | **移除** | 改为 Header + 左面板作为页面内容 |
-| 左面板（桌面） | 无独立面板 | 280px 可调 (240–400px) | 双栏布局的一部分 |
-| 最大宽度 | 1520px | 100%（全宽） | 移动优先不需要限制宽度 |
-| Header | 无 | 56px（移动端）/ 60px（桌面端） | 新增全局 Header |
-| 底部 Tab 导航 | 三栏（移动端） | **移除** | 改用 Header 图标 + 全屏切换 |
+| 属性           | 当前                 | 调整后                         | 原因                             |
+| -------------- | -------------------- | ------------------------------ | -------------------------------- |
+| 侧边栏         | 272px 固定（桌面端） | **移除**                       | 改为 Header + 左面板作为页面内容 |
+| 左面板（桌面） | 无独立面板           | 280px 可调 (240–400px)         | 双栏布局的一部分                 |
+| 最大宽度       | 1520px               | 100%（全宽）                   | 移动优先不需要限制宽度           |
+| Header         | 无                   | 56px（移动端）/ 60px（桌面端） | 新增全局 Header                  |
+| 底部 Tab 导航  | 三栏（移动端）       | **移除**                       | 改用 Header 图标 + 全屏切换      |
 
 ### 7.3 视觉简化
 
@@ -559,6 +579,7 @@ Tailwind + shadcn + Radix UI + Lucide Icons 完全保留。
 ## 八、迁移计划
 
 ### 阶段 1：认证流程 + 路由重构
+
 1. 新建 `device-info.ts`（设备信息自动检测）
 2. 新建 `pairing-screen.tsx`（全屏配对页）
 3. 新建 `auth-guard.tsx`（认证门卫组件）
@@ -566,6 +587,7 @@ Tailwind + shadcn + Radix UI + Lucide Icons 完全保留。
 5. 移除旧侧边栏和底部 Tab 导航
 
 ### 阶段 2：Header + 布局重构
+
 1. 新建 `header.tsx`（全局 Header）
 2. 新建 `connection-indicator.tsx` 和 `notification-bell.tsx`
 3. 重写 `app-shell.tsx`（Header + 内容区）
@@ -573,17 +595,20 @@ Tailwind + shadcn + Radix UI + Lucide Icons 完全保留。
 5. 移动端面板状态机 `use-mobile-panel.ts`
 
 ### 阶段 3：线程工作区优化
+
 1. 拆分 `thread-list-panel.tsx` → 多个小组件
 2. 拆分 `thread-detail-panel.tsx` → 多个小组件
 3. 内联请求卡片 `inline-request-card.tsx`
 4. 状态筛选 Tab `thread-status-tabs.tsx`
 
 ### 阶段 4：请求面板 + 设置面板
+
 1. 实现 `request-sheet.tsx`（替代 Inbox）
 2. 实现 `settings-sheet.tsx`（替代 Connection）
 3. 删除旧组件文件
 
 ### 阶段 5：清理验证
+
 1. 清理无用 import 和文件
 2. 类型检查通过
 3. 移动端 + 桌面端布局验证
@@ -592,15 +617,15 @@ Tailwind + shadcn + Radix UI + Lucide Icons 完全保留。
 
 ## 九、前后对比
 
-| 维度 | 重构前 | 重构后 |
-|------|--------|--------|
-| 设计优先级 | 桌面优先，移动适配 | **移动优先**，桌面扩展 |
-| 首次体验 | 看到三个 Tab，需要自己找到 Connection | **直接进入配对页**，一个输入框搞定 |
-| 配对字段 | 4 个（code + label + platform + deviceId） | **1 个**（code），其余自动生成 |
-| 顶级路由 | 3 个 | 2 个（/pair + /threads）+ Drawer |
-| 导航方式 | 侧边栏 + 底部 Tab | Header + 面板内全屏切换（移动端）|
-| 审批请求 | 切换到 Inbox 页面 | 铃铛弹出 + 线程内内联 |
-| 连接管理 | 556 行独立页面 | 精简设置面板，隐藏调试内容 |
-| 移动端详情 | 双栏压缩 | 全屏切换，底部固定输入栏 |
-| 组件粒度 | 大组件（500+ 行） | 小组件（<200 行） |
-| Runtime 快照 | 暴露在 Connection 页面 | 完全隐藏，不展示给用户 |
+| 维度         | 重构前                                     | 重构后                             |
+| ------------ | ------------------------------------------ | ---------------------------------- |
+| 设计优先级   | 桌面优先，移动适配                         | **移动优先**，桌面扩展             |
+| 首次体验     | 看到三个 Tab，需要自己找到 Connection      | **直接进入配对页**，一个输入框搞定 |
+| 配对字段     | 4 个（code + label + platform + deviceId） | **1 个**（code），其余自动生成     |
+| 顶级路由     | 3 个                                       | 2 个（/pair + /threads）+ Drawer   |
+| 导航方式     | 侧边栏 + 底部 Tab                          | Header + 面板内全屏切换（移动端）  |
+| 审批请求     | 切换到 Inbox 页面                          | 铃铛弹出 + 线程内内联              |
+| 连接管理     | 556 行独立页面                             | 精简设置面板，隐藏调试内容         |
+| 移动端详情   | 双栏压缩                                   | 全屏切换，底部固定输入栏           |
+| 组件粒度     | 大组件（500+ 行）                          | 小组件（<200 行）                  |
+| Runtime 快照 | 暴露在 Connection 页面                     | 完全隐藏，不展示给用户             |

@@ -1,9 +1,19 @@
-import { createContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 
-import { createTranslator, normalizeLocale } from "@/lib/i18n/catalog";
-import { formatDateTime, formatRelativeTime } from "@/lib/i18n/formatters";
-import { detectPreferredLocale, loadStoredLocale, saveStoredLocale } from "@/lib/i18n/storage";
-import type { AppLocale, I18nShape } from "@/lib/i18n/types";
+import { createTranslator, normalizeLocale } from '@/lib/i18n/catalog';
+import { formatDateTime, formatRelativeTime } from '@/lib/i18n/formatters';
+import {
+  detectPreferredLocale,
+  loadStoredLocale,
+  saveStoredLocale,
+} from '@/lib/i18n/storage';
+import type { AppLocale, I18nShape } from '@/lib/i18n/types';
 
 export const I18nContext = createContext<I18nShape | null>(null);
 
@@ -29,7 +39,7 @@ export function LocaleProvider({ children }: { children: ReactNode }) {
       setLocale: (nextLocale) => {
         setLocaleState(normalizeLocale(nextLocale));
       },
-      t
+      t,
     };
   }, [locale]);
 

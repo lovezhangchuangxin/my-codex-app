@@ -8,20 +8,20 @@ import type {
   ThreadRuntimeStatus,
   ThreadSummary,
   TurnDetail,
-  UserInput
-} from "@my-codex-app/protocol";
+  UserInput,
+} from '@my-codex-app/protocol';
 
 export type ThreadListState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "ready"; threads: ThreadSummary[] }
-  | { kind: "error"; message: string };
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ready'; threads: ThreadSummary[] }
+  | { kind: 'error'; message: string };
 
 export type ThreadDetailState =
-  | { kind: "idle" }
-  | { kind: "loading"; threadId: string }
-  | { kind: "ready"; thread: ThreadDetail }
-  | { kind: "error"; threadId: string; message: string };
+  | { kind: 'idle' }
+  | { kind: 'loading'; threadId: string }
+  | { kind: 'ready'; thread: ThreadDetail }
+  | { kind: 'error'; threadId: string; message: string };
 
 export interface ThreadMutationState {
   startThreadPending: boolean;
@@ -40,11 +40,15 @@ export interface ThreadRuntimeSnapshot {
   mutations: ThreadMutationState;
 }
 
-export function createInitialSnapshot(hasCredentials = false): ThreadRuntimeSnapshot {
+export function createInitialSnapshot(
+  hasCredentials = false,
+): ThreadRuntimeSnapshot {
   return {
-    connection: hasCredentials ? { kind: "disconnected" } : { kind: "unpaired" },
-    threads: hasCredentials ? { kind: "loading" } : { kind: "idle" },
-    detail: { kind: "idle" },
+    connection: hasCredentials
+      ? { kind: 'disconnected' }
+      : { kind: 'unpaired' },
+    threads: hasCredentials ? { kind: 'loading' } : { kind: 'idle' },
+    detail: { kind: 'idle' },
     selectedThreadId: null,
     mutations: {
       startThreadPending: false,
@@ -52,8 +56,8 @@ export function createInitialSnapshot(hasCredentials = false): ThreadRuntimeSnap
       interruptPending: false,
       compactingThreadIds: [],
       respondingRequestIds: [],
-      lastError: null
-    }
+      lastError: null,
+    },
   };
 }
 
@@ -62,7 +66,7 @@ export function toThreadDetail(thread: ThreadSummary): ThreadDetail {
     ...thread,
     turns: [],
     settings: null,
-    contextUsage: null
+    contextUsage: null,
   };
 }
 
@@ -76,14 +80,19 @@ export function toThreadSummary(thread: ThreadDetail): ThreadSummary {
     modelProvider: thread.modelProvider,
     status: thread.status,
     pendingRequests: thread.pendingRequests,
-    ...(thread.name !== undefined ? { name: thread.name } : {})
+    ...(thread.name !== undefined ? { name: thread.name } : {}),
   };
 }
 
-export function upsertThreadSummary(threads: ThreadSummary[], nextThread: ThreadSummary): ThreadSummary[] {
+export function upsertThreadSummary(
+  threads: ThreadSummary[],
+  nextThread: ThreadSummary,
+): ThreadSummary[] {
   const found = threads.some((thread) => thread.id === nextThread.id);
   const nextThreads = found
-    ? threads.map((thread) => (thread.id === nextThread.id ? nextThread : thread))
+    ? threads.map((thread) =>
+        thread.id === nextThread.id ? nextThread : thread,
+      )
     : [...threads, nextThread];
 
   return sortThreads(nextThreads);
@@ -91,190 +100,217 @@ export function upsertThreadSummary(threads: ThreadSummary[], nextThread: Thread
 
 export function updateThreadSummaryState(
   state: ThreadListState,
-  event: BridgeEvent
+  event: BridgeEvent,
 ): ThreadListState {
-  if (state.kind !== "ready") {
+  if (state.kind !== 'ready') {
     return state;
   }
 
   switch (event.type) {
-    case "threadStarted":
+    case 'threadStarted':
       return {
-        kind: "ready",
-        threads: upsertThreadSummary(state.threads, toThreadSummary(event.thread))
+        kind: 'ready',
+        threads: upsertThreadSummary(
+          state.threads,
+          toThreadSummary(event.thread),
+        ),
       };
-    case "threadStatusChanged":
+    case 'threadStatusChanged':
       return {
-        kind: "ready",
+        kind: 'ready',
         threads: sortThreads(
           state.threads.map((thread) =>
-            thread.id === event.threadId ? { ...thread, status: event.status } : thread
-          )
-        )
+            thread.id === event.threadId
+              ? { ...thread, status: event.status }
+              : thread,
+          ),
+        ),
       };
-    case "threadNameUpdated":
+    case 'threadNameUpdated':
       return {
-        kind: "ready",
+        kind: 'ready',
         threads: sortThreads(
           state.threads.map((thread) =>
-            thread.id === event.threadId ? applyThreadName(thread, event.threadName) : thread
-          )
-        )
+            thread.id === event.threadId
+              ? applyThreadName(thread, event.threadName)
+              : thread,
+          ),
+        ),
       };
-    case "turnStarted":
+    case 'turnStarted':
       return {
-        kind: "ready",
+        kind: 'ready',
         threads: sortThreads(
           state.threads.map((thread) =>
             thread.id === event.threadId
               ? {
                   ...thread,
                   status: toActiveStatus(thread.status),
-                  updatedAt: event.turn.startedAt ?? thread.updatedAt
+                  updatedAt: event.turn.startedAt ?? thread.updatedAt,
                 }
-              : thread
-          )
-        )
+              : thread,
+          ),
+        ),
       };
-    case "itemStarted":
-    case "itemCompleted":
-      if (event.item.type !== "userMessage") {
+    case 'itemStarted':
+    case 'itemCompleted':
+      if (event.item.type !== 'userMessage') {
         return state;
       }
 
       const userMessage = event.item;
 
       return {
-        kind: "ready",
+        kind: 'ready',
         threads: sortThreads(
           state.threads.map((thread) =>
             thread.id === event.threadId
               ? {
                   ...thread,
-                  preview: previewFromUserInput(userMessage.content) ?? thread.preview,
-                  updatedAt: nowInSeconds()
+                  preview:
+                    previewFromUserInput(userMessage.content) ?? thread.preview,
+                  updatedAt: nowInSeconds(),
                 }
-              : thread
-          )
-        )
+              : thread,
+          ),
+        ),
       };
-    case "turnCompleted":
-    case "agentMessageDelta":
+    case 'turnCompleted':
+    case 'agentMessageDelta':
       return state;
-    case "pendingRequestAdded":
+    case 'pendingRequestAdded':
       return {
-        kind: "ready",
+        kind: 'ready',
         threads: sortThreads(
           state.threads.map((thread) =>
             thread.id === event.threadId
               ? {
                   ...thread,
-                  pendingRequests: upsertPendingRequest(thread.pendingRequests, event.request)
+                  pendingRequests: upsertPendingRequest(
+                    thread.pendingRequests,
+                    event.request,
+                  ),
                 }
-              : thread
-          )
-        )
+              : thread,
+          ),
+        ),
       };
-    case "pendingRequestResolved":
+    case 'pendingRequestResolved':
       return {
-        kind: "ready",
+        kind: 'ready',
         threads: sortThreads(
           state.threads.map((thread) =>
             thread.id === event.threadId
               ? {
                   ...thread,
-                  pendingRequests: removePendingRequest(thread.pendingRequests, event.requestId)
+                  pendingRequests: removePendingRequest(
+                    thread.pendingRequests,
+                    event.requestId,
+                  ),
                 }
-              : thread
-          )
-        )
+              : thread,
+          ),
+        ),
       };
-    case "threadSettingsUpdated":
-    case "threadContextUsageUpdated":
+    case 'threadSettingsUpdated':
+    case 'threadContextUsageUpdated':
       return state;
   }
 }
 
-export function applyThreadEvent(thread: ThreadDetail, event: BridgeEvent): ThreadDetail {
+export function applyThreadEvent(
+  thread: ThreadDetail,
+  event: BridgeEvent,
+): ThreadDetail {
   switch (event.type) {
-    case "threadStarted":
+    case 'threadStarted':
       return event.thread;
-    case "threadStatusChanged":
+    case 'threadStatusChanged':
       return {
         ...thread,
-        status: event.status
+        status: event.status,
       };
-    case "threadNameUpdated":
+    case 'threadNameUpdated':
       return applyThreadName(thread, event.threadName);
-    case "turnStarted":
+    case 'turnStarted':
       return {
         ...thread,
         status: toActiveStatus(thread.status),
         updatedAt: event.turn.startedAt ?? thread.updatedAt,
-        turns: upsertTurn(thread.turns, event.turn)
+        turns: upsertTurn(thread.turns, event.turn),
       };
-    case "turnCompleted":
+    case 'turnCompleted':
       return {
         ...thread,
         updatedAt: event.turn.completedAt ?? thread.updatedAt,
-        turns: upsertTurn(thread.turns, event.turn)
+        turns: upsertTurn(thread.turns, event.turn),
       };
-    case "itemStarted":
+    case 'itemStarted':
       return {
         ...thread,
         turns: thread.turns.map((turn) =>
           turn.id === event.turnId
             ? { ...turn, items: upsertItem(turn.items, event.item) }
-            : turn
-        )
+            : turn,
+        ),
       };
-    case "itemCompleted":
+    case 'itemCompleted':
       return {
         ...thread,
         turns: thread.turns.map((turn) =>
           turn.id === event.turnId
             ? { ...turn, items: upsertItem(turn.items, event.item) }
-            : turn
-        )
+            : turn,
+        ),
       };
-    case "agentMessageDelta":
+    case 'agentMessageDelta':
       return {
         ...thread,
         turns: thread.turns.map((turn) =>
           turn.id === event.turnId
             ? {
                 ...turn,
-                items: appendAgentMessageDelta(turn.items, event.itemId, event.delta)
+                items: appendAgentMessageDelta(
+                  turn.items,
+                  event.itemId,
+                  event.delta,
+                ),
               }
-            : turn
-        )
+            : turn,
+        ),
       };
-    case "pendingRequestAdded":
+    case 'pendingRequestAdded':
       return {
         ...thread,
-        pendingRequests: upsertPendingRequest(thread.pendingRequests, event.request)
+        pendingRequests: upsertPendingRequest(
+          thread.pendingRequests,
+          event.request,
+        ),
       };
-    case "pendingRequestResolved":
+    case 'pendingRequestResolved':
       return {
         ...thread,
-        pendingRequests: removePendingRequest(thread.pendingRequests, event.requestId)
+        pendingRequests: removePendingRequest(
+          thread.pendingRequests,
+          event.requestId,
+        ),
       };
-    case "threadSettingsUpdated":
+    case 'threadSettingsUpdated':
       return {
         ...thread,
-        settings: event.settings
+        settings: event.settings,
       };
-    case "threadContextUsageUpdated":
+    case 'threadContextUsageUpdated':
       return {
         ...thread,
-        contextUsage: event.contextUsage
+        contextUsage: event.contextUsage,
       };
   }
 }
 
 export function previewFromUserInput(inputs: UserInput[]): string | null {
   for (const input of inputs) {
-    if (input.type === "text" && input.text.trim().length > 0) {
+    if (input.type === 'text' && input.text.trim().length > 0) {
       return input.text.trim();
     }
   }
@@ -283,14 +319,16 @@ export function previewFromUserInput(inputs: UserInput[]): string | null {
 }
 
 export function findActiveTurnId(thread: ThreadDetail): string | null {
-  const activeTurn = [...thread.turns].reverse().find((turn) => turn.status === "inProgress");
+  const activeTurn = [...thread.turns]
+    .reverse()
+    .find((turn) => turn.status === 'inProgress');
   return activeTurn?.id ?? null;
 }
 
 export function setThreadMessagePending(
   threads: ThreadSummary[],
   threadId: string,
-  input: UserInput[]
+  input: UserInput[],
 ): ThreadSummary[] {
   const nextPreview = previewFromUserInput(input);
 
@@ -301,27 +339,36 @@ export function setThreadMessagePending(
             ...thread,
             preview: nextPreview ?? thread.preview,
             status: toActiveStatus(thread.status),
-            updatedAt: nowInSeconds()
+            updatedAt: nowInSeconds(),
           }
-        : thread
-    )
+        : thread,
+    ),
   );
 }
 
-function appendAgentMessageDelta(items: ThreadItem[], itemId: string, delta: string): ThreadItem[] {
-  const found = items.some((item) => item.type === "agentMessage" && item.id === itemId);
+function appendAgentMessageDelta(
+  items: ThreadItem[],
+  itemId: string,
+  delta: string,
+): ThreadItem[] {
+  const found = items.some(
+    (item) => item.type === 'agentMessage' && item.id === itemId,
+  );
   if (!found) {
-    return [...items, { type: "agentMessage", id: itemId, text: delta }];
+    return [...items, { type: 'agentMessage', id: itemId, text: delta }];
   }
 
   return items.map((item) =>
-    item.type === "agentMessage" && item.id === itemId
+    item.type === 'agentMessage' && item.id === itemId
       ? { ...item, text: `${item.text}${delta}` }
-      : item
+      : item,
   );
 }
 
-function applyThreadName<T extends { name?: string }>(thread: T, threadName: string | null): T {
+function applyThreadName<T extends { name?: string }>(
+  thread: T,
+  threadName: string | null,
+): T {
   const { name: _currentName, ...rest } = thread;
   if (threadName === null) {
     return rest as T;
@@ -329,7 +376,7 @@ function applyThreadName<T extends { name?: string }>(thread: T, threadName: str
 
   return {
     ...rest,
-    name: threadName
+    name: threadName,
   } as T;
 }
 
@@ -342,7 +389,10 @@ function sortThreads(threads: ThreadSummary[]): ThreadSummary[] {
   });
 }
 
-function upsertTurn(turns: ThreadDetail["turns"], nextTurn: TurnDetail): ThreadDetail["turns"] {
+function upsertTurn(
+  turns: ThreadDetail['turns'],
+  nextTurn: TurnDetail,
+): ThreadDetail['turns'] {
   const found = turns.some((turn) => turn.id === nextTurn.id);
   if (!found) {
     return [...turns, nextTurn];
@@ -353,9 +403,9 @@ function upsertTurn(turns: ThreadDetail["turns"], nextTurn: TurnDetail): ThreadD
       ? {
           ...turn,
           ...nextTurn,
-          items: nextTurn.items.length > 0 ? nextTurn.items : turn.items
+          items: nextTurn.items.length > 0 ? nextTurn.items : turn.items,
         }
-      : turn
+      : turn,
   );
 }
 
@@ -369,32 +419,40 @@ function upsertItem(items: ThreadItem[], nextItem: ThreadItem): ThreadItem[] {
 }
 
 function toActiveStatus(current: ThreadRuntimeStatus): ThreadRuntimeStatus {
-  if (current.type === "active") {
+  if (current.type === 'active') {
     return current;
   }
 
-  return { type: "active", activeFlags: [] };
+  return { type: 'active', activeFlags: [] };
 }
 
 function upsertPendingRequest(
   pendingRequests: PendingRequest[],
-  nextRequest: PendingRequest
+  nextRequest: PendingRequest,
 ): PendingRequest[] {
   const nextKey = toRequestKey(nextRequest.requestId);
-  const remaining = pendingRequests.filter((request) => toRequestKey(request.requestId) !== nextKey);
-  return [...remaining, nextRequest].sort((left, right) => left.requestedAt - right.requestedAt);
+  const remaining = pendingRequests.filter(
+    (request) => toRequestKey(request.requestId) !== nextKey,
+  );
+  return [...remaining, nextRequest].sort(
+    (left, right) => left.requestedAt - right.requestedAt,
+  );
 }
 
 function removePendingRequest(
   pendingRequests: PendingRequest[],
-  requestId: JsonRpcRequestId
+  requestId: JsonRpcRequestId,
 ): PendingRequest[] {
   const requestKey = toRequestKey(requestId);
-  return pendingRequests.filter((request) => toRequestKey(request.requestId) !== requestKey);
+  return pendingRequests.filter(
+    (request) => toRequestKey(request.requestId) !== requestKey,
+  );
 }
 
 function toRequestKey(requestId: JsonRpcRequestId): string {
-  return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
+  return typeof requestId === 'string'
+    ? `string:${requestId}`
+    : `number:${requestId}`;
 }
 
 function nowInSeconds(): number {

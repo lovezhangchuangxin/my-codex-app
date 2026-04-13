@@ -1,4 +1,4 @@
-import type { JsonRpcRequestId, PendingRequest } from "@my-codex-app/protocol";
+import type { JsonRpcRequestId, PendingRequest } from '@my-codex-app/protocol';
 
 export class PendingRequestState {
   readonly #requestsByThreadId = new Map<string, PendingRequest[]>();
@@ -18,19 +18,27 @@ export class PendingRequestState {
     const key = toRequestKey(request.requestId);
     const previous = this.#requestsByRequestId.get(key);
     if (previous) {
-      const previousThreadRequests = this.#requestsByThreadId.get(previous.threadId) ?? [];
+      const previousThreadRequests =
+        this.#requestsByThreadId.get(previous.threadId) ?? [];
       this.#requestsByThreadId.set(
         previous.threadId,
-        previousThreadRequests.filter((entry) => toRequestKey(entry.requestId) !== key)
+        previousThreadRequests.filter(
+          (entry) => toRequestKey(entry.requestId) !== key,
+        ),
       );
     }
 
     this.#requestsByRequestId.set(key, request);
-    const nextThreadRequests = this.#requestsByThreadId.get(request.threadId) ?? [];
-    const deduped = nextThreadRequests.filter((entry) => toRequestKey(entry.requestId) !== key);
+    const nextThreadRequests =
+      this.#requestsByThreadId.get(request.threadId) ?? [];
+    const deduped = nextThreadRequests.filter(
+      (entry) => toRequestKey(entry.requestId) !== key,
+    );
     this.#requestsByThreadId.set(
       request.threadId,
-      [...deduped, request].sort((left, right) => left.requestedAt - right.requestedAt)
+      [...deduped, request].sort(
+        (left, right) => left.requestedAt - right.requestedAt,
+      ),
     );
   }
 
@@ -42,9 +50,10 @@ export class PendingRequestState {
     }
 
     this.#requestsByRequestId.delete(key);
-    const currentThreadRequests = this.#requestsByThreadId.get(request.threadId) ?? [];
+    const currentThreadRequests =
+      this.#requestsByThreadId.get(request.threadId) ?? [];
     const nextThreadRequests = currentThreadRequests.filter(
-      (entry) => toRequestKey(entry.requestId) !== key
+      (entry) => toRequestKey(entry.requestId) !== key,
     );
     if (nextThreadRequests.length === 0) {
       this.#requestsByThreadId.delete(request.threadId);
@@ -65,5 +74,7 @@ export class PendingRequestState {
 }
 
 function toRequestKey(requestId: JsonRpcRequestId): string {
-  return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
+  return typeof requestId === 'string'
+    ? `string:${requestId}`
+    : `number:${requestId}`;
 }

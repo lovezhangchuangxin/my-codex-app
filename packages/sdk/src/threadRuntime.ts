@@ -13,10 +13,10 @@ import type {
   ThreadSummary,
   ThreadTurnSettingsOverrides,
   TurnDetail,
-  UserInput
-} from "@my-codex-app/protocol";
+  UserInput,
+} from '@my-codex-app/protocol';
 
-import { BridgeClient, BridgeClientError } from "./bridgeClient";
+import { BridgeClient, BridgeClientError } from './bridgeClient';
 import {
   applyThreadEvent,
   createInitialSnapshot,
@@ -26,15 +26,15 @@ import {
   type ThreadDetailState,
   type ThreadRuntimeSnapshot,
   updateThreadSummaryState,
-  upsertThreadSummary
-} from "./threadState";
+  upsertThreadSummary,
+} from './threadState';
 
 type Listener = () => void;
-type ResyncReason = "startup" | "manual" | "reconnect";
+type ResyncReason = 'startup' | 'manual' | 'reconnect';
 type BridgeFailureClassification =
   | LocalConnectionState
   | {
-      kind: "requestError";
+      kind: 'requestError';
       message: string;
     };
 
@@ -51,32 +51,36 @@ export class BridgeThreadRuntime {
 
   constructor(private readonly client: BridgeClient) {
     this.#snapshot = createInitialSnapshot(this.client.hasCredentials());
-    this.#unsubscribeSessionEvents = this.client.subscribeToSessionEvents((event) => {
-      if (this.#disposed) {
-        return;
-      }
+    this.#unsubscribeSessionEvents = this.client.subscribeToSessionEvents(
+      (event) => {
+        if (this.#disposed) {
+          return;
+        }
 
-      switch (event.type) {
-        case "refreshing":
-          if (isTerminalConnectionState(this.#snapshot.connection.kind)) {
+        switch (event.type) {
+          case 'refreshing':
+            if (isTerminalConnectionState(this.#snapshot.connection.kind)) {
+              return;
+            }
+            this.#setConnectionState({ kind: 'refreshing' });
             return;
-          }
-          this.#setConnectionState({ kind: "refreshing" });
-          return;
-        case "refreshed":
-          if (
-            this.#resyncPromise === null &&
-            !isTerminalConnectionState(this.#snapshot.connection.kind) &&
-            this.#snapshot.connection.kind !== "unpaired"
-          ) {
-            this.#markAuthenticated();
-          }
-          return;
-        case "invalidated":
-          this.#applySessionLoss(classifyTerminalSessionState(event.code, event.message));
-          return;
-      }
-    });
+          case 'refreshed':
+            if (
+              this.#resyncPromise === null &&
+              !isTerminalConnectionState(this.#snapshot.connection.kind) &&
+              this.#snapshot.connection.kind !== 'unpaired'
+            ) {
+              this.#markAuthenticated();
+            }
+            return;
+          case 'invalidated':
+            this.#applySessionLoss(
+              classifyTerminalSessionState(event.code, event.message),
+            );
+            return;
+        }
+      },
+    );
   }
 
   getSnapshot = (): ThreadRuntimeSnapshot => this.#snapshot;
@@ -90,18 +94,18 @@ export class BridgeThreadRuntime {
 
   async bootstrap(): Promise<void> {
     if (!this.client.hasCredentials()) {
-      this.#applySessionLoss({ kind: "unpaired" });
+      this.#applySessionLoss({ kind: 'unpaired' });
       return;
     }
 
-    await this.resyncFromBridge("startup");
+    await this.resyncFromBridge('startup');
   }
 
   async loadThreads(): Promise<void> {
-    await this.resyncFromBridge("manual");
+    await this.resyncFromBridge('manual');
   }
 
-  async resyncFromBridge(reason: ResyncReason = "manual"): Promise<void> {
+  async resyncFromBridge(reason: ResyncReason = 'manual'): Promise<void> {
     if (this.#resyncPromise) {
       return this.#resyncPromise;
     }
@@ -122,7 +126,7 @@ export class BridgeThreadRuntime {
     }
 
     if (!this.client.hasCredentials()) {
-      this.#applySessionLoss({ kind: "unpaired" });
+      this.#applySessionLoss({ kind: 'unpaired' });
       return;
     }
 
@@ -130,8 +134,8 @@ export class BridgeThreadRuntime {
       return;
     }
 
-    this.#setConnectionState({ kind: "reconnecting" });
-    await this.resyncFromBridge("reconnect");
+    this.#setConnectionState({ kind: 'reconnecting' });
+    await this.resyncFromBridge('reconnect');
   }
 
   async selectThread(threadId: string | null): Promise<void> {
@@ -146,7 +150,7 @@ export class BridgeThreadRuntime {
       this.#update((current) => ({
         ...current,
         selectedThreadId: null,
-        detail: { kind: "idle" }
+        detail: { kind: 'idle' },
       }));
       return;
     }
@@ -155,10 +159,10 @@ export class BridgeThreadRuntime {
     this.#update((current) => ({
       ...current,
       selectedThreadId: threadId,
-      detail: { kind: "loading", threadId }
+      detail: { kind: 'loading', threadId },
     }));
 
-    if (this.#snapshot.connection.kind !== "authenticated") {
+    if (this.#snapshot.connection.kind !== 'authenticated') {
       return;
     }
 
@@ -174,15 +178,18 @@ export class BridgeThreadRuntime {
       this.#update((current) => ({
         ...current,
         threads:
-          current.threads.kind === "ready"
+          current.threads.kind === 'ready'
             ? {
-                kind: "ready",
-                threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
+                kind: 'ready',
+                threads: upsertThreadSummary(
+                  current.threads.threads,
+                  toThreadSummary(thread),
+                ),
               }
             : {
-                kind: "ready",
-                threads: [toThreadSummary(thread)]
-              }
+                kind: 'ready',
+                threads: [toThreadSummary(thread)],
+              },
       }));
 
       this.#showSelectedThread(thread);
@@ -195,20 +202,27 @@ export class BridgeThreadRuntime {
     }
   }
 
-  async renameThread(threadId: string, name: string): Promise<ThreadRenameResponse> {
+  async renameThread(
+    threadId: string,
+    name: string,
+  ): Promise<ThreadRenameResponse> {
     this.#updateMutations({ lastError: null });
 
     try {
       const response = await this.client.renameThread({ threadId, name });
       const event: BridgeEvent = {
-        type: "threadNameUpdated",
+        type: 'threadNameUpdated',
         threadId,
-        threadName: name
+        threadName: name,
       };
       this.#update((current) => ({
         ...current,
         threads: updateThreadSummaryState(current.threads, event),
-        detail: this.#applyEventToDetail(current.detail, current.selectedThreadId, event)
+        detail: this.#applyEventToDetail(
+          current.detail,
+          current.selectedThreadId,
+          event,
+        ),
       }));
       return response;
     } catch (error) {
@@ -220,10 +234,12 @@ export class BridgeThreadRuntime {
   async sendMessage(
     threadId: string,
     text: string,
-    settings?: ThreadTurnSettingsOverrides
+    settings?: ThreadTurnSettingsOverrides,
   ): Promise<void> {
     if (this.#isThreadCompactingPending(threadId)) {
-      throw new Error("Thread compaction is starting. Wait before sending another message.");
+      throw new Error(
+        'Thread compaction is starting. Wait before sending another message.',
+      );
     }
 
     const nextText = text.trim();
@@ -231,25 +247,29 @@ export class BridgeThreadRuntime {
       return;
     }
 
-    const input: UserInput[] = [{ type: "text", text: nextText }];
+    const input: UserInput[] = [{ type: 'text', text: nextText }];
     this.#updateMutations({ sendMessagePending: true, lastError: null });
 
     try {
       const response = await this.client.startTurn({
         threadId,
         input,
-        ...(settings !== undefined ? { settings } : {})
+        ...(settings !== undefined ? { settings } : {}),
       });
 
       this.#update((current) => ({
         ...current,
         threads:
-          current.threads.kind === "ready"
+          current.threads.kind === 'ready'
             ? {
-                kind: "ready",
-                threads: setThreadMessagePending(current.threads.threads, threadId, input)
+                kind: 'ready',
+                threads: setThreadMessagePending(
+                  current.threads.threads,
+                  threadId,
+                  input,
+                ),
               }
-            : current.threads
+            : current.threads,
       }));
 
       this.#applyStartedTurn(threadId, response.turn);
@@ -266,7 +286,7 @@ export class BridgeThreadRuntime {
 
   async compactThread(threadId: string): Promise<void> {
     if (this.#isThreadCompactingPending(threadId)) {
-      throw new Error("Thread compaction is already pending for this thread.");
+      throw new Error('Thread compaction is already pending for this thread.');
     }
 
     this.#setThreadCompacting(threadId, true);
@@ -281,7 +301,9 @@ export class BridgeThreadRuntime {
     }
   }
 
-  async startReview(request: ThreadReviewRequest): Promise<ThreadReviewResponse> {
+  async startReview(
+    request: ThreadReviewRequest,
+  ): Promise<ThreadReviewResponse> {
     this.#updateMutations({ lastError: null });
 
     try {
@@ -345,24 +367,27 @@ export class BridgeThreadRuntime {
     this.#clearReconnectTimer();
 
     if (!this.client.hasCredentials()) {
-      this.#applySessionLoss({ kind: "unpaired" });
+      this.#applySessionLoss({ kind: 'unpaired' });
       return;
     }
 
     try {
       if (this.#credentialsNeedRefresh()) {
-        this.#setConnectionState({ kind: "refreshing" });
+        this.#setConnectionState({ kind: 'refreshing' });
         await this.client.refreshSession();
       }
 
-      this.#setConnectionState({ kind: "resyncing" });
+      this.#setConnectionState({ kind: 'resyncing' });
       this.#update((current) => ({
         ...current,
-        threads: current.threads.kind === "ready" ? current.threads : { kind: "loading" },
+        threads:
+          current.threads.kind === 'ready'
+            ? current.threads
+            : { kind: 'loading' },
         detail:
-          current.selectedThreadId && current.detail.kind !== "ready"
-            ? { kind: "loading", threadId: current.selectedThreadId }
-            : current.detail
+          current.selectedThreadId && current.detail.kind !== 'ready'
+            ? { kind: 'loading', threadId: current.selectedThreadId }
+            : current.detail,
       }));
 
       const response = await this.client.listThreads();
@@ -371,16 +396,16 @@ export class BridgeThreadRuntime {
       this.#update((current) => ({
         ...current,
         threads: {
-          kind: "ready",
-          threads: response.data
-        }
+          kind: 'ready',
+          threads: response.data,
+        },
       }));
 
       if (!selectedThreadId) {
         this.#disconnectEvents();
         this.#update((current) => ({
           ...current,
-          detail: { kind: "idle" }
+          detail: { kind: 'idle' },
         }));
         this.#markAuthenticated();
         return;
@@ -389,12 +414,16 @@ export class BridgeThreadRuntime {
       this.#update((current) => ({
         ...current,
         detail:
-          current.detail.kind === "ready" && current.detail.thread.id === selectedThreadId
+          current.detail.kind === 'ready' &&
+          current.detail.thread.id === selectedThreadId
             ? current.detail
-            : { kind: "loading", threadId: selectedThreadId }
+            : { kind: 'loading', threadId: selectedThreadId },
       }));
 
-      const thread = await this.#readThreadDetail(selectedThreadId, response.data);
+      const thread = await this.#readThreadDetail(
+        selectedThreadId,
+        response.data,
+      );
       if (this.#snapshot.selectedThreadId !== selectedThreadId) {
         return;
       }
@@ -402,26 +431,29 @@ export class BridgeThreadRuntime {
       this.#update((current) => ({
         ...current,
         threads:
-          current.threads.kind === "ready"
+          current.threads.kind === 'ready'
             ? {
-                kind: "ready",
-                threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
+                kind: 'ready',
+                threads: upsertThreadSummary(
+                  current.threads.threads,
+                  toThreadSummary(thread),
+                ),
               }
             : current.threads,
-        detail: { kind: "ready", thread }
+        detail: { kind: 'ready', thread },
       }));
       this.#connectEvents(selectedThreadId);
       this.#markAuthenticated();
     } catch (error) {
       const classification = classifyBridgeFailure(error);
-      if (classification.kind === "requestError") {
-        if (this.#snapshot.threads.kind !== "ready") {
+      if (classification.kind === 'requestError') {
+        if (this.#snapshot.threads.kind !== 'ready') {
           this.#update((current) => ({
             ...current,
             threads: {
-              kind: "error",
-              message: classification.message
-            }
+              kind: 'error',
+              message: classification.message,
+            },
           }));
         }
 
@@ -429,67 +461,77 @@ export class BridgeThreadRuntime {
           this.#update((current) => ({
             ...current,
             detail: {
-              kind: "error",
-              threadId: current.selectedThreadId ?? "unknown",
-              message: classification.message
-            }
+              kind: 'error',
+              threadId: current.selectedThreadId ?? 'unknown',
+              message: classification.message,
+            },
           }));
         }
 
         this.#markAuthenticated();
-        if (reason === "manual") {
+        if (reason === 'manual') {
           throw error;
         }
         return;
       }
 
-      if (classification.kind === "unpaired") {
+      if (classification.kind === 'unpaired') {
         this.#applySessionLoss(
-          withOptionalMessage({ kind: "unpaired" }, classification.message)
+          withOptionalMessage({ kind: 'unpaired' }, classification.message),
         );
         return;
       }
 
-      if (classification.kind === "revoked" || classification.kind === "expired") {
+      if (
+        classification.kind === 'revoked' ||
+        classification.kind === 'expired'
+      ) {
         this.#applySessionLoss({
           kind: classification.kind,
-          ...(classification.message ? { message: classification.message } : {}),
+          ...(classification.message
+            ? { message: classification.message }
+            : {}),
           ...(classification.authErrorCode
             ? { authErrorCode: classification.authErrorCode }
-            : {})
+            : {}),
         });
         return;
       }
 
       this.#disconnectEvents();
       this.#setConnectionState({
-        kind: "disconnected",
-        ...(classification.message ? { message: classification.message } : {})
+        kind: 'disconnected',
+        ...(classification.message ? { message: classification.message } : {}),
       });
-      this.#scheduleReconnect(classification.message ?? "Bridge is disconnected");
+      this.#scheduleReconnect(
+        classification.message ?? 'Bridge is disconnected',
+      );
 
-      if (this.#snapshot.threads.kind !== "ready") {
+      if (this.#snapshot.threads.kind !== 'ready') {
         this.#update((current) => ({
           ...current,
           threads: {
-            kind: "error",
-            message: classification.message ?? "Bridge is disconnected"
-          }
+            kind: 'error',
+            message: classification.message ?? 'Bridge is disconnected',
+          },
         }));
       }
 
-      if (this.#snapshot.detail.kind !== "ready" && this.#snapshot.selectedThreadId) {
+      if (
+        this.#snapshot.detail.kind !== 'ready' &&
+        this.#snapshot.selectedThreadId
+      ) {
         this.#update((current) => ({
           ...current,
           detail: {
-            kind: "error",
-            threadId: current.selectedThreadId ?? "unknown",
-            message: classification.message ?? "Bridge is disconnected"
-          }
+            kind: 'error',
+            threadId: current.selectedThreadId ?? 'unknown',
+            message: classification.message ?? 'Bridge is disconnected',
+          },
         }));
       }
 
-      if (reason === "manual") {
+      if (reason === 'manual') {
         throw error;
       }
     }
@@ -508,13 +550,16 @@ export class BridgeThreadRuntime {
       this.#update((current) => ({
         ...current,
         threads:
-          current.threads.kind === "ready"
+          current.threads.kind === 'ready'
             ? {
-                kind: "ready",
-                threads: upsertThreadSummary(current.threads.threads, toThreadSummary(thread))
+                kind: 'ready',
+                threads: upsertThreadSummary(
+                  current.threads.threads,
+                  toThreadSummary(thread),
+                ),
               }
             : current.threads,
-        detail: { kind: "ready", thread }
+        detail: { kind: 'ready', thread },
       }));
     } catch (error) {
       if (this.#snapshot.selectedThreadId !== threadId) {
@@ -522,55 +567,66 @@ export class BridgeThreadRuntime {
       }
 
       const classification = classifyBridgeFailure(error);
-      if (classification.kind === "requestError") {
+      if (classification.kind === 'requestError') {
         this.#setActionError(error);
         this.#update((current) => ({
           ...current,
           detail: {
-            kind: "error",
+            kind: 'error',
             threadId,
-            message: classification.message
-          }
+            message: classification.message,
+          },
         }));
         return;
       }
 
-      if (classification.kind === "revoked" || classification.kind === "expired") {
+      if (
+        classification.kind === 'revoked' ||
+        classification.kind === 'expired'
+      ) {
         this.#applySessionLoss({
           kind: classification.kind,
-          ...(classification.message ? { message: classification.message } : {}),
+          ...(classification.message
+            ? { message: classification.message }
+            : {}),
           ...(classification.authErrorCode
             ? { authErrorCode: classification.authErrorCode }
-            : {})
+            : {}),
         });
         return;
       }
 
-      if (classification.kind === "unpaired") {
+      if (classification.kind === 'unpaired') {
         this.#applySessionLoss(
-          withOptionalMessage({ kind: "unpaired" }, classification.message)
+          withOptionalMessage({ kind: 'unpaired' }, classification.message),
         );
         return;
       }
 
       this.#setConnectionState({
-        kind: "reconnecting",
-        ...(classification.message ? { message: classification.message } : {})
+        kind: 'reconnecting',
+        ...(classification.message ? { message: classification.message } : {}),
       });
-      this.#scheduleReconnect(classification.message ?? "Bridge event stream disconnected");
+      this.#scheduleReconnect(
+        classification.message ?? 'Bridge event stream disconnected',
+      );
     }
   }
 
   async #readThreadDetail(
     threadId: string,
-    fallbackThreads?: ThreadSummary[]
+    fallbackThreads?: ThreadSummary[],
   ): Promise<ThreadDetail> {
     try {
       const response = await this.client.readThread(threadId);
       return this.#drainPendingEvents(threadId, response.thread);
     } catch (error) {
       const message = toErrorMessage(error);
-      if (message.includes("includeTurns is unavailable before first user message")) {
+      if (
+        message.includes(
+          'includeTurns is unavailable before first user message',
+        )
+      ) {
         const thread =
           fallbackThreads?.find((entry) => entry.id === threadId) ??
           (await this.#resolveThreadSummary(threadId));
@@ -589,17 +645,20 @@ export class BridgeThreadRuntime {
     }
 
     const currentDetail = this.#snapshot.detail;
-    if (currentDetail.kind === "ready" && currentDetail.thread.id === threadId) {
+    if (
+      currentDetail.kind === 'ready' &&
+      currentDetail.thread.id === threadId
+    ) {
       this.#update((current) => ({
         ...current,
         detail: {
-          kind: "ready",
+          kind: 'ready',
           thread: applyThreadEvent(currentDetail.thread, {
-            type: "turnStarted",
+            type: 'turnStarted',
             threadId,
-            turn
-          })
-        }
+            turn,
+          }),
+        },
       }));
       return;
     }
@@ -612,13 +671,13 @@ export class BridgeThreadRuntime {
     this.#update((current) => ({
       ...current,
       detail: {
-        kind: "ready",
+        kind: 'ready',
         thread: applyThreadEvent(toThreadDetail(thread), {
-          type: "turnStarted",
+          type: 'turnStarted',
           threadId,
-          turn
-        })
-      }
+          turn,
+        }),
+      },
     }));
   }
 
@@ -628,23 +687,27 @@ export class BridgeThreadRuntime {
     }
 
     const currentDetail = this.#snapshot.detail;
-    if (currentDetail.kind !== "ready" || currentDetail.thread.id !== threadId) {
+    if (
+      currentDetail.kind !== 'ready' ||
+      currentDetail.thread.id !== threadId
+    ) {
       return;
     }
 
     this.#update((current) => ({
-      ...(current.detail.kind === "ready" && current.detail.thread.id === threadId
+      ...(current.detail.kind === 'ready' &&
+      current.detail.thread.id === threadId
         ? {
             ...current,
             detail: {
-              kind: "ready" as const,
+              kind: 'ready' as const,
               thread: {
                 ...current.detail.thread,
-                settings
-              }
-            }
+                settings,
+              },
+            },
           }
-        : current)
+        : current),
     }));
   }
 
@@ -656,7 +719,11 @@ export class BridgeThreadRuntime {
           ...current,
           mutations: clearCompactingThreadOnEvent(current.mutations, event),
           threads: updateThreadSummaryState(current.threads, event),
-          detail: this.#applyEventToDetail(current.detail, current.selectedThreadId, event)
+          detail: this.#applyEventToDetail(
+            current.detail,
+            current.selectedThreadId,
+            event,
+          ),
         }));
       },
       onDisconnect: (error) => {
@@ -665,31 +732,40 @@ export class BridgeThreadRuntime {
         }
 
         const classification = classifyBridgeFailure(error);
-        if (classification.kind === "revoked" || classification.kind === "expired") {
+        if (
+          classification.kind === 'revoked' ||
+          classification.kind === 'expired'
+        ) {
           this.#applySessionLoss({
             kind: classification.kind,
-            ...(classification.message ? { message: classification.message } : {}),
+            ...(classification.message
+              ? { message: classification.message }
+              : {}),
             ...(classification.authErrorCode
               ? { authErrorCode: classification.authErrorCode }
-              : {})
+              : {}),
           });
           return;
         }
 
-        if (classification.kind === "unpaired") {
+        if (classification.kind === 'unpaired') {
           this.#applySessionLoss(
-            withOptionalMessage({ kind: "unpaired" }, classification.message)
+            withOptionalMessage({ kind: 'unpaired' }, classification.message),
           );
           return;
         }
 
         this.#disconnectEvents();
         this.#setConnectionState({
-          kind: "reconnecting",
-          ...(classification.message ? { message: classification.message } : {})
+          kind: 'reconnecting',
+          ...(classification.message
+            ? { message: classification.message }
+            : {}),
         });
-        this.#scheduleReconnect(classification.message ?? "Bridge event stream disconnected");
-      }
+        this.#scheduleReconnect(
+          classification.message ?? 'Bridge event stream disconnected',
+        );
+      },
     });
   }
 
@@ -705,9 +781,9 @@ export class BridgeThreadRuntime {
       ...current,
       selectedThreadId: thread.id,
       detail: {
-        kind: "ready",
-        thread
-      }
+        kind: 'ready',
+        thread,
+      },
     }));
     this.#connectEvents(thread.id);
   }
@@ -715,21 +791,21 @@ export class BridgeThreadRuntime {
   #applyEventToDetail(
     detail: ThreadDetailState,
     selectedThreadId: string | null,
-    event: BridgeEvent
+    event: BridgeEvent,
   ): ThreadDetailState {
     if (selectedThreadId !== event.threadId) {
       return detail;
     }
 
-    if (detail.kind !== "ready") {
+    if (detail.kind !== 'ready') {
       const queued = this.#pendingEvents.get(event.threadId) ?? [];
       this.#pendingEvents.set(event.threadId, [...queued, event]);
       return detail;
     }
 
     return {
-      kind: "ready",
-      thread: applyThreadEvent(detail.thread, event)
+      kind: 'ready',
+      thread: applyThreadEvent(detail.thread, event),
     };
   }
 
@@ -738,16 +814,19 @@ export class BridgeThreadRuntime {
     this.#pendingEvents.delete(threadId);
     return queuedEvents.reduce(
       (currentThread, event) => applyThreadEvent(currentThread, event),
-      thread
+      thread,
     );
   }
 
   #findThreadSummary(threadId: string): ThreadSummary | null {
-    if (this.#snapshot.threads.kind !== "ready") {
+    if (this.#snapshot.threads.kind !== 'ready') {
       return null;
     }
 
-    return this.#snapshot.threads.threads.find((thread) => thread.id === threadId) ?? null;
+    return (
+      this.#snapshot.threads.threads.find((thread) => thread.id === threadId) ??
+      null
+    );
   }
 
   async #resolveThreadSummary(threadId: string): Promise<ThreadSummary | null> {
@@ -760,13 +839,14 @@ export class BridgeThreadRuntime {
     let matchedThread: ThreadSummary | null = null;
 
     this.#update((current) => {
-      matchedThread = response.data.find((thread) => thread.id === threadId) ?? null;
+      matchedThread =
+        response.data.find((thread) => thread.id === threadId) ?? null;
       return {
         ...current,
         threads: {
-          kind: "ready",
-          threads: response.data
-        }
+          kind: 'ready',
+          threads: response.data,
+        },
       };
     });
 
@@ -780,7 +860,10 @@ export class BridgeThreadRuntime {
     this.#pendingEvents.clear();
     this.#snapshot = {
       ...nextSnapshot,
-      connection: withLastSyncedAt(nextConnection, this.#snapshot.connection.lastSyncedAt)
+      connection: withLastSyncedAt(
+        nextConnection,
+        this.#snapshot.connection.lastSyncedAt,
+      ),
     };
     for (const listener of this.#listeners) {
       listener();
@@ -800,18 +883,23 @@ export class BridgeThreadRuntime {
   #markAuthenticated(): void {
     this.#reconnectAttempt = 0;
     this.#setConnectionState({
-      kind: "authenticated",
-      lastSyncedAt: Math.floor(Date.now() / 1000)
+      kind: 'authenticated',
+      lastSyncedAt: Math.floor(Date.now() / 1000),
     });
   }
 
   #scheduleReconnect(message: string): void {
-    if (this.#reconnectTimer || this.#disposed || !this.client.hasCredentials()) {
+    if (
+      this.#reconnectTimer ||
+      this.#disposed ||
+      !this.client.hasCredentials()
+    ) {
       return;
     }
 
     const delay =
-      Math.min(1000 * 2 ** this.#reconnectAttempt, 30_000) + Math.floor(Math.random() * 1000);
+      Math.min(1000 * 2 ** this.#reconnectAttempt, 30_000) +
+      Math.floor(Math.random() * 1000);
     this.#reconnectAttempt++;
     this.#reconnectTimer = setTimeout(() => {
       this.#reconnectTimer = null;
@@ -820,10 +908,10 @@ export class BridgeThreadRuntime {
       }
 
       this.#setConnectionState({
-        kind: "reconnecting",
-        message
+        kind: 'reconnecting',
+        message,
       });
-      void this.resyncFromBridge("reconnect");
+      void this.resyncFromBridge('reconnect');
     }, delay);
   }
 
@@ -837,7 +925,10 @@ export class BridgeThreadRuntime {
   #setConnectionState(nextConnection: LocalConnectionState): void {
     this.#update((current) => ({
       ...current,
-      connection: withLastSyncedAt(nextConnection, current.connection.lastSyncedAt)
+      connection: withLastSyncedAt(
+        nextConnection,
+        current.connection.lastSyncedAt,
+      ),
     }));
   }
 
@@ -861,42 +952,51 @@ export class BridgeThreadRuntime {
         ...current,
         mutations: {
           ...current.mutations,
-          compactingThreadIds: nextIds
-        }
+          compactingThreadIds: nextIds,
+        },
       };
     });
   }
 
-  #updateMutations(next: Partial<ThreadRuntimeSnapshot["mutations"]>): void {
+  #updateMutations(next: Partial<ThreadRuntimeSnapshot['mutations']>): void {
     this.#update((current) => ({
       ...current,
       mutations: {
         ...current.mutations,
-        ...next
-      }
+        ...next,
+      },
     }));
   }
 
-  #setPendingRequestResponse(requestId: JsonRpcRequestId, isPending: boolean): void {
+  #setPendingRequestResponse(
+    requestId: JsonRpcRequestId,
+    isPending: boolean,
+  ): void {
     const requestKey = toRequestKey(requestId);
     this.#update((current) => {
       const nextIds = isPending
-        ? current.mutations.respondingRequestIds.some((id) => toRequestKey(id) === requestKey)
+        ? current.mutations.respondingRequestIds.some(
+            (id) => toRequestKey(id) === requestKey,
+          )
           ? current.mutations.respondingRequestIds
           : [...current.mutations.respondingRequestIds, requestId]
-        : current.mutations.respondingRequestIds.filter((id) => toRequestKey(id) !== requestKey);
+        : current.mutations.respondingRequestIds.filter(
+            (id) => toRequestKey(id) !== requestKey,
+          );
 
       return {
         ...current,
         mutations: {
           ...current.mutations,
-          respondingRequestIds: nextIds
-        }
+          respondingRequestIds: nextIds,
+        },
       };
     });
   }
 
-  #update(updater: (current: ThreadRuntimeSnapshot) => ThreadRuntimeSnapshot): void {
+  #update(
+    updater: (current: ThreadRuntimeSnapshot) => ThreadRuntimeSnapshot,
+  ): void {
     this.#snapshot = updater(this.#snapshot);
     for (const listener of this.#listeners) {
       listener();
@@ -906,78 +1006,81 @@ export class BridgeThreadRuntime {
 
 function classifyBridgeFailure(error: unknown): BridgeFailureClassification {
   if (error instanceof BridgeClientError) {
-    if (error.kind === "stream") {
+    if (error.kind === 'stream') {
       return {
-        kind: "requestError",
-        message: error.message
+        kind: 'requestError',
+        message: error.message,
       };
     }
 
     if (
-      error.kind === "http" &&
+      error.kind === 'http' &&
       error.status !== 401 &&
       error.code === undefined
     ) {
       return {
-        kind: "requestError",
-        message: error.message
-      };
-    }
-
-    if (error.code === "missingCredentials" || error.kind === "sessionUnavailable") {
-      return {
-        kind: "unpaired",
+        kind: 'requestError',
         message: error.message,
-        ...(error.code ? { authErrorCode: error.code } : {})
-      };
-    }
-
-    if (error.code === "revokedDevice") {
-      return {
-        kind: "revoked",
-        message: error.message,
-        authErrorCode: error.code
       };
     }
 
     if (
-      error.code === "invalidRefreshToken" ||
-      error.code === "expiredRefreshToken"
+      error.code === 'missingCredentials' ||
+      error.kind === 'sessionUnavailable'
     ) {
       return {
-        kind: "expired",
+        kind: 'unpaired',
         message: error.message,
-        authErrorCode: error.code
+        ...(error.code ? { authErrorCode: error.code } : {}),
+      };
+    }
+
+    if (error.code === 'revokedDevice') {
+      return {
+        kind: 'revoked',
+        message: error.message,
+        authErrorCode: error.code,
+      };
+    }
+
+    if (
+      error.code === 'invalidRefreshToken' ||
+      error.code === 'expiredRefreshToken'
+    ) {
+      return {
+        kind: 'expired',
+        message: error.message,
+        authErrorCode: error.code,
       };
     }
   }
 
   return {
-    kind: "disconnected",
-    message: toErrorMessage(error)
+    kind: 'disconnected',
+    message: toErrorMessage(error),
   };
 }
 
 function clearCompactingThreadOnEvent(
-  mutations: ThreadRuntimeSnapshot["mutations"],
-  event: BridgeEvent
-): ThreadRuntimeSnapshot["mutations"] {
+  mutations: ThreadRuntimeSnapshot['mutations'],
+  event: BridgeEvent,
+): ThreadRuntimeSnapshot['mutations'] {
   switch (event.type) {
-    case "turnStarted":
-    case "turnCompleted":
+    case 'turnStarted':
+    case 'turnCompleted':
       if (!mutations.compactingThreadIds.includes(event.threadId)) {
         return mutations;
       }
       return {
         ...mutations,
         compactingThreadIds: mutations.compactingThreadIds.filter(
-          (threadId) => threadId !== event.threadId
-        )
+          (threadId) => threadId !== event.threadId,
+        ),
       };
-    case "itemStarted":
-    case "itemCompleted":
+    case 'itemStarted':
+    case 'itemCompleted':
       if (
-        event.item.type !== "contextCompaction" ||
+        event.item.type !== 'contextCompaction' ||
         !mutations.compactingThreadIds.includes(event.threadId)
       ) {
         return mutations;
@@ -985,8 +1088,8 @@ function clearCompactingThreadOnEvent(
       return {
         ...mutations,
         compactingThreadIds: mutations.compactingThreadIds.filter(
-          (threadId) => threadId !== event.threadId
-        )
+          (threadId) => threadId !== event.threadId,
+        ),
       };
     default:
       return mutations;
@@ -995,38 +1098,40 @@ function clearCompactingThreadOnEvent(
 
 function classifyTerminalSessionState(
   code: BridgeAuthErrorCode | undefined,
-  message: string
+  message: string,
 ): LocalConnectionState {
-  if (code === "revokedDevice") {
+  if (code === 'revokedDevice') {
     return {
-      kind: "revoked",
+      kind: 'revoked',
       message,
-      authErrorCode: code
+      authErrorCode: code,
     };
   }
 
-  if (code === "invalidRefreshToken" || code === "expiredRefreshToken") {
+  if (code === 'invalidRefreshToken' || code === 'expiredRefreshToken') {
     return {
-      kind: "expired",
+      kind: 'expired',
       message,
-      authErrorCode: code
+      authErrorCode: code,
     };
   }
 
   return {
-    kind: "unpaired",
+    kind: 'unpaired',
     message,
-    ...(code ? { authErrorCode: code } : {})
+    ...(code ? { authErrorCode: code } : {}),
   };
 }
 
-function isTerminalConnectionState(kind: LocalConnectionState["kind"]): boolean {
-  return kind === "revoked" || kind === "expired";
+function isTerminalConnectionState(
+  kind: LocalConnectionState['kind'],
+): boolean {
+  return kind === 'revoked' || kind === 'expired';
 }
 
 function withLastSyncedAt(
   nextConnection: LocalConnectionState,
-  lastSyncedAt: number | undefined
+  lastSyncedAt: number | undefined,
 ): LocalConnectionState {
   if (nextConnection.lastSyncedAt !== undefined || lastSyncedAt === undefined) {
     return nextConnection;
@@ -1034,13 +1139,13 @@ function withLastSyncedAt(
 
   return {
     ...nextConnection,
-    lastSyncedAt
+    lastSyncedAt,
   };
 }
 
-function withOptionalMessage<T extends { kind: LocalConnectionState["kind"] }>(
+function withOptionalMessage<T extends { kind: LocalConnectionState['kind'] }>(
   nextConnection: T,
-  message: string | undefined
+  message: string | undefined,
 ): T | (T & { message: string }) {
   if (!message) {
     return nextConnection;
@@ -1048,7 +1153,7 @@ function withOptionalMessage<T extends { kind: LocalConnectionState["kind"] }>(
 
   return {
     ...nextConnection,
-    message
+    message,
   };
 }
 
@@ -1057,9 +1162,11 @@ function toErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  return error instanceof Error ? error.message : "Unknown client error";
+  return error instanceof Error ? error.message : 'Unknown client error';
 }
 
 function toRequestKey(requestId: JsonRpcRequestId): string {
-  return typeof requestId === "string" ? `string:${requestId}` : `number:${requestId}`;
+  return typeof requestId === 'string'
+    ? `string:${requestId}`
+    : `number:${requestId}`;
 }

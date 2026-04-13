@@ -36,11 +36,11 @@ If this repository's assumptions conflict with the upstream Codex source, stop a
 2. Read the relevant local code, docs, and existing project files before editing.
 3. For Codex integration tasks, read `docs/reference/2026-04-11-codex-upstream-integration-guide.md` before doing a fresh upstream repo sweep.
 4. Prefer the smallest coherent change that advances the current milestone.
-4. Keep browser and Tauri-mobile behavior aligned unless platform differences are explicitly required.
-5. Keep core client logic Web-first. Do not move domain logic into Tauri-specific code without a strong reason.
-6. Keep bridge-facing and relay-facing protocol definitions typed and centralized.
-7. Do not introduce private Codex desktop IPC dependencies as a core architectural requirement.
-8. Before finishing a task, review the changed files for consistency with the current spec and plan.
+5. Keep browser and Tauri-mobile behavior aligned unless platform differences are explicitly required.
+6. Keep core client logic Web-first. Do not move domain logic into Tauri-specific code without a strong reason.
+7. Keep bridge-facing and relay-facing protocol definitions typed and centralized.
+8. Do not introduce private Codex desktop IPC dependencies as a core architectural requirement.
+9. Before finishing a task, review the changed files for consistency with the current spec and plan.
 
 ## Architecture Constraints
 
@@ -70,5 +70,6 @@ Run focused checks appropriate to the files you changed. At minimum, preserve:
 - type correctness
 - protocol/schema consistency
 - documentation consistency
+- code formatting (run `pnpm fmt` before committing; config is `.oxfmtrc.json`)
 
 If a task introduces a new architectural assumption, document it before considering the task complete.

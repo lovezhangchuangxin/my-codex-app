@@ -1,24 +1,24 @@
-import { startTransition, useEffect, useState } from "react";
-import { useLocation, useNavigate, useParams } from "react-router-dom";
-import { toast } from "sonner";
+import { startTransition, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { toast } from 'sonner';
 
-import { ProjectImportSheet } from "@/features/projects/components/project-import-sheet";
-import { ProjectsPanel } from "@/features/projects/components/projects-panel";
-import { ProjectSessionsPanel } from "@/features/projects/components/project-sessions-panel";
-import { useProjectHome } from "@/features/projects/hooks/use-project-home";
-import { ThreadDetailPanel } from "@/features/threads/components/thread-detail-panel";
-import { useMobilePanel } from "@/hooks/use-mobile-panel";
-import { useMediaQuery } from "@/hooks/use-media-query";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import { useRuntime } from "@/lib/runtime/runtime-provider";
-import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
-import type { ThreadDetailState, ThreadListState } from "@my-codex-app/sdk";
+import { ProjectImportSheet } from '@/features/projects/components/project-import-sheet';
+import { ProjectsPanel } from '@/features/projects/components/projects-panel';
+import { ProjectSessionsPanel } from '@/features/projects/components/project-sessions-panel';
+import { useProjectHome } from '@/features/projects/hooks/use-project-home';
+import { ThreadDetailPanel } from '@/features/threads/components/thread-detail-panel';
+import { useMobilePanel } from '@/hooks/use-mobile-panel';
+import { useMediaQuery } from '@/hooks/use-media-query';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import { useRuntime } from '@/lib/runtime/runtime-provider';
+import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
+import type { ThreadDetailState, ThreadListState } from '@my-codex-app/sdk';
 import type {
   LocalConnectionState,
   ThreadReviewRequest,
   ThreadSummary,
-  ThreadTurnSettingsOverrides
-} from "@my-codex-app/protocol";
+  ThreadTurnSettingsOverrides,
+} from '@my-codex-app/protocol';
 
 export function ThreadsLayout() {
   const { t } = useI18n();
@@ -27,34 +27,43 @@ export function ThreadsLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { threadId } = useParams();
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const mobilePanel = useMobilePanel();
   const [projectImportOpen, setProjectImportOpen] = useState(false);
 
   const routeThreadId = threadId ?? null;
-  const highlightedRequestKey = new URLSearchParams(location.search).get("request");
+  const highlightedRequestKey = new URLSearchParams(location.search).get(
+    'request',
+  );
   const routeProjectPath = resolveThreadProjectPath(
     routeThreadId,
     snapshot.selectedThreadId,
     snapshot.detail,
-    snapshot.threads
+    snapshot.threads,
   );
-  const projectHome = useProjectHome(snapshot.connection, routeProjectPath, snapshot.threads);
+  const projectHome = useProjectHome(
+    snapshot.connection,
+    routeProjectPath,
+    snapshot.threads,
+  );
   const selectedProjectPath = isDesktop
-    ? projectHome.selectedProjectPath ?? routeProjectPath
-    : routeProjectPath ?? projectHome.selectedProjectPath;
+    ? (projectHome.selectedProjectPath ?? routeProjectPath)
+    : (routeProjectPath ?? projectHome.selectedProjectPath);
   const selectedProject =
-    projectHome.projectsState.kind === "ready" && selectedProjectPath
-      ? projectHome.projectsState.projects.find((project) => project.path === selectedProjectPath) ??
-        null
+    projectHome.projectsState.kind === 'ready' && selectedProjectPath
+      ? (projectHome.projectsState.projects.find(
+          (project) => project.path === selectedProjectPath,
+        ) ?? null)
       : null;
 
   // Desktop: use URL param. Mobile: use panel state machine.
-  const activeThreadId = isDesktop ? routeThreadId : mobilePanel.selectedThreadId;
+  const activeThreadId = isDesktop
+    ? routeThreadId
+    : mobilePanel.selectedThreadId;
 
   const displayedDetailState: ThreadDetailState =
     activeThreadId === null
-      ? { kind: "idle" }
+      ? { kind: 'idle' }
       : snapshot.selectedThreadId === activeThreadId
         ? snapshot.detail
         : unresolvedRouteDetailState(activeThreadId, snapshot.connection, t);
@@ -63,7 +72,9 @@ export function ThreadsLayout() {
     : snapshot.threads;
 
   useEffect(() => {
-    void runtime.selectThread(isDesktop ? routeThreadId : mobilePanel.selectedThreadId);
+    void runtime.selectThread(
+      isDesktop ? routeThreadId : mobilePanel.selectedThreadId,
+    );
   }, [runtime, isDesktop, routeThreadId, mobilePanel.selectedThreadId]);
 
   useEffect(() => {
@@ -80,7 +91,7 @@ export function ThreadsLayout() {
     if (
       !isDesktop &&
       routeThreadId &&
-      (mobilePanel.view !== "thread-detail" ||
+      (mobilePanel.view !== 'thread-detail' ||
         mobilePanel.selectedThreadId !== routeThreadId ||
         (selectedProjectPath !== null &&
           mobilePanel.selectedProjectPath !== selectedProjectPath))
@@ -138,7 +149,9 @@ export function ThreadsLayout() {
     }
   }
 
-  async function handleImportProject(request: Parameters<typeof projectHome.importProject>[0]) {
+  async function handleImportProject(
+    request: Parameters<typeof projectHome.importProject>[0],
+  ) {
     const project = await projectHome.importProject(request);
     if (isDesktop) {
       projectHome.selectProject(project.path);
@@ -151,7 +164,7 @@ export function ThreadsLayout() {
   async function handleSendMessage(
     activeId: string,
     text: string,
-    settings?: ThreadTurnSettingsOverrides
+    settings?: ThreadTurnSettingsOverrides,
   ) {
     try {
       await runtime.sendMessage(activeId, text, settings);
@@ -190,7 +203,9 @@ export function ThreadsLayout() {
     }
   }
 
-  async function handleRespond(request: Parameters<typeof runtime.respondToRequest>[0]) {
+  async function handleRespond(
+    request: Parameters<typeof runtime.respondToRequest>[0],
+  ) {
     try {
       await runtime.respondToRequest(request);
       return true;
@@ -202,14 +217,16 @@ export function ThreadsLayout() {
 
   // Mobile: full-screen panel switching
   if (!isDesktop) {
-    if (mobilePanel.view === "thread-detail" && mobilePanel.selectedThreadId) {
+    if (mobilePanel.view === 'thread-detail' && mobilePanel.selectedThreadId) {
       return (
         <div className="h-full">
           <ThreadDetailPanel
             connectionState={snapshot.connection}
             compactPending={
               mobilePanel.selectedThreadId !== null &&
-              snapshot.mutations.compactingThreadIds.includes(mobilePanel.selectedThreadId)
+              snapshot.mutations.compactingThreadIds.includes(
+                mobilePanel.selectedThreadId,
+              )
             }
             detailState={displayedDetailState}
             highlightedRequestKey={highlightedRequestKey}
@@ -228,13 +245,17 @@ export function ThreadsLayout() {
             respondingRequestIds={snapshot.mutations.respondingRequestIds}
             selectedThreadId={mobilePanel.selectedThreadId}
             sendMessagePending={snapshot.mutations.sendMessagePending}
-            threadsState={selectedProjectPath !== null ? projectHome.sessionsState : detailThreadsState}
+            threadsState={
+              selectedProjectPath !== null
+                ? projectHome.sessionsState
+                : detailThreadsState
+            }
           />
         </div>
       );
     }
 
-    if (mobilePanel.view === "project-sessions" && selectedProjectPath) {
+    if (mobilePanel.view === 'project-sessions' && selectedProjectPath) {
       return (
         <div className="h-full">
           <ProjectSessionsPanel
@@ -317,7 +338,7 @@ export function ThreadsLayout() {
           lastError={snapshot.mutations.lastError}
           onBack={() => {
             startTransition(() => {
-              navigate("/threads");
+              navigate('/threads');
             });
           }}
           onCompactThread={handleCompactThread}
@@ -346,41 +367,44 @@ export function ThreadsLayout() {
 }
 
 function toErrorMessage(error: unknown, t: (key: string) => string) {
-  return error instanceof Error ? error.message : t("common.unknownClientError");
+  return error instanceof Error
+    ? error.message
+    : t('common.unknownClientError');
 }
 
 function unresolvedRouteDetailState(
   threadId: string,
   connectionState: LocalConnectionState,
-  t: (key: string) => string
+  t: (key: string) => string,
 ): ThreadDetailState {
   switch (connectionState.kind) {
-    case "unpaired":
+    case 'unpaired':
       return {
-        kind: "error",
+        kind: 'error',
         threadId,
-        message: t("detail.banner.unpaired.message")
+        message: t('detail.banner.unpaired.message'),
       };
-    case "revoked":
+    case 'revoked':
       return {
-        kind: "error",
+        kind: 'error',
         threadId,
-        message: connectionState.message ?? t("detail.banner.revoked.message")
+        message: connectionState.message ?? t('detail.banner.revoked.message'),
       };
-    case "expired":
+    case 'expired':
       return {
-        kind: "error",
+        kind: 'error',
         threadId,
-        message: connectionState.message ?? t("detail.banner.expired.message")
+        message: connectionState.message ?? t('detail.banner.expired.message'),
       };
-    case "disconnected":
+    case 'disconnected':
       return {
-        kind: "error",
+        kind: 'error',
         threadId,
-        message: connectionState.message ?? t("detail.banner.disconnected.message")
+        message:
+          connectionState.message ?? t('detail.banner.disconnected.message'),
       };
     default:
-      return { kind: "loading", threadId };
+      return { kind: 'loading', threadId };
   }
 }
 
@@ -388,37 +412,44 @@ function resolveThreadProjectPath(
   threadId: string | null,
   selectedThreadId: string | null,
   detailState: ThreadDetailState,
-  threadsState: ReturnType<typeof useRuntimeSnapshot>["threads"]
+  threadsState: ReturnType<typeof useRuntimeSnapshot>['threads'],
 ): string | null {
   if (threadId === null) {
     return null;
   }
 
-  if (selectedThreadId === threadId && detailState.kind === "ready") {
+  if (selectedThreadId === threadId && detailState.kind === 'ready') {
     return detailState.thread.cwd;
   }
 
-  if (threadsState.kind !== "ready") {
+  if (threadsState.kind !== 'ready') {
     return null;
   }
 
-  return threadsState.threads.find((thread) => thread.id === threadId)?.cwd ?? null;
+  return (
+    threadsState.threads.find((thread) => thread.id === threadId)?.cwd ?? null
+  );
 }
 
 function filterThreadsStateByProject(
   threadsState: ThreadListState,
-  projectPath: string
+  projectPath: string,
 ): ThreadListState {
-  if (threadsState.kind !== "ready") {
+  if (threadsState.kind !== 'ready') {
     return threadsState;
   }
 
   return {
-    kind: "ready",
-    threads: threadsState.threads.filter((thread) => isThreadInProject(thread, projectPath))
+    kind: 'ready',
+    threads: threadsState.threads.filter((thread) =>
+      isThreadInProject(thread, projectPath),
+    ),
   };
 }
 
-function isThreadInProject(thread: ThreadSummary, projectPath: string): boolean {
+function isThreadInProject(
+  thread: ThreadSummary,
+  projectPath: string,
+): boolean {
   return thread.cwd === projectPath;
 }

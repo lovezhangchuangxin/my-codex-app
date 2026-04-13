@@ -1,13 +1,13 @@
-import { useI18n } from "@/lib/i18n/use-i18n";
-import type { ThreadSummary } from "@my-codex-app/protocol";
+import { useI18n } from '@/lib/i18n/use-i18n';
+import type { ThreadSummary } from '@my-codex-app/protocol';
 
-import { ThreadCard } from "./thread-card";
+import { ThreadCard } from './thread-card';
 
 export function WorkspaceGroup({
   isSelected,
   onOpen,
   threads,
-  workspace
+  workspace,
 }: {
   isSelected: (id: string) => boolean;
   onOpen: (threadId: string) => void;
@@ -28,7 +28,7 @@ export function WorkspaceGroup({
             {workspace}
           </h3>
           <p className="mt-1 font-mono text-[0.7rem] text-muted-foreground uppercase">
-            {t("thread.list.workspaceCount", { count: threads.length })}
+            {t('thread.list.workspaceCount', { count: threads.length })}
           </p>
         </div>
       </div>

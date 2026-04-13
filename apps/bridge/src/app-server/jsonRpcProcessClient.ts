@@ -1,15 +1,15 @@
-import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { EventEmitter } from "node:events";
-import { once } from "node:events";
-import { createInterface } from "node:readline";
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { EventEmitter } from 'node:events';
+import { once } from 'node:events';
+import { createInterface } from 'node:readline';
 
 import type {
   JsonRpcFailure,
   JsonRpcRequest,
   JsonRpcSuccess,
   NotificationEnvelope,
-  RequestEnvelope
-} from "./types";
+  RequestEnvelope,
+} from './types';
 
 type PendingRequest = {
   resolve: (value: unknown) => void;
@@ -22,24 +22,27 @@ export class JsonRpcProcessClient extends EventEmitter {
   #nextRequestId = 1;
   #pendingRequests = new Map<number, PendingRequest>();
 
-  constructor(private readonly command = "codex", private readonly args = ["app-server"]) {
+  constructor(
+    private readonly command = 'codex',
+    private readonly args = ['app-server'],
+  ) {
     super();
     this.#child = spawn(this.command, this.args, {
-      stdio: ["pipe", "pipe", "pipe"]
+      stdio: ['pipe', 'pipe', 'pipe'],
     });
     this.#lineReader = createInterface({ input: this.#child.stdout });
-    this.#lineReader.on("line", (line) => {
+    this.#lineReader.on('line', (line) => {
       this.#handleLine(line);
     });
-    this.#child.stderr.on("data", (chunk) => {
-      const text = chunk.toString("utf8").trim();
+    this.#child.stderr.on('data', (chunk) => {
+      const text = chunk.toString('utf8').trim();
       if (text.length > 0) {
         console.error(`[app-server] ${text}`);
       }
     });
-    this.#child.on("exit", (code, signal) => {
+    this.#child.on('exit', (code, signal) => {
       const reason = new Error(
-        `codex app-server exited before request completed (code=${code ?? "null"} signal=${signal ?? "null"})`
+        `codex app-server exited before request completed (code=${code ?? 'null'} signal=${signal ?? 'null'})`,
       );
       for (const pending of this.#pendingRequests.values()) {
         pending.reject(reason);
@@ -48,13 +51,16 @@ export class JsonRpcProcessClient extends EventEmitter {
     });
   }
 
-  async sendRequest<TParams, TResult>(method: string, params: TParams): Promise<TResult> {
+  async sendRequest<TParams, TResult>(
+    method: string,
+    params: TParams,
+  ): Promise<TResult> {
     const id = this.#nextRequestId++;
     const request: JsonRpcRequest<TParams> = { id, method, params };
     const promise = new Promise<TResult>((resolve, reject) => {
       this.#pendingRequests.set(id, {
         resolve: (value) => resolve(value as TResult),
-        reject
+        reject,
       });
     });
     this.#write(request as unknown as Record<string, unknown>);
@@ -64,14 +70,14 @@ export class JsonRpcProcessClient extends EventEmitter {
   sendResponse(id: number | string, result: unknown): void {
     this.#write({
       id,
-      result
+      result,
     });
   }
 
   sendNotification(method: string, params: Record<string, unknown>): void {
     this.#write({
       method,
-      params
+      params,
     });
   }
 
@@ -81,13 +87,13 @@ export class JsonRpcProcessClient extends EventEmitter {
 
     const exitedGracefully = await waitForExit(this.#child, 500);
     if (!exitedGracefully && !this.#child.killed) {
-      this.#child.kill("SIGTERM");
-      await once(this.#child, "exit");
+      this.#child.kill('SIGTERM');
+      await once(this.#child, 'exit');
     }
   }
 
   #write(payload: Record<string, unknown>): void {
-    const message = { jsonrpc: "2.0", ...payload };
+    const message = { jsonrpc: '2.0', ...payload };
     this.#child.stdin.write(`${JSON.stringify(message)}\n`);
   }
 
@@ -96,21 +102,26 @@ export class JsonRpcProcessClient extends EventEmitter {
       return;
     }
 
-    const payload = JSON.parse(line) as Partial<JsonRpcSuccess<unknown> & JsonRpcFailure> & {
+    const payload = JSON.parse(line) as Partial<
+      JsonRpcSuccess<unknown> & JsonRpcFailure
+    > & {
       method?: string;
     };
 
     if (payload.method) {
-      if ("id" in payload && (typeof payload.id === "number" || typeof payload.id === "string")) {
-        this.emit("request", payload as RequestEnvelope);
+      if (
+        'id' in payload &&
+        (typeof payload.id === 'number' || typeof payload.id === 'string')
+      ) {
+        this.emit('request', payload as RequestEnvelope);
         return;
       }
 
-      this.emit("notification", payload as NotificationEnvelope);
+      this.emit('notification', payload as NotificationEnvelope);
       return;
     }
 
-    if (typeof payload.id !== "number") {
+    if (typeof payload.id !== 'number') {
       return;
     }
 
@@ -121,7 +132,7 @@ export class JsonRpcProcessClient extends EventEmitter {
 
     this.#pendingRequests.delete(payload.id);
 
-    if ("error" in payload && payload.error) {
+    if ('error' in payload && payload.error) {
       pending.reject(new Error(payload.error.message));
       return;
     }
@@ -132,7 +143,7 @@ export class JsonRpcProcessClient extends EventEmitter {
 
 async function waitForExit(
   child: ChildProcessWithoutNullStreams,
-  timeoutMs: number
+  timeoutMs: number,
 ): Promise<boolean> {
   if (child.exitCode !== null || child.signalCode !== null) {
     return true;
@@ -151,9 +162,9 @@ async function waitForExit(
 
     const cleanup = () => {
       clearTimeout(timer);
-      child.off("exit", onExit);
+      child.off('exit', onExit);
     };
 
-    child.on("exit", onExit);
+    child.on('exit', onExit);
   });
 }

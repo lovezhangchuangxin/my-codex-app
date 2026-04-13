@@ -1,26 +1,26 @@
-import { useCallback, useEffect, useState } from "react";
-import { KeyRound } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from 'react';
+import { KeyRound } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { bridgeHealthUrl } from "@/lib/env";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import { useBridgeClient, useRuntime } from "@/lib/runtime/runtime-provider";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { bridgeHealthUrl } from '@/lib/env';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import { useBridgeClient, useRuntime } from '@/lib/runtime/runtime-provider';
 
-import { detectDeviceInfo } from "./device-info";
+import { detectDeviceInfo } from './device-info';
 
 type PairingState =
-  | { status: "idle" }
-  | { status: "submitting" }
-  | { status: "success" }
-  | { message: string; status: "error" };
+  | { status: 'idle' }
+  | { status: 'submitting' }
+  | { status: 'success' }
+  | { message: string; status: 'error' };
 
 type BridgeAvailability =
-  | { status: "unknown" }
-  | { status: "reachable" }
-  | { status: "unreachable" };
+  | { status: 'unknown' }
+  | { status: 'reachable' }
+  | { status: 'unreachable' };
 
 export function PairingScreen() {
   const { t } = useI18n();
@@ -28,22 +28,27 @@ export function PairingScreen() {
   const runtime = useRuntime();
   const navigate = useNavigate();
 
-  const [pairingCode, setPairingCode] = useState("");
-  const [pairingState, setPairingState] = useState<PairingState>({ status: "idle" });
-  const [bridgeAvailability, setBridgeAvailability] = useState<BridgeAvailability>({
-    status: "unknown"
+  const [pairingCode, setPairingCode] = useState('');
+  const [pairingState, setPairingState] = useState<PairingState>({
+    status: 'idle',
   });
+  const [bridgeAvailability, setBridgeAvailability] =
+    useState<BridgeAvailability>({
+      status: 'unknown',
+    });
 
   useEffect(() => {
     let cancelled = false;
 
     async function checkBridge() {
       try {
-        const response = await fetch(bridgeHealthUrl, { signal: AbortSignal.timeout(5000) });
-        if (!response.ok) throw new Error("not ok");
-        if (!cancelled) setBridgeAvailability({ status: "reachable" });
+        const response = await fetch(bridgeHealthUrl, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!response.ok) throw new Error('not ok');
+        if (!cancelled) setBridgeAvailability({ status: 'reachable' });
       } catch {
-        if (!cancelled) setBridgeAvailability({ status: "unreachable" });
+        if (!cancelled) setBridgeAvailability({ status: 'unreachable' });
       }
     }
 
@@ -60,24 +65,24 @@ export function PairingScreen() {
       const code = pairingCode.trim();
       if (code.length === 0) return;
 
-      setPairingState({ status: "submitting" });
+      setPairingState({ status: 'submitting' });
 
       try {
         const device = detectDeviceInfo();
         await bridgeClient.completePairing({ code, device });
-        setPairingState({ status: "success" });
+        setPairingState({ status: 'success' });
         await runtime.bootstrap();
-        navigate("/threads", { replace: true });
+        navigate('/threads', { replace: true });
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : t("pairing.error.generic");
-        setPairingState({ status: "error", message });
+          error instanceof Error ? error.message : t('pairing.error.generic');
+        setPairingState({ status: 'error', message });
       }
     },
-    [bridgeClient, runtime, navigate, pairingCode, t]
+    [bridgeClient, runtime, navigate, pairingCode, t],
   );
 
-  const isSubmitting = pairingState.status === "submitting";
+  const isSubmitting = pairingState.status === 'submitting';
 
   return (
     <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center px-8 lg:min-h-[calc(100dvh-60px)]">
@@ -87,10 +92,10 @@ export function PairingScreen() {
             <KeyRound className="size-5 text-muted-foreground" />
           </div>
           <h1 className="text-xl font-semibold tracking-tight">
-            {t("pairing.title")}
+            {t('pairing.title')}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {t("pairing.subtitle")}
+            {t('pairing.subtitle')}
           </p>
         </div>
 
@@ -102,30 +107,31 @@ export function PairingScreen() {
             onChange={(event) => {
               setPairingCode(event.target.value);
             }}
-            placeholder={t("pairing.codePlaceholder")}
+            placeholder={t('pairing.codePlaceholder')}
             value={pairingCode}
           />
 
           <p className="text-[13px] text-muted-foreground">
-            {t("pairing.helperPrefix")}
+            {t('pairing.helperPrefix')}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
               pnpm dev:bridge
-            </code>{" "}
-            {t("pairing.helperSuffix")}
+            </code>{' '}
+            {t('pairing.helperSuffix')}
           </p>
 
-          {pairingState.status === "error" ? (
+          {pairingState.status === 'error' ? (
             <Alert variant="destructive">
               <AlertDescription>{pairingState.message}</AlertDescription>
             </Alert>
           ) : null}
 
-          {bridgeAvailability.status === "unreachable" && pairingState.status === "idle" ? (
+          {bridgeAvailability.status === 'unreachable' &&
+          pairingState.status === 'idle' ? (
             <Alert>
               <AlertDescription>
-                {t("pairing.bridgeUnavailablePrefix")}
+                {t('pairing.bridgeUnavailablePrefix')}
                 <code className="font-mono text-xs">pnpm dev:bridge</code>
-                {t("pairing.bridgeUnavailableSuffix")}
+                {t('pairing.bridgeUnavailableSuffix')}
               </AlertDescription>
             </Alert>
           ) : null}
@@ -136,7 +142,7 @@ export function PairingScreen() {
             size="lg"
             type="submit"
           >
-            {isSubmitting ? t("pairing.connecting") : t("pairing.connect")}
+            {isSubmitting ? t('pairing.connecting') : t('pairing.connect')}
           </Button>
         </form>
       </div>

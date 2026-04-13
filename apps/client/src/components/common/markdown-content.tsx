@@ -1,11 +1,11 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
-import { CodeBlock, parseCodeLanguage } from "@/components/common/code-block";
-import { cn } from "@/lib/utils";
+import { CodeBlock, parseCodeLanguage } from '@/components/common/code-block';
+import { cn } from '@/lib/utils';
 
-type MarkdownCodeProps = ComponentPropsWithoutRef<"code"> & {
+type MarkdownCodeProps = ComponentPropsWithoutRef<'code'> & {
   inline?: boolean;
   node?: unknown;
 };
@@ -13,14 +13,14 @@ type MarkdownCodeProps = ComponentPropsWithoutRef<"code"> & {
 export function MarkdownContent({
   className,
   content,
-  onFilePathClick
+  onFilePathClick,
 }: {
   className?: string;
   content: string;
   onFilePathClick?: ((href: string) => void) | undefined;
 }) {
   return (
-    <div className={cn("markdown-content", className)}>
+    <div className={cn('markdown-content', className)}>
       <ReactMarkdown
         components={{
           a: ({ children, href, ...props }) => {
@@ -46,13 +46,17 @@ export function MarkdownContent({
               </a>
             );
           },
-          code: ({ children, className: codeClassName, inline }: MarkdownCodeProps) => {
+          code: ({
+            children,
+            className: codeClassName,
+            inline,
+          }: MarkdownCodeProps) => {
             const renderedChildren = toCodeContent(children);
             const language = parseCodeLanguage(codeClassName);
             const isInlineCode =
               inline ??
               (!language &&
-                !renderedChildren.includes("\n") &&
+                !renderedChildren.includes('\n') &&
                 renderedChildren.trim().length > 0);
 
             if (isInlineCode) {
@@ -64,9 +68,7 @@ export function MarkdownContent({
             }
 
             return (
-              <CodeBlock language={language}>
-                {renderedChildren}
-              </CodeBlock>
+              <CodeBlock language={language}>{renderedChildren}</CodeBlock>
             );
           },
           pre: ({ children }) => <>{children}</>,
@@ -74,7 +76,7 @@ export function MarkdownContent({
             <div className="my-4 overflow-x-auto">
               <table>{children}</table>
             </div>
-          )
+          ),
         }}
         remarkPlugins={[remarkGfm]}
       >
@@ -85,13 +87,13 @@ export function MarkdownContent({
 }
 
 function toCodeContent(children: ReactNode) {
-  if (typeof children === "string") {
+  if (typeof children === 'string') {
     return children;
   }
 
   if (Array.isArray(children)) {
-    return children.join("");
+    return children.join('');
   }
 
-  return String(children ?? "");
+  return String(children ?? '');
 }

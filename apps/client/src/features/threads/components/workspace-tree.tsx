@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useRef } from "react";
-import { ChevronRight, FileCode2, Folder, FolderOpen, LoaderCircle, TriangleAlert } from "lucide-react";
+import { useCallback, useEffect, useRef } from 'react';
+import {
+  ChevronRight,
+  FileCode2,
+  Folder,
+  FolderOpen,
+  LoaderCircle,
+  TriangleAlert,
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import { cn } from "@/lib/utils";
-import type { WorkspaceEntry } from "@my-codex-app/protocol";
+import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import { cn } from '@/lib/utils';
+import type { WorkspaceEntry } from '@my-codex-app/protocol';
 
 export interface WorkspaceDirectoryState {
-  status: "idle" | "loading" | "ready" | "error";
+  status: 'idle' | 'loading' | 'ready' | 'error';
   entries: WorkspaceEntry[];
   message?: string;
 }
@@ -21,7 +28,7 @@ export function WorkspaceTree({
   scrollRequestKey,
   scrollTargetPath,
   selectedDirectoryPath,
-  selectedFilePath
+  selectedFilePath,
 }: {
   directories: Record<string, WorkspaceDirectoryState>;
   expandedPaths: Record<string, boolean>;
@@ -34,18 +41,21 @@ export function WorkspaceTree({
   selectedFilePath: string | null;
 }) {
   const { t } = useI18n();
-  const rootState = directories[""];
+  const rootState = directories[''];
   const entryNodeRefs = useRef(new Map<string, HTMLButtonElement>());
   const lastScrolledRequestKeyRef = useRef<number | null>(null);
 
-  const registerEntryNode = useCallback((path: string, node: HTMLButtonElement | null) => {
-    if (node) {
-      entryNodeRefs.current.set(path, node);
-      return;
-    }
+  const registerEntryNode = useCallback(
+    (path: string, node: HTMLButtonElement | null) => {
+      if (node) {
+        entryNodeRefs.current.set(path, node);
+        return;
+      }
 
-    entryNodeRefs.current.delete(path);
-  }, []);
+      entryNodeRefs.current.delete(path);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!scrollTargetPath || scrollTargetPath.length === 0) {
@@ -63,7 +73,7 @@ export function WorkspaceTree({
 
     const frameId = requestAnimationFrame(() => {
       targetNode.scrollIntoView({
-        block: "center"
+        block: 'center',
       });
       lastScrolledRequestKeyRef.current = scrollRequestKey;
     });
@@ -71,32 +81,46 @@ export function WorkspaceTree({
     return () => cancelAnimationFrame(frameId);
   }, [directories, expandedPaths, scrollRequestKey, scrollTargetPath]);
 
-  if (!rootState || rootState.status === "idle" || rootState.status === "loading") {
-    return <TreeStateMessage icon={<LoaderCircle className="size-4 animate-spin" />} message={t("detail.workspace.loading.directory")} />;
+  if (
+    !rootState ||
+    rootState.status === 'idle' ||
+    rootState.status === 'loading'
+  ) {
+    return (
+      <TreeStateMessage
+        icon={<LoaderCircle className="size-4 animate-spin" />}
+        message={t('detail.workspace.loading.directory')}
+      />
+    );
   }
 
-  if (rootState.status === "error") {
+  if (rootState.status === 'error') {
     return (
       <TreeStateMessage
         action={
           <Button
             onClick={() => {
-              onRetryDirectory("");
+              onRetryDirectory('');
             }}
             size="xs"
             variant="outline"
           >
-            {t("detail.workspace.action.retry")}
+            {t('detail.workspace.action.retry')}
           </Button>
         }
         icon={<TriangleAlert className="size-4 text-destructive" />}
-        message={rootState.message ?? t("detail.workspace.error.directory")}
+        message={rootState.message ?? t('detail.workspace.error.directory')}
       />
     );
   }
 
   if (rootState.entries.length === 0) {
-    return <TreeStateMessage icon={<Folder className="size-4" />} message={t("detail.workspace.empty.directory")} />;
+    return (
+      <TreeStateMessage
+        icon={<Folder className="size-4" />}
+        message={t('detail.workspace.empty.directory')}
+      />
+    );
   }
 
   return (
@@ -127,7 +151,7 @@ function WorkspaceTreeEntries({
   onToggleDirectory,
   registerEntryNode,
   selectedDirectoryPath,
-  selectedFilePath
+  selectedFilePath,
 }: {
   depth: number;
   directories: Record<string, WorkspaceDirectoryState>;
@@ -145,7 +169,9 @@ function WorkspaceTreeEntries({
   return (
     <div className="space-y-1">
       {entries.map((entry) => {
-        const expanded = entry.isDirectory ? expandedPaths[entry.path] === true : false;
+        const expanded = entry.isDirectory
+          ? expandedPaths[entry.path] === true
+          : false;
         const childState = entry.isDirectory ? directories[entry.path] : null;
         const selected = entry.isDirectory
           ? selectedDirectoryPath === entry.path
@@ -155,8 +181,8 @@ function WorkspaceTreeEntries({
           <div key={entry.path} className="space-y-1">
             <button
               className={cn(
-                "flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-muted/60",
-                selected && "bg-primary/10 text-primary hover:bg-primary/12"
+                'flex w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left transition-colors hover:bg-muted/60',
+                selected && 'bg-primary/10 text-primary hover:bg-primary/12',
               )}
               onClick={() => {
                 if (entry.isDirectory) {
@@ -175,8 +201,8 @@ function WorkspaceTreeEntries({
               {entry.isDirectory ? (
                 <ChevronRight
                   className={cn(
-                    "size-3.5 shrink-0 text-muted-foreground transition-transform",
-                    expanded && "rotate-90"
+                    'size-3.5 shrink-0 text-muted-foreground transition-transform',
+                    expanded && 'rotate-90',
                   )}
                 />
               ) : (
@@ -196,13 +222,15 @@ function WorkspaceTreeEntries({
 
             {entry.isDirectory && expanded ? (
               <div className="space-y-1">
-                {!childState || childState.status === "idle" || childState.status === "loading" ? (
+                {!childState ||
+                childState.status === 'idle' ||
+                childState.status === 'loading' ? (
                   <InlineStateMessage
                     depth={depth + 1}
                     icon={<LoaderCircle className="size-3.5 animate-spin" />}
-                    message={t("detail.workspace.loading.directory")}
+                    message={t('detail.workspace.loading.directory')}
                   />
-                ) : childState.status === "error" ? (
+                ) : childState.status === 'error' ? (
                   <InlineStateMessage
                     action={
                       <Button
@@ -212,18 +240,23 @@ function WorkspaceTreeEntries({
                         size="xs"
                         variant="ghost"
                       >
-                        {t("detail.workspace.action.retry")}
+                        {t('detail.workspace.action.retry')}
                       </Button>
                     }
                     depth={depth + 1}
-                    icon={<TriangleAlert className="size-3.5 text-destructive" />}
-                    message={childState.message ?? t("detail.workspace.error.directory")}
+                    icon={
+                      <TriangleAlert className="size-3.5 text-destructive" />
+                    }
+                    message={
+                      childState.message ??
+                      t('detail.workspace.error.directory')
+                    }
                   />
                 ) : childState.entries.length === 0 ? (
                   <InlineStateMessage
                     depth={depth + 1}
                     icon={<Folder className="size-3.5" />}
-                    message={t("detail.workspace.empty.directory")}
+                    message={t('detail.workspace.empty.directory')}
                   />
                 ) : (
                   <WorkspaceTreeEntries
@@ -251,10 +284,10 @@ function WorkspaceTreeEntries({
 function TreeStateMessage({
   action,
   icon,
-  message
+  message,
 }: {
-  action?: import("react").ReactNode;
-  icon: import("react").ReactNode;
+  action?: import('react').ReactNode;
+  icon: import('react').ReactNode;
   message: string;
 }) {
   return (
@@ -276,11 +309,11 @@ function InlineStateMessage({
   action,
   depth,
   icon,
-  message
+  message,
 }: {
-  action?: import("react").ReactNode;
+  action?: import('react').ReactNode;
   depth: number;
-  icon: import("react").ReactNode;
+  icon: import('react').ReactNode;
   message: string;
 }) {
   return (

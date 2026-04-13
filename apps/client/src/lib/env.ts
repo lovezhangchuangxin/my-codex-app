@@ -15,5 +15,5 @@ function resolveBridgeBaseUrl(): string {
 }
 
 export const bridgeBaseUrl = resolveBridgeBaseUrl();
-export const bridgeHealthUrl = new URL("/healthz", bridgeBaseUrl).toString();
-export const connectionModeLabel = "Local";
+export const bridgeHealthUrl = new URL('/healthz', bridgeBaseUrl).toString();
+export const connectionModeLabel = 'Local';

@@ -248,20 +248,20 @@ falling back to raw JSON in the unknown-item renderer.
 
 ## File-Level Summary
 
-| File | Purpose |
-| --- | --- |
-| `packages/protocol/src/index.ts` | shared command/search/review contracts |
-| `apps/bridge/src/app-server/types.ts` | app-server request/response typing |
-| `apps/bridge/src/appServerClient.ts` | app-server command methods |
-| `apps/bridge/src/threads/threadMappers.ts` | compaction/review item mapping |
-| `apps/bridge/src/threadService.ts` | bridge command entry points |
-| `apps/bridge/src/workspaceService.ts` | thread-rooted workspace search |
-| `apps/bridge/src/server/bridgeServer.ts` | HTTP route wiring |
-| `packages/sdk/src/bridgeClient.ts` | typed client methods |
-| `packages/sdk/src/threadRuntime.ts` | runtime actions for compact/review |
-| `apps/client/src/features/threads/components/thread-detail-composer.tsx` | composer popups and command dispatch |
-| `apps/client/src/features/threads/components/thread-detail-messages.tsx` | readable review/compaction rendering |
-| `apps/client/src/lib/i18n/messages/*.ts` | popup labels, empty states, errors |
+| File                                                                     | Purpose                                |
+| ------------------------------------------------------------------------ | -------------------------------------- |
+| `packages/protocol/src/index.ts`                                         | shared command/search/review contracts |
+| `apps/bridge/src/app-server/types.ts`                                    | app-server request/response typing     |
+| `apps/bridge/src/appServerClient.ts`                                     | app-server command methods             |
+| `apps/bridge/src/threads/threadMappers.ts`                               | compaction/review item mapping         |
+| `apps/bridge/src/threadService.ts`                                       | bridge command entry points            |
+| `apps/bridge/src/workspaceService.ts`                                    | thread-rooted workspace search         |
+| `apps/bridge/src/server/bridgeServer.ts`                                 | HTTP route wiring                      |
+| `packages/sdk/src/bridgeClient.ts`                                       | typed client methods                   |
+| `packages/sdk/src/threadRuntime.ts`                                      | runtime actions for compact/review     |
+| `apps/client/src/features/threads/components/thread-detail-composer.tsx` | composer popups and command dispatch   |
+| `apps/client/src/features/threads/components/thread-detail-messages.tsx` | readable review/compaction rendering   |
+| `apps/client/src/lib/i18n/messages/*.ts`                                 | popup labels, empty states, errors     |
 
 ## Risks And Mitigations
 

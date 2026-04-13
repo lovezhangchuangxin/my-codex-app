@@ -1,15 +1,18 @@
 {
   "name": "my-codex-app",
-  "private": true,
   "version": "0.1.0",
-  "packageManager": "pnpm@10.22.0",
+  "private": true,
   "scripts": {
     "build": "pnpm -r build",
     "dev:bridge": "pnpm --filter @my-codex-app/bridge dev",
     "dev:client": "pnpm --filter @my-codex-app/client dev",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "fmt": "oxfmt",
+    "fmt:check": "oxfmt --check"
   },
   "devDependencies": {
+    "oxfmt": "^0.45.0",
     "typescript": "^5.9.3"
-  }
+  },
+  "packageManager": "pnpm@10.22.0"
 }

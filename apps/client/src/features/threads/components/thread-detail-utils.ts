@@ -20,7 +20,10 @@ export function looksLikeMarkdownContent(content: string) {
   );
 }
 
-export function parseFilePathWithLine(href: string): { path: string; line: number | null } {
+export function parseFilePathWithLine(href: string): {
+  path: string;
+  line: number | null;
+} {
   const match = href.match(/^(.+?)#L(\d+)$/i);
   if (match?.[1] != null && match[2] != null) {
     return { path: match[1], line: parseInt(match[2], 10) };
@@ -32,7 +35,7 @@ export function getCommandDisplay(command: string): string {
   const trimmed = command.trim();
   const wrappedCommandMatch =
     /^(?<shell>(?:\/bin\/|\/usr\/bin\/)?(?:bash|zsh|sh))\s+(?<flags>-[A-Za-z]+(?:\s+-[A-Za-z]+)*)\s+(?<body>[\s\S]+)$/u.exec(
-      trimmed
+      trimmed,
     );
 
   if (!wrappedCommandMatch?.groups) {
@@ -40,7 +43,7 @@ export function getCommandDisplay(command: string): string {
   }
 
   const { body, flags } = wrappedCommandMatch.groups;
-  if (!body || !flags || !flags.includes("c")) {
+  if (!body || !flags || !flags.includes('c')) {
     return command;
   }
 
@@ -63,10 +66,7 @@ function unwrapShellCommandBody(body: string): string | null {
   }
 
   if (trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed
-      .slice(1, -1)
-      .replace(/\\"/g, '"')
-      .replace(/\\\\/g, "\\");
+    return trimmed.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, '\\');
   }
 
   return trimmed;

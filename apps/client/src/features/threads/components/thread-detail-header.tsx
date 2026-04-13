@@ -1,34 +1,34 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   ArrowLeft,
   Check,
   Copy,
   FolderOpen,
-  PanelLeftOpen
-} from "lucide-react";
+  PanelLeftOpen,
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
-  PopoverTrigger
-} from "@/components/ui/popover";
-import { StatusBadge } from "@/features/threads/components/status-badge";
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { StatusBadge } from '@/features/threads/components/status-badge';
 import {
   buildThreadTitle,
   formatStatusLabel,
-  getStatusTone
-} from "@/features/threads/lib/thread-utils";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import type { ThreadDetail } from "@my-codex-app/protocol";
+  getStatusTone,
+} from '@/features/threads/lib/thread-utils';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import type { ThreadDetail } from '@my-codex-app/protocol';
 
 export function ThreadDetailHeader({
   isDesktop,
   onBack,
   onOpenThreadSwitcher,
   onOpenWorkspace,
-  thread
+  thread,
 }: {
   isDesktop: boolean;
   onBack: () => void;
@@ -45,7 +45,9 @@ export function ThreadDetailHeader({
           {!isDesktop ? (
             <Button onClick={onBack} size="icon-sm" variant="ghost">
               <ArrowLeft className="size-4" />
-              <span className="sr-only">{t("detail.action.backToThreads")}</span>
+              <span className="sr-only">
+                {t('detail.action.backToThreads')}
+              </span>
             </Button>
           ) : null}
           <div className="min-w-0 space-y-1.5">
@@ -66,23 +68,30 @@ export function ThreadDetailHeader({
 
         <div className="flex min-w-0 items-center gap-2 md:self-start">
           {!isDesktop ? (
-            <Button onClick={onOpenThreadSwitcher} size="icon-sm" variant="outline">
+            <Button
+              onClick={onOpenThreadSwitcher}
+              size="icon-sm"
+              variant="outline"
+            >
               <PanelLeftOpen className="size-4" />
-              <span className="sr-only">{t("detail.switcher.open")}</span>
+              <span className="sr-only">{t('detail.switcher.open')}</span>
             </Button>
           ) : null}
           <Button onClick={onOpenWorkspace} size="sm" variant="outline">
             <FolderOpen className="size-3.5" />
-            {t("detail.workspace.open")}
+            {t('detail.workspace.open')}
           </Button>
         </div>
       </div>
 
       {thread.pendingRequests.length > 0 ? (
         <div className="mt-3">
-          <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
-            {t("detail.badge.pendingRequests", {
-              count: thread.pendingRequests.length
+          <Badge
+            className="bg-secondary/16 text-secondary pulse-secondary"
+            variant="secondary"
+          >
+            {t('detail.badge.pendingRequests', {
+              count: thread.pendingRequests.length,
             })}
           </Badge>
         </div>
@@ -92,7 +101,9 @@ export function ThreadDetailHeader({
 }
 
 function CwdPathDisplay({ cwd }: { cwd: string }) {
-  const displayName = cwd ? cwd.split(/[\\/]/).filter(Boolean).pop() || cwd : cwd;
+  const displayName = cwd
+    ? cwd.split(/[\\/]/).filter(Boolean).pop() || cwd
+    : cwd;
 
   return (
     <Popover>
@@ -105,7 +116,10 @@ function CwdPathDisplay({ cwd }: { cwd: string }) {
           {displayName}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto max-w-sm flex-row items-center gap-2 p-2.5">
+      <PopoverContent
+        align="start"
+        className="w-auto max-w-sm flex-row items-center gap-2 p-2.5"
+      >
         <p className="min-w-0 break-all font-mono text-[0.7rem] leading-relaxed">
           {cwd}
         </p>
@@ -130,7 +144,11 @@ function CopyPathButton({ value }: { value: string }) {
       }}
       type="button"
     >
-      {copied ? <Check className="size-3 text-primary" /> : <Copy className="size-3" />}
+      {copied ? (
+        <Check className="size-3 text-primary" />
+      ) : (
+        <Copy className="size-3" />
+      )}
     </button>
   );
 }

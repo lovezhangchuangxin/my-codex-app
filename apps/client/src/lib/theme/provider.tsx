@@ -5,13 +5,13 @@ import {
   useMemo,
   useState,
   type ReactNode,
-} from "react";
+} from 'react';
 import {
   DEFAULT_THEME,
   THEME_STORAGE_KEY,
   THEMES,
   type ThemeName,
-} from "./constants";
+} from './constants';
 
 interface ThemeContextValue {
   theme: ThemeName;
@@ -34,15 +34,15 @@ function getInitialTheme(): ThemeName {
 }
 
 const THEME_COLORS: Record<ThemeName, string> = {
-  dark: "#0b0b0d",
-  light: "#f8f9fa",
+  dark: '#0b0b0d',
+  light: '#f8f9fa',
 };
 
 function applyTheme(theme: ThemeName) {
-  document.documentElement.setAttribute("data-theme", theme);
+  document.documentElement.setAttribute('data-theme', theme);
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) {
-    meta.setAttribute("content", THEME_COLORS[theme]);
+    meta.setAttribute('content', THEME_COLORS[theme]);
   }
 }
 

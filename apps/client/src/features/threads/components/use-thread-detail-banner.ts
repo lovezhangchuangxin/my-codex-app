@@ -1,20 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react';
 
-import type { LocalConnectionState } from "@my-codex-app/protocol";
+import type { LocalConnectionState } from '@my-codex-app/protocol';
 
 const BANNER_DELAY_MS = 1500;
 
 export function useThreadDetailBanner(
   connectionState: LocalConnectionState,
-  t: (key: string) => string
+  t: (key: string) => string,
 ) {
-  const [visibleBanner, setVisibleBanner] = useState<ReturnType<typeof connectionBanner>>(null);
+  const [visibleBanner, setVisibleBanner] =
+    useState<ReturnType<typeof connectionBanner>>(null);
 
   useEffect(() => {
     const next = connectionBanner(connectionState, t);
-    const timer = setTimeout(() => {
-      setVisibleBanner(next);
-    }, next ? BANNER_DELAY_MS : 0);
+    const timer = setTimeout(
+      () => {
+        setVisibleBanner(next);
+      },
+      next ? BANNER_DELAY_MS : 0,
+    );
 
     return () => clearTimeout(timer);
   }, [connectionState, t]);
@@ -24,58 +28,58 @@ export function useThreadDetailBanner(
 
 function connectionBanner(
   connectionState: LocalConnectionState,
-  t: (key: string) => string
-):
-  | {
-      message: string;
-      title: string;
-      tone: "info" | "error";
-    }
-  | null {
+  t: (key: string) => string,
+): {
+  message: string;
+  title: string;
+  tone: 'info' | 'error';
+} | null {
   switch (connectionState.kind) {
-    case "authenticated":
+    case 'authenticated':
       return null;
-    case "refreshing":
+    case 'refreshing':
       return {
-        title: t("detail.banner.refreshing.title"),
-        message: t("detail.banner.refreshing.message"),
-        tone: "info"
+        title: t('detail.banner.refreshing.title'),
+        message: t('detail.banner.refreshing.message'),
+        tone: 'info',
       };
-    case "reconnecting":
+    case 'reconnecting':
       return {
-        title: t("detail.banner.reconnecting.title"),
-        message: connectionState.message ?? t("detail.banner.reconnecting.message"),
-        tone: "info"
+        title: t('detail.banner.reconnecting.title'),
+        message:
+          connectionState.message ?? t('detail.banner.reconnecting.message'),
+        tone: 'info',
       };
-    case "resyncing":
+    case 'resyncing':
       return {
-        title: t("detail.banner.resyncing.title"),
-        message: t("detail.banner.resyncing.message"),
-        tone: "info"
+        title: t('detail.banner.resyncing.title'),
+        message: t('detail.banner.resyncing.message'),
+        tone: 'info',
       };
-    case "disconnected":
+    case 'disconnected':
       return {
-        title: t("detail.banner.disconnected.title"),
-        message: connectionState.message ?? t("detail.banner.disconnected.message"),
-        tone: "error"
+        title: t('detail.banner.disconnected.title'),
+        message:
+          connectionState.message ?? t('detail.banner.disconnected.message'),
+        tone: 'error',
       };
-    case "revoked":
+    case 'revoked':
       return {
-        title: t("detail.banner.revoked.title"),
-        message: connectionState.message ?? t("detail.banner.revoked.message"),
-        tone: "error"
+        title: t('detail.banner.revoked.title'),
+        message: connectionState.message ?? t('detail.banner.revoked.message'),
+        tone: 'error',
       };
-    case "expired":
+    case 'expired':
       return {
-        title: t("detail.banner.expired.title"),
-        message: connectionState.message ?? t("detail.banner.expired.message"),
-        tone: "error"
+        title: t('detail.banner.expired.title'),
+        message: connectionState.message ?? t('detail.banner.expired.message'),
+        tone: 'error',
       };
-    case "unpaired":
+    case 'unpaired':
       return {
-        title: t("detail.banner.unpaired.title"),
-        message: t("detail.banner.unpaired.message"),
-        tone: "error"
+        title: t('detail.banner.unpaired.title'),
+        message: t('detail.banner.unpaired.message'),
+        tone: 'error',
       };
   }
 }

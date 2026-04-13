@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
-import { LaptopMinimal, Smartphone } from "lucide-react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useState } from 'react';
+import { LaptopMinimal, Smartphone } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { useBridgeClient, useRuntime } from "@/lib/runtime/runtime-provider";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import type { DeviceTrustRecord } from "@my-codex-app/protocol";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { useBridgeClient, useRuntime } from '@/lib/runtime/runtime-provider';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import type { DeviceTrustRecord } from '@my-codex-app/protocol';
 
 export function DevicesSection() {
   const { formatRelativeTime, t } = useI18n();
@@ -27,7 +27,9 @@ export function DevicesSection() {
       const response = await bridgeClient.listDevices();
       setDevices(response.devices);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("devices.error.loadFailed"));
+      toast.error(
+        error instanceof Error ? error.message : t('devices.error.loadFailed'),
+      );
     } finally {
       setLoading(false);
     }
@@ -46,9 +48,13 @@ export function DevicesSection() {
         runtime.resetState();
       }
       await refreshDevices();
-      toast.success(t("devices.success.revoked"));
+      toast.success(t('devices.success.revoked'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("devices.error.revokeFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('devices.error.revokeFailed'),
+      );
     } finally {
       setLoading(false);
     }
@@ -60,9 +66,13 @@ export function DevicesSection() {
     try {
       await bridgeClient.deleteDevice({ deviceId });
       await refreshDevices();
-      toast.success(t("devices.success.deleted"));
+      toast.success(t('devices.success.deleted'));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : t("devices.error.deleteFailed"));
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : t('devices.error.deleteFailed'),
+      );
     } finally {
       setLoading(false);
     }
@@ -71,13 +81,17 @@ export function DevicesSection() {
   return (
     <div className="space-y-3">
       <h3 className="font-mono text-xs tracking-[0.18em] text-muted-foreground uppercase">
-        {t("settings.devices.title")}
+        {t('settings.devices.title')}
       </h3>
 
       {!credentials ? (
-        <p className="text-sm text-muted-foreground">{t("devices.empty.pairFirst")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('devices.empty.pairFirst')}
+        </p>
       ) : devices.length === 0 && !loading ? (
-        <p className="text-sm text-muted-foreground">{t("devices.empty.none")}</p>
+        <p className="text-sm text-muted-foreground">
+          {t('devices.empty.none')}
+        </p>
       ) : (
         <div className="space-y-2">
           {devices.map((device) => {
@@ -92,26 +106,36 @@ export function DevicesSection() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      {device.platform.toLowerCase().includes("iphone") ||
-                      device.platform.toLowerCase().includes("android") ? (
+                      {device.platform.toLowerCase().includes('iphone') ||
+                      device.platform.toLowerCase().includes('android') ? (
                         <Smartphone className="size-4 text-primary" />
                       ) : (
                         <LaptopMinimal className="size-4 text-primary" />
                       )}
-                      <span className="text-sm font-medium text-foreground">{device.label}</span>
+                      <span className="text-sm font-medium text-foreground">
+                        {device.label}
+                      </span>
                       {isCurrent ? (
-                        <Badge className="bg-primary/12 text-primary" variant="secondary">
-                          {t("devices.badge.current")}
+                        <Badge
+                          className="bg-primary/12 text-primary"
+                          variant="secondary"
+                        >
+                          {t('devices.badge.current')}
                         </Badge>
                       ) : null}
                       {isRevoked ? (
-                        <Badge className="bg-destructive/12 text-destructive" variant="secondary">
-                          {t("devices.badge.revoked")}
+                        <Badge
+                          className="bg-destructive/12 text-destructive"
+                          variant="secondary"
+                        >
+                          {t('devices.badge.revoked')}
                         </Badge>
                       ) : null}
                     </div>
                     <p className="font-mono text-[0.7rem] text-muted-foreground">
-                      {t("devices.lastSeen", { relative: formatRelativeTime(device.lastSeenAt) })}
+                      {t('devices.lastSeen', {
+                        relative: formatRelativeTime(device.lastSeenAt),
+                      })}
                     </p>
                   </div>
 
@@ -124,7 +148,7 @@ export function DevicesSection() {
                       size="sm"
                       variant="outline"
                     >
-                      {t("devices.action.revoke")}
+                      {t('devices.action.revoke')}
                     </Button>
                   ) : (
                     <Button
@@ -135,7 +159,7 @@ export function DevicesSection() {
                       size="sm"
                       variant="outline"
                     >
-                      {t("devices.action.delete")}
+                      {t('devices.action.delete')}
                     </Button>
                   )}
                 </div>

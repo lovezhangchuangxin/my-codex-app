@@ -1,16 +1,16 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '@/components/ui/badge';
 import {
   describePermissionProfile,
-  getRequestDescription
-} from "@/features/requests/lib/request-utils";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import type { PendingRequest } from "@my-codex-app/protocol";
+  getRequestDescription,
+} from '@/features/requests/lib/request-utils';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import type { PendingRequest } from '@my-codex-app/protocol';
 
 export function PendingRequestBody({ request }: { request: PendingRequest }) {
   const { t } = useI18n();
 
   switch (request.kind) {
-    case "command":
+    case 'command':
       return (
         <div className="space-y-3">
           {request.command ? (
@@ -20,23 +20,23 @@ export function PendingRequestBody({ request }: { request: PendingRequest }) {
           ) : null}
           {request.cwd ? (
             <p className="text-sm text-muted-foreground">
-              {t("request.command.cwd")}: {request.cwd}
+              {t('request.command.cwd')}: {request.cwd}
             </p>
           ) : null}
         </div>
       );
-    case "fileChange":
+    case 'fileChange':
       return (
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p>{t("request.fileChange.waiting")}</p>
+          <p>{t('request.fileChange.waiting')}</p>
           {request.grantRoot ? (
             <p className="font-mono">
-              {t("request.fileChange.grantRoot", { root: request.grantRoot })}
+              {t('request.fileChange.grantRoot', { root: request.grantRoot })}
             </p>
           ) : null}
         </div>
       );
-    case "permissions":
+    case 'permissions':
       return (
         <ul className="space-y-2 text-sm text-muted-foreground">
           {describePermissionProfile(request.permissions, t).map((detail) => (
@@ -44,10 +44,14 @@ export function PendingRequestBody({ request }: { request: PendingRequest }) {
           ))}
         </ul>
       );
-    case "userInput":
+    case 'userInput':
       return (
         <div className="space-y-2 text-sm text-muted-foreground">
-          <p>{t("request.userInput.waitingQuestions", { count: request.questions.length })}</p>
+          <p>
+            {t('request.userInput.waitingQuestions', {
+              count: request.questions.length,
+            })}
+          </p>
           <div className="flex flex-wrap gap-2">
             {request.questions.map((question) => (
               <Badge

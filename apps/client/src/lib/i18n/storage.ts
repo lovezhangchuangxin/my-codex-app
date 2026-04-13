@@ -1,10 +1,10 @@
-import { normalizeLocale } from "@/lib/i18n/catalog";
-import type { AppLocale } from "@/lib/i18n/types";
+import { normalizeLocale } from '@/lib/i18n/catalog';
+import type { AppLocale } from '@/lib/i18n/types';
 
-const LOCALE_STORAGE_KEY = "my-codex-app.locale";
+const LOCALE_STORAGE_KEY = 'my-codex-app.locale';
 
 export function loadStoredLocale(): AppLocale | null {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return null;
   }
 
@@ -17,7 +17,7 @@ export function loadStoredLocale(): AppLocale | null {
 }
 
 export function saveStoredLocale(locale: AppLocale) {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return;
   }
 
@@ -25,8 +25,8 @@ export function saveStoredLocale(locale: AppLocale) {
 }
 
 export function detectPreferredLocale(): AppLocale {
-  if (typeof navigator === "undefined") {
-    return "en";
+  if (typeof navigator === 'undefined') {
+    return 'en';
   }
 
   return normalizeLocale(navigator.languages?.[0] ?? navigator.language);

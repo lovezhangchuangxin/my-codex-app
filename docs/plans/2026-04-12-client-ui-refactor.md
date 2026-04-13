@@ -65,6 +65,7 @@ New file: `components/pairing/pairing-screen.tsx`
 Full-screen centered card. Reuses `Input`, `Button`, and `Label` from shadcn.
 
 **Behavior:**
+
 - On mount, ping `bridgeHealthUrl` to check bridge availability. Show info message if unreachable.
 - User enters pairing code. On submit:
   1. Call `bridgeClient.completePairing({ code, device: detectDeviceInfo() })`.
@@ -85,14 +86,20 @@ function AuthGuard({ children }) {
   const nav = useNavigate();
   const location = useLocation();
 
-  const isAuthenticated = ["authenticated", "refreshing", "resyncing", "disconnected", "reconnecting"].includes(snapshot.connection.kind);
+  const isAuthenticated = [
+    'authenticated',
+    'refreshing',
+    'resyncing',
+    'disconnected',
+    'reconnecting',
+  ].includes(snapshot.connection.kind);
 
   useEffect(() => {
-    if (!isAuthenticated && !location.pathname.startsWith("/pair")) {
-      nav("/pair", { replace: true });
+    if (!isAuthenticated && !location.pathname.startsWith('/pair')) {
+      nav('/pair', { replace: true });
     }
-    if (isAuthenticated && location.pathname.startsWith("/pair")) {
-      nav("/threads", { replace: true });
+    if (isAuthenticated && location.pathname.startsWith('/pair')) {
+      nav('/threads', { replace: true });
     }
   }, [isAuthenticated, location.pathname]);
 
@@ -176,12 +183,14 @@ New file: `components/layout/notification-bell.tsx`
 ### 2.4 Rewrite `app-shell.tsx`
 
 Remove:
+
 - The entire `<aside>` sidebar (lines ~38–116 of current file)
 - The entire bottom `<nav>` tab bar (lines ~125–147)
 - The `navigationItems` array
 - The `PageHeader` brand block
 
 New structure:
+
 ```tsx
 function AppShell() {
   return (
@@ -215,19 +224,19 @@ No padding changes for mobile (content goes full width). Desktop content area ge
 New file: `hooks/use-mobile-panel.ts`
 
 ```typescript
-type MobilePanelView = "thread-list" | "thread-detail";
+type MobilePanelView = 'thread-list' | 'thread-detail';
 
 function useMobilePanel() {
-  const [view, setView] = useState<MobilePanelView>("thread-list");
+  const [view, setView] = useState<MobilePanelView>('thread-list');
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
 
   const openThread = (id: string) => {
     setSelectedThreadId(id);
-    setView("thread-detail");
+    setView('thread-detail');
   };
 
   const backToList = () => {
-    setView("thread-list");
+    setView('thread-list');
     setSelectedThreadId(null);
   };
 
@@ -240,12 +249,14 @@ function useMobilePanel() {
 New file: `app/layouts/threads-layout.tsx` (replaces `threads-shell.tsx`)
 
 **Mobile** (< `lg` breakpoint):
+
 - Uses `useMobilePanel` state machine.
 - `thread-list` view: full-width `ThreadListPanel`, click thread calls `openThread(id)`.
 - `thread-detail` view: full-width `ThreadDetailPanel` with back button calling `backToList()`.
 - Transition: no animation in v1, just conditional rendering.
 
 **Desktop** (>= `lg` breakpoint):
+
 - Side-by-side: `ThreadListPanel` (left, `w-[280px] shrink-0`) + `ThreadDetailPanel` (right, `flex-1`).
 - Both always visible. Thread selection from URL param `threadId`.
 
@@ -253,12 +264,12 @@ New file: `app/layouts/threads-layout.tsx` (replaces `threads-shell.tsx`)
 
 Extract from current `features/threads/components/thread-list-panel.tsx`:
 
-| New component | Responsibility |
-|---------------|----------------|
-| `features/threads/components/thread-list-panel.tsx` | Container: status tabs, workspace groups, thread cards |
+| New component                                        | Responsibility                                                                             |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `features/threads/components/thread-list-panel.tsx`  | Container: status tabs, workspace groups, thread cards                                     |
 | `features/threads/components/thread-status-tabs.tsx` | Tab bar: `[All] [Active] [Pending] [Idle]` — replaces the current search + dropdown filter |
-| `features/threads/components/thread-card.tsx` | Single thread row: title, preview, model badge, status badge, pending count |
-| `features/threads/components/workspace-group.tsx` | Collapsible section: workspace name + thread count + list of thread cards |
+| `features/threads/components/thread-card.tsx`        | Single thread row: title, preview, model badge, status badge, pending count                |
+| `features/threads/components/workspace-group.tsx`    | Collapsible section: workspace name + thread count + list of thread cards                  |
 
 Filter logic: status tabs filter threads by `statusBadge` field. Workspace grouping logic moves from inline to `workspace-group.tsx`. Search moves to Header (wired later).
 
@@ -266,12 +277,12 @@ Filter logic: status tabs filter threads by `statusBadge` field. Workspace group
 
 Extract from current `features/threads/components/thread-detail-panel.tsx`:
 
-| New component | Responsibility |
-|---------------|----------------|
-| `features/threads/components/thread-detail-panel.tsx` | Container shell: composes sub-components |
-| `features/threads/components/thread-detail-header.tsx` | Top bar: thread title, workspace, status, action menu |
+| New component                                            | Responsibility                                                      |
+| -------------------------------------------------------- | ------------------------------------------------------------------- |
+| `features/threads/components/thread-detail-panel.tsx`    | Container shell: composes sub-components                            |
+| `features/threads/components/thread-detail-header.tsx`   | Top bar: thread title, workspace, status, action menu               |
 | `features/threads/components/thread-detail-messages.tsx` | Message list: user/assistant messages, code blocks, terminal output |
-| `features/threads/components/thread-detail-composer.tsx` | Bottom composer: text input + send button + interrupt button |
+| `features/threads/components/thread-detail-composer.tsx` | Bottom composer: text input + send button + interrupt button        |
 
 The existing rendering logic for messages, code blocks, and terminal output is moved without modification. Only the structural wrapping changes.
 
@@ -303,6 +314,7 @@ request display.
 Props: `request`, `onApprove`, `onDeny`, `onSubmitInput`, `showThreadName`.
 
 Renders:
+
 - Request type icon (⚡ command, 📄 file, ❓ user-input, 🔐 permission)
 - Description / command / file path
 - Thread name (if `showThreadName` is true)
@@ -353,6 +365,7 @@ State: open/close managed by settings icon in `Header`.
 New file: `components/settings/connection-section.tsx`
 
 Shows:
+
 - Connection state dot + label
 - Bridge URL
 - Reconnect button
@@ -364,6 +377,7 @@ Reads from `useRuntimeSnapshot()`. The reconnect button calls `runtime.retryConn
 New file: `components/settings/devices-section.tsx`
 
 Shows:
+
 - List of trusted devices from `bridgeClient.listDevices()`
 - Each device: icon (phone/laptop), label, last seen timestamp, "Current" badge if applicable
 - Revoke button per device
@@ -442,13 +456,13 @@ If the Header search input is wired in Phase 3 or 4, verify it filters threads b
 
 ## Task Summary
 
-| # | Phase | Key Files | Depends On |
-|---|-------|-----------|------------|
-| 1 | Auth gate + pairing | `device-info.ts`, `pairing-screen.tsx`, `auth-guard.tsx`, `router.tsx` | — |
-| 2 | Header + app shell | `header.tsx`, `connection-indicator.tsx`, `notification-bell.tsx`, `app-shell.tsx` | Phase 1 |
-| 3 | Threads layout | `threads-layout.tsx`, `use-mobile-panel.ts`, split thread components | Phase 2 |
-| 4 | Request + settings sheets | `request-sheet.tsx`, `pending-request-list.tsx`, `pending-request-card.tsx`, `settings-sheet.tsx`, `connection-section.tsx`, `devices-section.tsx` | Phase 3 |
-| 5 | Cleanup + verification | Remove old files, update docs | Phase 4 |
+| #   | Phase                     | Key Files                                                                                                                                          | Depends On |
+| --- | ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- |
+| 1   | Auth gate + pairing       | `device-info.ts`, `pairing-screen.tsx`, `auth-guard.tsx`, `router.tsx`                                                                             | —          |
+| 2   | Header + app shell        | `header.tsx`, `connection-indicator.tsx`, `notification-bell.tsx`, `app-shell.tsx`                                                                 | Phase 1    |
+| 3   | Threads layout            | `threads-layout.tsx`, `use-mobile-panel.ts`, split thread components                                                                               | Phase 2    |
+| 4   | Request + settings sheets | `request-sheet.tsx`, `pending-request-list.tsx`, `pending-request-card.tsx`, `settings-sheet.tsx`, `connection-section.tsx`, `devices-section.tsx` | Phase 3    |
+| 5   | Cleanup + verification    | Remove old files, update docs                                                                                                                      | Phase 4    |
 
 ## Implementation Approach
 

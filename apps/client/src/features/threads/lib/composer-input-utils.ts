@@ -12,21 +12,21 @@ export interface SlashCommandSubmission {
 
 export function findMentionToken(
   text: string,
-  caret: number
+  caret: number,
 ): ComposerTokenMatch | null {
-  return findPrefixedToken(text, caret, "@", true);
+  return findPrefixedToken(text, caret, '@', true);
 }
 
 export function findSlashCommandToken(
   text: string,
-  caret: number
+  caret: number,
 ): ComposerTokenMatch | null {
   const safeCaret = clampCaret(text, caret);
-  const firstLineEnd = text.indexOf("\n");
+  const firstLineEnd = text.indexOf('\n');
   const effectiveFirstLineEnd = firstLineEnd >= 0 ? firstLineEnd : text.length;
   const firstLine = text.slice(0, effectiveFirstLineEnd);
 
-  if (!firstLine.startsWith("/") || safeCaret > effectiveFirstLineEnd) {
+  if (!firstLine.startsWith('/') || safeCaret > effectiveFirstLineEnd) {
     return null;
   }
 
@@ -36,7 +36,7 @@ export function findSlashCommandToken(
   }
 
   const token = firstLine.slice(0, commandEnd);
-  if (token.length === 0 || token.startsWith("/ ") || token.includes("/", 1)) {
+  if (token.length === 0 || token.startsWith('/ ') || token.includes('/', 1)) {
     return null;
   }
 
@@ -44,26 +44,26 @@ export function findSlashCommandToken(
     start: 0,
     end: commandEnd,
     token,
-    query: token.slice(1)
+    query: token.slice(1),
   };
 }
 
 export function parseSlashCommandSubmission(
-  text: string
+  text: string,
 ): SlashCommandSubmission | null {
-  if (!text.startsWith("/")) {
+  if (!text.startsWith('/')) {
     return null;
   }
 
   const commandEnd = findTokenEnd(text, 0);
   const token = text.slice(0, commandEnd);
-  if (token.length <= 1 || token.startsWith("/ ") || token.includes("/", 1)) {
+  if (token.length <= 1 || token.startsWith('/ ') || token.includes('/', 1)) {
     return null;
   }
 
   return {
     commandName: token.slice(1),
-    args: text.slice(commandEnd).trim()
+    args: text.slice(commandEnd).trim(),
   };
 }
 
@@ -71,25 +71,25 @@ export function replaceComposerToken(
   text: string,
   token: ComposerTokenMatch,
   replacement: string,
-  options?: { addTrailingSpace?: boolean }
+  options?: { addTrailingSpace?: boolean },
 ): {
   nextText: string;
   nextCaret: number;
 } {
-  const suffix = options?.addTrailingSpace === false ? "" : " ";
+  const suffix = options?.addTrailingSpace === false ? '' : ' ';
   const inserted = `${replacement}${suffix}`;
   const nextText = `${text.slice(0, token.start)}${inserted}${text.slice(token.end)}`;
   const nextCaret = token.start + inserted.length;
 
   return {
     nextText,
-    nextCaret
+    nextCaret,
   };
 }
 
 export function formatPathInsertion(path: string): string {
   const needsQuotes = /\s/.test(path);
-  if (!needsQuotes || path.includes("\"")) {
+  if (!needsQuotes || path.includes('"')) {
     return path;
   }
 
@@ -100,7 +100,7 @@ function findPrefixedToken(
   text: string,
   caret: number,
   prefix: string,
-  allowEmpty: boolean
+  allowEmpty: boolean,
 ): ComposerTokenMatch | null {
   const safeCaret = clampCaret(text, caret);
   const start = findTokenStart(text, safeCaret);
@@ -118,7 +118,7 @@ function findPrefixedToken(
     start,
     end,
     token,
-    query: token.slice(prefix.length)
+    query: token.slice(prefix.length),
   };
 }
 

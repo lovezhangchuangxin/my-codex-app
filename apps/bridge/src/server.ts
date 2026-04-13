@@ -1,30 +1,32 @@
-import { AppServerClient } from "./appServerClient";
-import { BridgeAuthService } from "./auth/authService";
-import { DeviceTrustStore } from "./auth/deviceTrustStore";
-import { ProjectService } from "./projectService";
-import { ProjectRegistryStore } from "./projects/projectRegistryStore";
-import { BridgeServer } from "./server/bridgeServer";
-import { loadBridgeServerConfig } from "./server/config";
-import { logPairingStatus } from "./server/logging";
-import { ThreadEventStreamRegistry } from "./server/threadEventStreamRegistry";
-import { ThreadService } from "./threadService";
-import { WorkspaceService } from "./workspaceService";
+import { AppServerClient } from './appServerClient';
+import { BridgeAuthService } from './auth/authService';
+import { DeviceTrustStore } from './auth/deviceTrustStore';
+import { ProjectService } from './projectService';
+import { ProjectRegistryStore } from './projects/projectRegistryStore';
+import { BridgeServer } from './server/bridgeServer';
+import { loadBridgeServerConfig } from './server/config';
+import { logPairingStatus } from './server/logging';
+import { ThreadEventStreamRegistry } from './server/threadEventStreamRegistry';
+import { ThreadService } from './threadService';
+import { WorkspaceService } from './workspaceService';
 
 async function main(): Promise<void> {
   const config = loadBridgeServerConfig();
   const appServerClient = new AppServerClient();
   await appServerClient.initialize();
 
-  const authService = new BridgeAuthService(new DeviceTrustStore(config.bridgeStatePath));
+  const authService = new BridgeAuthService(
+    new DeviceTrustStore(config.bridgeStatePath),
+  );
   const threadService = new ThreadService(appServerClient);
   const projectService = new ProjectService(
     new ProjectRegistryStore(config.bridgeProjectStatePath),
-    threadService
+    threadService,
   );
   const workspaceService = new WorkspaceService(appServerClient);
   const eventRegistry = new ThreadEventStreamRegistry(
     threadService,
-    config.threadUnsubscribeGraceMs
+    config.threadUnsubscribeGraceMs,
   );
   const unsubscribeEvents = threadService.onBridgeEvent((event) => {
     eventRegistry.broadcast(event);
@@ -34,7 +36,7 @@ async function main(): Promise<void> {
     projectService,
     threadService,
     workspaceService,
-    eventRegistry
+    eventRegistry,
   });
 
   let shuttingDown = false;
@@ -50,10 +52,10 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  process.on("SIGINT", () => {
+  process.on('SIGINT', () => {
     void shutdown();
   });
-  process.on("SIGTERM", () => {
+  process.on('SIGTERM', () => {
     void shutdown();
   });
 
@@ -66,7 +68,8 @@ async function main(): Promise<void> {
 }
 
 void main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.stack ?? error.message : String(error);
+  const message =
+    error instanceof Error ? (error.stack ?? error.message) : String(error);
   console.error(message);
   process.exit(1);
 });

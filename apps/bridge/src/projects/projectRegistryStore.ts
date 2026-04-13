@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname } from 'node:path';
 
 interface StoredProjectRecord {
   path: string;
@@ -34,24 +34,26 @@ export class ProjectRegistryStore {
   }
 
   upsertProject(path: string, nowInSeconds: number): ProjectRegistryRecord {
-    const existing = this.#state.projects.find((record) => record.path === path);
+    const existing = this.#state.projects.find(
+      (record) => record.path === path,
+    );
     const nextRecord: StoredProjectRecord = existing
       ? {
           ...existing,
-          updatedAt: nowInSeconds
+          updatedAt: nowInSeconds,
         }
       : {
           path,
           importedAt: nowInSeconds,
-          updatedAt: nowInSeconds
+          updatedAt: nowInSeconds,
         };
 
     this.#state = {
       version: 1,
       projects: [
         ...this.#state.projects.filter((record) => record.path !== path),
-        nextRecord
-      ]
+        nextRecord,
+      ],
     };
     this.#save();
     return { ...nextRecord };
@@ -61,13 +63,13 @@ export class ProjectRegistryStore {
     if (!existsSync(this.#statePath)) {
       const initialState: ProjectRegistryState = {
         version: 1,
-        projects: []
+        projects: [],
       };
       this.#writeState(initialState);
       return initialState;
     }
 
-    const raw = readFileSync(this.#statePath, "utf8");
+    const raw = readFileSync(this.#statePath, 'utf8');
     const parsed = JSON.parse(raw) as Partial<ProjectRegistryState>;
     if (parsed.version !== 1 || !Array.isArray(parsed.projects)) {
       throw new Error(`Invalid project registry state at ${this.#statePath}`);
@@ -78,11 +80,11 @@ export class ProjectRegistryStore {
       projects: parsed.projects
         .filter(
           (record): record is StoredProjectRecord =>
-            typeof record?.path === "string" &&
-            typeof record.importedAt === "number" &&
-            typeof record.updatedAt === "number"
+            typeof record?.path === 'string' &&
+            typeof record.importedAt === 'number' &&
+            typeof record.updatedAt === 'number',
         )
-        .map((record) => ({ ...record }))
+        .map((record) => ({ ...record })),
     };
   }
 
@@ -92,6 +94,10 @@ export class ProjectRegistryStore {
 
   #writeState(state: ProjectRegistryState): void {
     mkdirSync(dirname(this.#statePath), { recursive: true });
-    writeFileSync(this.#statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    writeFileSync(
+      this.#statePath,
+      `${JSON.stringify(state, null, 2)}\n`,
+      'utf8',
+    );
   }
 }

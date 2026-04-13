@@ -1,16 +1,16 @@
-import { Suspense, lazy } from "react";
-import { Navigate, createBrowserRouter } from "react-router-dom";
+import { Suspense, lazy } from 'react';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
 
-import { AppShell } from "@/app/layouts/app-shell";
-import { AuthGuard } from "@/app/layouts/auth-guard";
+import { AppShell } from '@/app/layouts/app-shell';
+import { AuthGuard } from '@/app/layouts/auth-guard';
 
 const PairingScreen = lazy(async () => {
-  const module = await import("@/components/pairing/pairing-screen");
+  const module = await import('@/components/pairing/pairing-screen');
   return { default: module.PairingScreen };
 });
 
 const ThreadsLayout = lazy(async () => {
-  const module = await import("@/app/layouts/threads-layout");
+  const module = await import('@/app/layouts/threads-layout');
   return { default: module.ThreadsLayout };
 });
 
@@ -32,37 +32,29 @@ function withSuspense(element: React.ReactNode) {
 
 export const appRouter = createBrowserRouter([
   {
-    path: "/",
+    path: '/',
     element: <AppShell />,
     children: [
       {
         index: true,
-        element: <Navigate replace to="/threads" />
+        element: <Navigate replace to="/threads" />,
       },
       {
-        path: "pair",
-        element: withSuspense(<PairingScreen />)
+        path: 'pair',
+        element: withSuspense(<PairingScreen />),
       },
       {
-        path: "threads",
-        element: (
-          <AuthGuard>
-            {withSuspense(<ThreadsLayout />)}
-          </AuthGuard>
-        )
+        path: 'threads',
+        element: <AuthGuard>{withSuspense(<ThreadsLayout />)}</AuthGuard>,
       },
       {
-        path: "threads/:threadId",
-        element: (
-          <AuthGuard>
-            {withSuspense(<ThreadsLayout />)}
-          </AuthGuard>
-        )
+        path: 'threads/:threadId',
+        element: <AuthGuard>{withSuspense(<ThreadsLayout />)}</AuthGuard>,
       },
       {
-        path: "*",
-        element: <Navigate replace to="/" />
-      }
-    ]
-  }
+        path: '*',
+        element: <Navigate replace to="/" />,
+      },
+    ],
+  },
 ]);

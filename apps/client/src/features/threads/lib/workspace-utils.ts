@@ -1,72 +1,79 @@
 const LANGUAGE_BY_EXTENSION: Record<string, string> = {
-  bash: "bash",
-  cjs: "javascript",
-  js: "javascript",
-  json: "json",
-  markdown: "markdown",
-  md: "markdown",
-  mjs: "javascript",
-  sh: "bash",
-  ts: "typescript",
-  tsx: "tsx",
-  yaml: "yaml",
-  yml: "yaml",
-  zsh: "bash"
+  bash: 'bash',
+  cjs: 'javascript',
+  js: 'javascript',
+  json: 'json',
+  markdown: 'markdown',
+  md: 'markdown',
+  mjs: 'javascript',
+  sh: 'bash',
+  ts: 'typescript',
+  tsx: 'tsx',
+  yaml: 'yaml',
+  yml: 'yaml',
+  zsh: 'bash',
 };
 
-export function normalizeWorkspacePath(value: string | null | undefined): string | null {
-  const trimmed = value?.trim() ?? "";
+export function normalizeWorkspacePath(
+  value: string | null | undefined,
+): string | null {
+  const trimmed = value?.trim() ?? '';
   if (trimmed.length === 0) {
-    return "";
+    return '';
   }
 
-  const normalized = trimmed.replace(/\\/g, "/");
+  const normalized = trimmed.replace(/\\/g, '/');
   if (isAbsoluteLikePath(normalized)) {
     return null;
   }
 
   const segments = normalized
-    .split("/")
-    .filter((segment) => segment.length > 0 && segment !== ".");
+    .split('/')
+    .filter((segment) => segment.length > 0 && segment !== '.');
 
-  if (segments.some((segment) => segment === "..")) {
+  if (segments.some((segment) => segment === '..')) {
     return null;
   }
 
-  return segments.join("/");
+  return segments.join('/');
 }
 
 export function toWorkspaceRelativePath(
   rootPath: string,
-  candidatePath: string | null | undefined
+  candidatePath: string | null | undefined,
 ): string | null {
-  const trimmed = candidatePath?.trim() ?? "";
-  if (trimmed.length === 0 || trimmed === "unknown") {
+  const trimmed = candidatePath?.trim() ?? '';
+  if (trimmed.length === 0 || trimmed === 'unknown') {
     return null;
   }
 
-  const normalizedCandidate = trimmed.replace(/\\/g, "/");
+  const normalizedCandidate = trimmed.replace(/\\/g, '/');
   if (!isAbsoluteLikePath(normalizedCandidate)) {
     return normalizeWorkspacePath(normalizedCandidate);
   }
 
-  const normalizedRoot = rootPath.trim().replace(/\\/g, "/").replace(/\/+$/, "");
+  const normalizedRoot = rootPath
+    .trim()
+    .replace(/\\/g, '/')
+    .replace(/\/+$/, '');
   if (normalizedRoot.length === 0) {
     return null;
   }
 
   if (normalizedCandidate === normalizedRoot) {
-    return "";
+    return '';
   }
 
-  const normalizedRootPrefix = normalizedRoot.endsWith("/")
+  const normalizedRootPrefix = normalizedRoot.endsWith('/')
     ? normalizedRoot
     : `${normalizedRoot}/`;
   if (!normalizedCandidate.startsWith(normalizedRootPrefix)) {
     return null;
   }
 
-  return normalizeWorkspacePath(normalizedCandidate.slice(normalizedRootPrefix.length));
+  return normalizeWorkspacePath(
+    normalizedCandidate.slice(normalizedRootPrefix.length),
+  );
 }
 
 export function getAncestorDirectoryPaths(filePath: string): string[] {
@@ -75,11 +82,11 @@ export function getAncestorDirectoryPaths(filePath: string): string[] {
     return [];
   }
 
-  const segments = normalized.split("/");
+  const segments = normalized.split('/');
   const ancestors: string[] = [];
 
   for (let index = 0; index < segments.length - 1; index++) {
-    ancestors.push(segments.slice(0, index + 1).join("/"));
+    ancestors.push(segments.slice(0, index + 1).join('/'));
   }
 
   return ancestors;
@@ -88,26 +95,31 @@ export function getAncestorDirectoryPaths(filePath: string): string[] {
 export function getParentDirectoryPath(workspacePath: string): string {
   const normalized = normalizeWorkspacePath(workspacePath);
   if (normalized === null || normalized.length === 0) {
-    return "";
+    return '';
   }
 
-  const segments = normalized.split("/");
-  return segments.slice(0, -1).join("/");
+  const segments = normalized.split('/');
+  return segments.slice(0, -1).join('/');
 }
 
 export function getFileName(workspacePath: string): string {
-  const normalized = workspacePath.replace(/\\/g, "/");
-  const segments = normalized.split("/").filter(Boolean);
+  const normalized = workspacePath.replace(/\\/g, '/');
+  const segments = normalized.split('/').filter(Boolean);
   return segments.at(-1) ?? workspacePath;
 }
 
-export function joinWorkspacePath(parentPath: string, childName: string): string {
+export function joinWorkspacePath(
+  parentPath: string,
+  childName: string,
+): string {
   return parentPath.length > 0 ? `${parentPath}/${childName}` : childName;
 }
 
-export function inferCodeLanguageFromPath(workspacePath: string): string | undefined {
+export function inferCodeLanguageFromPath(
+  workspacePath: string,
+): string | undefined {
   const fileName = getFileName(workspacePath);
-  const extension = fileName.split(".").at(-1)?.toLowerCase();
+  const extension = fileName.split('.').at(-1)?.toLowerCase();
   if (!extension) {
     return undefined;
   }
@@ -124,7 +136,7 @@ export function formatFileSize(bytes: number | undefined): string | null {
     return `${bytes} B`;
   }
 
-  const units = ["KB", "MB", "GB"];
+  const units = ['KB', 'MB', 'GB'];
   let value = bytes / 1024;
   let unitIndex = 0;
 
@@ -138,9 +150,9 @@ export function formatFileSize(bytes: number | undefined): string | null {
 
 function isAbsoluteLikePath(value: string): boolean {
   return (
-    value.startsWith("/") ||
-    value.startsWith("\\") ||
+    value.startsWith('/') ||
+    value.startsWith('\\') ||
     /^[A-Za-z]:/.test(value) ||
-    value.startsWith("//")
+    value.startsWith('//')
   );
 }

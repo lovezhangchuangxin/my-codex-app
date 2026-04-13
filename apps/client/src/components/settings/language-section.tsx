@@ -1,31 +1,33 @@
-import { Button } from "@/components/ui/button";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import { cn } from '@/lib/utils';
 
 const localeOptions = [
-  { key: "en" as const, labelKey: "settings.language.english" },
-  { key: "zh-CN" as const, labelKey: "settings.language.simplifiedChinese" }
+  { key: 'en' as const, labelKey: 'settings.language.english' },
+  { key: 'zh-CN' as const, labelKey: 'settings.language.simplifiedChinese' },
 ];
 
 export function LanguageSection() {
   const { locale, setLocale, t } = useI18n();
 
   const currentLanguageLabel =
-    locale === "zh-CN"
-      ? t("settings.language.simplifiedChinese")
-      : t("settings.language.english");
+    locale === 'zh-CN'
+      ? t('settings.language.simplifiedChinese')
+      : t('settings.language.english');
 
   return (
     <div className="space-y-3">
       <h3 className="font-mono text-xs tracking-[0.18em] text-muted-foreground uppercase">
-        {t("settings.language.title")}
+        {t('settings.language.title')}
       </h3>
 
       <div className="space-y-3 rounded-xl border border-subtle/8 bg-background/42 p-3">
         <div className="space-y-1">
-          <p className="text-sm text-foreground">{t("settings.language.description")}</p>
+          <p className="text-sm text-foreground">
+            {t('settings.language.description')}
+          </p>
           <p className="text-xs text-muted-foreground">
-            {t("settings.language.current", { language: currentLanguageLabel })}
+            {t('settings.language.current', { language: currentLanguageLabel })}
           </p>
         </div>
 
@@ -36,15 +38,16 @@ export function LanguageSection() {
             return (
               <Button
                 className={cn(
-                  "justify-center",
-                  isActive && "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+                  'justify-center',
+                  isActive &&
+                    'border-primary/30 bg-primary/10 text-primary hover:bg-primary/15',
                 )}
                 key={option.key}
                 onClick={() => {
                   setLocale(option.key);
                 }}
                 size="sm"
-                variant={isActive ? "secondary" : "outline"}
+                variant={isActive ? 'secondary' : 'outline'}
               >
                 {t(option.labelKey)}
               </Button>

@@ -85,11 +85,11 @@ The current client has three top-level routes (`/threads`, `/inbox`, `/connectio
 
 The root layout reads the runtime snapshot connection state:
 
-| Connection state | Behavior |
-|-----------------|----------|
-| `authenticated`, `refreshing`, `resyncing` | Allow access to `/threads`, redirect away from `/pair` |
-| `unpaired`, `expired`, `revoked` | Redirect to `/pair`, block access to `/threads` |
-| `disconnected`, `reconnecting` | Allow access to `/threads` (show reconnect banner), block `/pair` |
+| Connection state                           | Behavior                                                          |
+| ------------------------------------------ | ----------------------------------------------------------------- |
+| `authenticated`, `refreshing`, `resyncing` | Allow access to `/threads`, redirect away from `/pair`            |
+| `unpaired`, `expired`, `revoked`           | Redirect to `/pair`, block access to `/threads`                   |
+| `disconnected`, `reconnecting`             | Allow access to `/threads` (show reconnect banner), block `/pair` |
 
 ## Page Design
 
@@ -98,6 +98,7 @@ The root layout reads the runtime snapshot connection state:
 Full-screen, centered card layout. Same design on mobile and desktop.
 
 **User-visible elements:**
+
 - Product name and tagline
 - Single text input for pairing code
 - Helper text explaining where to find the code (terminal output of `pnpm dev:bridge`)
@@ -105,20 +106,21 @@ Full-screen, centered card layout. Same design on mobile and desktop.
 - Inline error messages for invalid code or unreachable bridge
 
 **Auto-detected fields (not shown to user):**
+
 - `device.label` — derived from `navigator.userAgent` (e.g. "iPhone Safari", "Chrome macOS")
 - `device.platform` — derived from `navigator.userAgent` (e.g. "ios-safari", "macos-chrome")
 - `device.deviceId` — `crypto.randomUUID()`
 
 **States:**
 
-| State | UI |
-|-------|----|
-| Initial | Input + button + helper text |
-| Submitting | Button loading spinner + "Connecting..." |
-| Success | Auto-redirect to `/threads` |
-| Invalid code | Red text below input: "Pairing code is invalid or expired" |
-| Network error | Red text below input: "Cannot reach bridge. Make sure `pnpm dev:bridge` is running." |
-| Bridge unreachable on load | Info banner: "Bridge not detected. Start the bridge first." |
+| State                      | UI                                                                                   |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| Initial                    | Input + button + helper text                                                         |
+| Submitting                 | Button loading spinner + "Connecting..."                                             |
+| Success                    | Auto-redirect to `/threads`                                                          |
+| Invalid code               | Red text below input: "Pairing code is invalid or expired"                           |
+| Network error              | Red text below input: "Cannot reach bridge. Make sure `pnpm dev:bridge` is running." |
+| Bridge unreachable on load | Info banner: "Bridge not detected. Start the bridge first."                          |
 
 ### Main Workspace (`/threads`)
 
@@ -134,12 +136,14 @@ Full-screen, centered card layout. Same design on mobile and desktop.
 - Right panel: thread detail
 
 **Thread list panel:**
+
 - Status filter tabs: `[All] [Active] [Pending] [Idle]`
 - Workspace groups (collapsible)
 - Thread cards showing: title, last message preview, model badge, status badge, pending request count
 - Floating action button: new thread (`+`)
 
 **Thread detail panel:**
+
 - Header: thread title, workspace name, status, action menu (copy ID, interrupt)
 - Message stream: user/assistant messages, code blocks, terminal output (reuses existing components)
 - Pending requests remain visible within thread detail without leaving the page.
@@ -150,11 +154,11 @@ Full-screen, centered card layout. Same design on mobile and desktop.
 
 Replaces the current sidebar and bottom tab bar.
 
-| Element | Mobile | Desktop |
-|---------|--------|---------|
-| Left | App name "Codex" | App name "Codex" |
-| Center | — | Search input |
-| Right | Bell icon + Settings icon | Bell icon + Settings icon + Connection indicator |
+| Element | Mobile                    | Desktop                                          |
+| ------- | ------------------------- | ------------------------------------------------ |
+| Left    | App name "Codex"          | App name "Codex"                                 |
+| Center  | —                         | Search input                                     |
+| Right   | Bell icon + Settings icon | Bell icon + Settings icon + Connection indicator |
 
 - **Bell icon**: shows badge with total pending request count across all threads
 - **Settings icon**: opens settings sheet
@@ -168,6 +172,7 @@ Triggered by the bell icon in the header.
 - Desktop: bottom sheet in the current implementation
 
 Shows all pending requests grouped by thread. Each request card includes:
+
 - Thread name (clickable to navigate)
 - Request type icon and description
 - Action buttons (approve/deny for commands and file changes; input field for user-input prompts)
@@ -182,11 +187,13 @@ Triggered by the settings icon in the header.
 - Desktop: right-side drawer
 
 **Sections:**
+
 - Connection status: state dot, mode label, bridge URL, reconnect button
 - Trusted devices: list with revoke buttons (only visible if authenticated)
 - About: version number
 
 **Removed from current Connection page:**
+
 - Runtime snapshot panel
 - Manual health check button
 - Pairing form (moved to `/pair`)
@@ -198,44 +205,44 @@ Triggered by the settings icon in the header.
 
 ### New components
 
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `PairingScreen` | `components/pairing/` | Full-screen pairing page |
-| `AuthGuard` | `app/layouts/` | Root layout that redirects based on auth state |
-| `Header` | `components/layout/` | Global top navigation bar |
-| `ConnectionIndicator` | `components/layout/` | Connection state dot + label |
-| `NotificationBell` | `components/layout/` | Bell icon with request count badge |
-| `ThreadCard` | `features/threads/components/` | Single thread item in list |
-| `ThreadStatusTabs` | `features/threads/components/` | Status filter tab bar |
-| `WorkspaceGroup` | `features/threads/components/` | Collapsible workspace section |
-| `ThreadDetailHeader` | `features/threads/components/` | Detail panel top bar |
-| `ThreadDetailMessages` | `features/threads/components/` | Conversation message list and item renderers |
-| `ThreadComposer` | `features/threads/components/` | Bottom composer and settings controls |
-| `RequestSheet` | `features/requests/components/` | Global request panel (replaces Inbox) |
-| `PendingRequestList` | `features/requests/components/` | Request list used in thread detail and request sheet |
-| `PendingRequestCard` | `features/requests/components/` | Shared request card shell |
-| `SettingsSheet` | `components/settings/` | Settings panel container |
-| `ConnectionSection` | `components/settings/` | Connection status in settings |
-| `DevicesSection` | `components/settings/` | Trusted device list in settings |
-| `device-info` | `components/pairing/` | UA detection utility |
+| Component              | Location                        | Purpose                                              |
+| ---------------------- | ------------------------------- | ---------------------------------------------------- |
+| `PairingScreen`        | `components/pairing/`           | Full-screen pairing page                             |
+| `AuthGuard`            | `app/layouts/`                  | Root layout that redirects based on auth state       |
+| `Header`               | `components/layout/`            | Global top navigation bar                            |
+| `ConnectionIndicator`  | `components/layout/`            | Connection state dot + label                         |
+| `NotificationBell`     | `components/layout/`            | Bell icon with request count badge                   |
+| `ThreadCard`           | `features/threads/components/`  | Single thread item in list                           |
+| `ThreadStatusTabs`     | `features/threads/components/`  | Status filter tab bar                                |
+| `WorkspaceGroup`       | `features/threads/components/`  | Collapsible workspace section                        |
+| `ThreadDetailHeader`   | `features/threads/components/`  | Detail panel top bar                                 |
+| `ThreadDetailMessages` | `features/threads/components/`  | Conversation message list and item renderers         |
+| `ThreadComposer`       | `features/threads/components/`  | Bottom composer and settings controls                |
+| `RequestSheet`         | `features/requests/components/` | Global request panel (replaces Inbox)                |
+| `PendingRequestList`   | `features/requests/components/` | Request list used in thread detail and request sheet |
+| `PendingRequestCard`   | `features/requests/components/` | Shared request card shell                            |
+| `SettingsSheet`        | `components/settings/`          | Settings panel container                             |
+| `ConnectionSection`    | `components/settings/`          | Connection status in settings                        |
+| `DevicesSection`       | `components/settings/`          | Trusted device list in settings                      |
+| `device-info`          | `components/pairing/`           | UA detection utility                                 |
 
 ### Removed components
 
-| Component | Reason |
-|-----------|--------|
-| Current `app-shell.tsx` sidebar | Replaced by Header |
-| Current `app-shell.tsx` bottom tab bar | Replaced by Header icons |
-| `inbox-panel.tsx` | Replaced by `RequestSheet` + inline cards |
-| `connection-route.tsx` | Split into `PairingScreen` + `SettingsSheet` |
+| Component                              | Reason                                       |
+| -------------------------------------- | -------------------------------------------- |
+| Current `app-shell.tsx` sidebar        | Replaced by Header                           |
+| Current `app-shell.tsx` bottom tab bar | Replaced by Header icons                     |
+| `inbox-panel.tsx`                      | Replaced by `RequestSheet` + inline cards    |
+| `connection-route.tsx`                 | Split into `PairingScreen` + `SettingsSheet` |
 
 ### Refactored components
 
-| Component | Change |
-|-----------|--------|
-| `app-shell.tsx` | Rewrite: Header + content area, no sidebar, no bottom nav |
-| `threads-shell.tsx` → `threads-layout.tsx` | Simplify: dual-panel / single-panel adaptive layout |
-| `thread-list-panel.tsx` | Split into smaller components |
-| `thread-detail-panel.tsx` | Split into smaller components |
+| Component                                  | Change                                                    |
+| ------------------------------------------ | --------------------------------------------------------- |
+| `app-shell.tsx`                            | Rewrite: Header + content area, no sidebar, no bottom nav |
+| `threads-shell.tsx` → `threads-layout.tsx` | Simplify: dual-panel / single-panel adaptive layout       |
+| `thread-list-panel.tsx`                    | Split into smaller components                             |
+| `thread-detail-panel.tsx`                  | Split into smaller components                             |
 
 ### File structure
 
@@ -334,9 +341,9 @@ The runtime snapshot shows internal SDK state (connection kind, thread list stat
 
 ## Risks
 
-| Risk | Mitigation |
-|------|------------|
-| Auth state edge cases during token refresh or reconnect | Treat `refreshing` and `resyncing` as authenticated states; treat `disconnected` and `reconnecting` as authenticated-but-disrupted to avoid booting users to pairing mid-session |
-| UA detection producing unexpected device labels | Use conservative defaults; device label is informational only and does not affect functionality |
-| Component split breaking existing thread detail rendering | Message stream, code blocks, and terminal output components are reused without modification |
-| Mobile panel state machine losing thread selection on back navigation | State machine clears `selectedThreadId` on back; URL-based routing preserves deep links on desktop |
+| Risk                                                                  | Mitigation                                                                                                                                                                       |
+| --------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Auth state edge cases during token refresh or reconnect               | Treat `refreshing` and `resyncing` as authenticated states; treat `disconnected` and `reconnecting` as authenticated-but-disrupted to avoid booting users to pairing mid-session |
+| UA detection producing unexpected device labels                       | Use conservative defaults; device label is informational only and does not affect functionality                                                                                  |
+| Component split breaking existing thread detail rendering             | Message stream, code blocks, and terminal output components are reused without modification                                                                                      |
+| Mobile panel state machine losing thread selection on back navigation | State machine clears `selectedThreadId` on back; URL-based routing preserves deep links on desktop                                                                               |

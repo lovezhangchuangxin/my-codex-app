@@ -1,8 +1,8 @@
-import type { ServerResponse } from "node:http";
+import type { ServerResponse } from 'node:http';
 
-import type { BridgeEvent } from "@my-codex-app/protocol";
+import type { BridgeEvent } from '@my-codex-app/protocol';
 
-import { ThreadService } from "../threadService";
+import { ThreadService } from '../threadService';
 
 type EventClient = {
   response: ServerResponse;
@@ -12,12 +12,15 @@ type EventClient = {
 export class ThreadEventStreamRegistry {
   readonly #eventClients = new Set<EventClient>();
   readonly #threadSubscriberCounts = new Map<string, number>();
-  readonly #threadUnsubscribeTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  readonly #threadUnsubscribeTimers = new Map<
+    string,
+    ReturnType<typeof setTimeout>
+  >();
   #closing = false;
 
   constructor(
     private readonly threadService: ThreadService,
-    private readonly threadUnsubscribeGraceMs: number
+    private readonly threadUnsubscribeGraceMs: number,
   ) {}
 
   broadcast(event: BridgeEvent): void {
@@ -33,16 +36,20 @@ export class ThreadEventStreamRegistry {
     }
   }
 
-  async addClient(response: ServerResponse, threadId: string): Promise<EventClient> {
+  async addClient(
+    response: ServerResponse,
+    threadId: string,
+  ): Promise<EventClient> {
     if (this.#closing) {
-      throw new Error("Event stream registry is closing");
+      throw new Error('Event stream registry is closing');
     }
 
     const client = { response, threadId };
     this.#eventClients.add(client);
 
     const subscriberCount = this.#threadSubscriberCounts.get(threadId) ?? 0;
-    const hadPendingUnsubscribe = this.#cancelScheduledThreadUnsubscribe(threadId);
+    const hadPendingUnsubscribe =
+      this.#cancelScheduledThreadUnsubscribe(threadId);
     this.#threadSubscriberCounts.set(threadId, subscriberCount + 1);
 
     try {
@@ -104,17 +111,20 @@ export class ThreadEventStreamRegistry {
 
   #scheduleThreadUnsubscribe(threadId: string): void {
     this.#cancelScheduledThreadUnsubscribe(threadId);
-    const timer = setTimeout(() => {
-      this.#threadUnsubscribeTimers.delete(threadId);
-      if ((this.#threadSubscriberCounts.get(threadId) ?? 0) > 0) {
-        return;
-      }
+    const timer = setTimeout(
+      () => {
+        this.#threadUnsubscribeTimers.delete(threadId);
+        if ((this.#threadSubscriberCounts.get(threadId) ?? 0) > 0) {
+          return;
+        }
 
-      this.#threadSubscriberCounts.delete(threadId);
-      void this.threadService.unsubscribeThread(threadId).catch(() => {
-        // Ignore delayed cleanup errors; the bridge remains authoritative on reconnect.
-      });
-    }, Math.max(this.threadUnsubscribeGraceMs, 0));
+        this.#threadSubscriberCounts.delete(threadId);
+        void this.threadService.unsubscribeThread(threadId).catch(() => {
+          // Ignore delayed cleanup errors; the bridge remains authoritative on reconnect.
+        });
+      },
+      Math.max(this.threadUnsubscribeGraceMs, 0),
+    );
     this.#threadUnsubscribeTimers.set(threadId, timer);
   }
 }

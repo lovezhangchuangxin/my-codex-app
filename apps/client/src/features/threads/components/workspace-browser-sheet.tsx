@@ -1,24 +1,24 @@
-import { FolderOpen, X } from "lucide-react";
+import { FolderOpen, X } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
-  SheetTitle
-} from "@/components/ui/sheet";
-import { useMediaQuery } from "@/hooks/use-media-query";
+  SheetTitle,
+} from '@/components/ui/sheet';
+import { useMediaQuery } from '@/hooks/use-media-query';
 import {
   useWorkspaceBrowser,
-  type WorkspaceBrowserRequestedTargetKind
-} from "@/features/threads/components/use-workspace-browser";
+  type WorkspaceBrowserRequestedTargetKind,
+} from '@/features/threads/components/use-workspace-browser';
 import {
   WorkspaceBrowserPreviewPane,
-  WorkspaceBrowserTreePane
-} from "@/features/threads/components/workspace-browser-panes";
-import { getWorkspaceLabel } from "@/features/threads/lib/thread-utils";
-import { useI18n } from "@/lib/i18n/use-i18n";
+  WorkspaceBrowserTreePane,
+} from '@/features/threads/components/workspace-browser-panes';
+import { getWorkspaceLabel } from '@/features/threads/lib/thread-utils';
+import { useI18n } from '@/lib/i18n/use-i18n';
 
 export function WorkspaceBrowserSheet({
   cwd,
@@ -28,7 +28,7 @@ export function WorkspaceBrowserSheet({
   requestedLine,
   requestedPath,
   requestedTargetKind,
-  threadId
+  threadId,
 }: {
   cwd: string;
   onOpenChange: (open: boolean) => void;
@@ -40,7 +40,7 @@ export function WorkspaceBrowserSheet({
   threadId: string;
 }) {
   const { t } = useI18n();
-  const isDesktop = useMediaQuery("(min-width: 1024px)");
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const {
     directories,
     expandedPaths,
@@ -53,14 +53,14 @@ export function WorkspaceBrowserSheet({
     selectedDirectoryPath,
     selectedFilePath,
     selectedPreviewPath,
-    setMobileMode
+    setMobileMode,
   } = useWorkspaceBrowser({
     isDesktop,
     open,
     requestKey,
     requestedPath,
     requestedTargetKind,
-    threadId
+    threadId,
   });
 
   return (
@@ -68,7 +68,7 @@ export function WorkspaceBrowserSheet({
       <SheetContent
         className="inset-0 h-[100dvh] w-screen max-w-none gap-0 rounded-none border-0 bg-card/95 p-0 sm:max-w-none lg:inset-y-0 lg:right-0 lg:left-auto lg:h-full lg:w-full lg:max-w-[min(96vw,1120px)] lg:border-l lg:border-subtle/6"
         showCloseButton={false}
-        side={isDesktop ? "right" : "bottom"}
+        side={isDesktop ? 'right' : 'bottom'}
       >
         <SheetHeader className="gap-2 border-b border-subtle/6 bg-background/45 px-4 py-4 md:px-5">
           <div className="flex items-start justify-between gap-3">
@@ -78,7 +78,7 @@ export function WorkspaceBrowserSheet({
               </div>
               <div className="min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <SheetTitle>{t("detail.workspace.sheetTitle")}</SheetTitle>
+                  <SheetTitle>{t('detail.workspace.sheetTitle')}</SheetTitle>
                   <Badge
                     className="border-0 bg-background/80 font-mono text-[0.68rem] uppercase text-muted-foreground"
                     variant="outline"
@@ -97,10 +97,12 @@ export function WorkspaceBrowserSheet({
               variant="ghost"
             >
               <X className="size-4" />
-              <span className="sr-only">{t("common.close")}</span>
+              <span className="sr-only">{t('common.close')}</span>
             </Button>
           </div>
-          <p className="break-all font-mono text-[0.74rem] text-muted-foreground">{cwd}</p>
+          <p className="break-all font-mono text-[0.74rem] text-muted-foreground">
+            {cwd}
+          </p>
         </SheetHeader>
 
         {isDesktop ? (
@@ -138,28 +140,28 @@ export function WorkspaceBrowserSheet({
             <div className="flex items-center gap-2 border-b border-subtle/6 px-4 py-3">
               <Button
                 onClick={() => {
-                  setMobileMode("files");
+                  setMobileMode('files');
                 }}
                 size="sm"
                 type="button"
-                variant={mobileMode === "files" ? "secondary" : "ghost"}
+                variant={mobileMode === 'files' ? 'secondary' : 'ghost'}
               >
-                {t("detail.workspace.treeTitle")}
+                {t('detail.workspace.treeTitle')}
               </Button>
               <Button
                 disabled={!selectedPreviewPath}
                 onClick={() => {
-                  setMobileMode("preview");
+                  setMobileMode('preview');
                 }}
                 size="sm"
                 type="button"
-                variant={mobileMode === "preview" ? "secondary" : "ghost"}
+                variant={mobileMode === 'preview' ? 'secondary' : 'ghost'}
               >
-                {t("detail.workspace.previewTitle")}
+                {t('detail.workspace.previewTitle')}
               </Button>
             </div>
 
-            {mobileMode === "files" ? (
+            {mobileMode === 'files' ? (
               <div className="min-h-0 flex flex-1 flex-col">
                 <WorkspaceBrowserTreePane
                   directories={directories}

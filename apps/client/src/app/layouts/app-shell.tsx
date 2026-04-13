@@ -1,6 +1,6 @@
-import { Outlet } from "react-router-dom";
+import { Outlet } from 'react-router-dom';
 
-import { Header } from "@/components/layout/header";
+import { Header } from '@/components/layout/header';
 
 export function AppShell() {
   return (

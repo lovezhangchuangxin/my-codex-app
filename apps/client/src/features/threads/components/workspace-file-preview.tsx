@@ -1,29 +1,29 @@
-import { FileCode2, FileWarning, LoaderCircle } from "lucide-react";
+import { FileCode2, FileWarning, LoaderCircle } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CodeBlock } from "@/components/common/code-block";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import type { MessageParams } from "@/lib/i18n/types";
-import type { WorkspaceReadFileResponse } from "@my-codex-app/protocol";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { CodeBlock } from '@/components/common/code-block';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import type { MessageParams } from '@/lib/i18n/types';
+import type { WorkspaceReadFileResponse } from '@my-codex-app/protocol';
 
 import {
   formatFileSize,
   getFileName,
-  inferCodeLanguageFromPath
-} from "@/features/threads/lib/workspace-utils";
+  inferCodeLanguageFromPath,
+} from '@/features/threads/lib/workspace-utils';
 
 export type WorkspaceFilePreviewState =
-  | { status: "idle" }
-  | { status: "loading"; path: string }
-  | { status: "error"; path: string; message: string }
-  | { status: "ready"; path: string; response: WorkspaceReadFileResponse };
+  | { status: 'idle' }
+  | { status: 'loading'; path: string }
+  | { status: 'error'; path: string; message: string }
+  | { status: 'ready'; path: string; response: WorkspaceReadFileResponse };
 
 export function WorkspaceFilePreview({
   highlightLine,
   onRetry,
-  state
+  state,
 }: {
   highlightLine?: number | null;
   onRetry: (path: string) => void;
@@ -31,39 +31,39 @@ export function WorkspaceFilePreview({
 }) {
   const { t } = useI18n();
 
-  if (state.status === "idle") {
+  if (state.status === 'idle') {
     return (
       <EmptyPreviewState
-        description={t("detail.workspace.preview.empty")}
-        title={t("detail.workspace.preview.title")}
+        description={t('detail.workspace.preview.empty')}
+        title={t('detail.workspace.preview.title')}
       />
     );
   }
 
-  if (state.status === "loading") {
+  if (state.status === 'loading') {
     return (
       <div className="space-y-3 p-4 md:p-5">
         <PreviewHeader
-          metadata={t("detail.workspace.loading.file")}
+          metadata={t('detail.workspace.loading.file')}
           path={state.path}
           title={getFileName(state.path)}
         />
         <div className="grid min-h-[14rem] place-items-center rounded-2xl border border-subtle/8 bg-background/55">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <LoaderCircle className="size-4 animate-spin" />
-            <span>{t("detail.workspace.loading.file")}</span>
+            <span>{t('detail.workspace.loading.file')}</span>
           </div>
         </div>
       </div>
     );
   }
 
-  if (state.status === "error") {
+  if (state.status === 'error') {
     return (
       <div className="space-y-3 p-4 md:p-5">
         <PreviewHeader path={state.path} title={getFileName(state.path)} />
         <Alert className="border-destructive/20 bg-destructive/5">
-          <AlertTitle>{t("detail.workspace.error.fileTitle")}</AlertTitle>
+          <AlertTitle>{t('detail.workspace.error.fileTitle')}</AlertTitle>
           <AlertDescription>{state.message}</AlertDescription>
         </Alert>
         <Button
@@ -73,7 +73,7 @@ export function WorkspaceFilePreview({
           size="sm"
           variant="outline"
         >
-          {t("detail.workspace.action.retry")}
+          {t('detail.workspace.action.retry')}
         </Button>
       </div>
     );
@@ -87,20 +87,27 @@ export function WorkspaceFilePreview({
     <div className="space-y-3 p-4 md:p-5">
       <PreviewHeader
         badge={workspaceFileKindBadge(state.response.kind, t)}
-        metadata={[fileSize, state.response.modifiedAtMs ? t("detail.workspace.updated", {
-          value: new Date(state.response.modifiedAtMs).toLocaleString()
-        }) : null].filter(Boolean).join(" · ")}
+        metadata={[
+          fileSize,
+          state.response.modifiedAtMs
+            ? t('detail.workspace.updated', {
+                value: new Date(state.response.modifiedAtMs).toLocaleString(),
+              })
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         path={state.response.path}
         title={fileName}
       />
 
-      {state.response.kind === "text" ? (
+      {state.response.kind === 'text' ? (
         <CodeBlock
           className="min-h-[18rem] rounded-2xl border border-subtle/8 bg-code-bg"
           highlightLine={highlightLine}
           {...(language ? { language } : {})}
         >
-          {state.response.content ?? ""}
+          {state.response.content ?? ''}
         </CodeBlock>
       ) : (
         <div className="rounded-2xl border border-subtle/8 bg-background/55 p-4">
@@ -113,7 +120,7 @@ export function WorkspaceFilePreview({
                 {workspaceFileKindMessage(state.response.kind, t)}
               </p>
               <p className="text-sm leading-6 text-muted-foreground">
-                {t("detail.workspace.preview.metadataOnly")}
+                {t('detail.workspace.preview.metadataOnly')}
               </p>
             </div>
           </div>
@@ -125,7 +132,7 @@ export function WorkspaceFilePreview({
 
 function EmptyPreviewState({
   description,
-  title
+  title,
 }: {
   description: string;
   title: string;
@@ -138,7 +145,9 @@ function EmptyPreviewState({
         </div>
         <div className="space-y-1.5">
           <p className="font-medium text-foreground">{title}</p>
-          <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+          <p className="text-sm leading-6 text-muted-foreground">
+            {description}
+          </p>
         </div>
       </div>
     </div>
@@ -149,7 +158,7 @@ function PreviewHeader({
   badge,
   metadata,
   path,
-  title
+  title,
 }: {
   badge?: string | undefined;
   metadata?: string | undefined;
@@ -165,13 +174,16 @@ function PreviewHeader({
           {title}
         </h3>
         {badge ? (
-          <Badge className="border-0 bg-background/80 font-mono text-[0.68rem] uppercase text-muted-foreground" variant="outline">
+          <Badge
+            className="border-0 bg-background/80 font-mono text-[0.68rem] uppercase text-muted-foreground"
+            variant="outline"
+          >
             {badge}
           </Badge>
         ) : null}
       </div>
       <p className="break-all font-mono text-[0.74rem] text-muted-foreground">
-        {t("detail.workspace.path")}: {path}
+        {t('detail.workspace.path')}: {path}
       </p>
       {metadata ? (
         <p className="text-xs text-muted-foreground">{metadata}</p>
@@ -181,33 +193,33 @@ function PreviewHeader({
 }
 
 function workspaceFileKindBadge(
-  kind: WorkspaceReadFileResponse["kind"],
-  t: (key: string, values?: MessageParams) => string
+  kind: WorkspaceReadFileResponse['kind'],
+  t: (key: string, values?: MessageParams) => string,
 ) {
   switch (kind) {
-    case "text":
-      return t("detail.workspace.kind.text");
-    case "binary":
-      return t("detail.workspace.kind.binary");
-    case "tooLarge":
-      return t("detail.workspace.kind.tooLarge");
-    case "unsupported":
-      return t("detail.workspace.kind.unsupported");
+    case 'text':
+      return t('detail.workspace.kind.text');
+    case 'binary':
+      return t('detail.workspace.kind.binary');
+    case 'tooLarge':
+      return t('detail.workspace.kind.tooLarge');
+    case 'unsupported':
+      return t('detail.workspace.kind.unsupported');
   }
 }
 
 function workspaceFileKindMessage(
-  kind: WorkspaceReadFileResponse["kind"],
-  t: (key: string, values?: MessageParams) => string
+  kind: WorkspaceReadFileResponse['kind'],
+  t: (key: string, values?: MessageParams) => string,
 ) {
   switch (kind) {
-    case "text":
-      return t("detail.workspace.kind.text");
-    case "binary":
-      return t("detail.workspace.preview.binary");
-    case "tooLarge":
-      return t("detail.workspace.preview.tooLarge");
-    case "unsupported":
-      return t("detail.workspace.preview.unsupported");
+    case 'text':
+      return t('detail.workspace.kind.text');
+    case 'binary':
+      return t('detail.workspace.preview.binary');
+    case 'tooLarge':
+      return t('detail.workspace.preview.tooLarge');
+    case 'unsupported':
+      return t('detail.workspace.preview.unsupported');
   }
 }

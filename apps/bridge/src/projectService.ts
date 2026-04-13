@@ -1,5 +1,5 @@
-import path from "node:path";
-import { readdir, realpath, stat } from "node:fs/promises";
+import path from 'node:path';
+import { readdir, realpath, stat } from 'node:fs/promises';
 
 import type {
   ProjectImportRequest,
@@ -8,16 +8,16 @@ import type {
   ProjectSearchMatch,
   ProjectSearchRequest,
   ProjectSearchResponse,
-  ProjectSummary
-} from "@my-codex-app/protocol";
+  ProjectSummary,
+} from '@my-codex-app/protocol';
 
 import {
   getProjectDisplayName,
   normalizeAbsolutePath,
-  resolveProjectIdentityPath
-} from "./projects/projectPathUtils";
-import { ProjectRegistryStore } from "./projects/projectRegistryStore";
-import { ThreadService } from "./threadService";
+  resolveProjectIdentityPath,
+} from './projects/projectPathUtils';
+import { ProjectRegistryStore } from './projects/projectRegistryStore';
+import { ThreadService } from './threadService';
 
 const DEFAULT_PROJECT_SEARCH_LIMIT = 12;
 const MAX_PROJECT_SEARCH_LIMIT = 20;
@@ -46,31 +46,35 @@ export class ProjectServiceError extends Error {
 export class ProjectService {
   constructor(
     private readonly registryStore: ProjectRegistryStore,
-    private readonly threadService: ThreadService
+    private readonly threadService: ThreadService,
   ) {}
 
   async listProjects(): Promise<ProjectListResponse> {
     return {
-      data: await this.#buildProjectSummaries()
+      data: await this.#buildProjectSummaries(),
     };
   }
 
-  async searchProjects(request: ProjectSearchRequest): Promise<ProjectSearchResponse> {
+  async searchProjects(
+    request: ProjectSearchRequest,
+  ): Promise<ProjectSearchResponse> {
     const query = request.query.trim();
     const limit = normalizeSearchLimit(request.limit);
     const projects = await this.#buildProjectSummaries();
-    const knownMatches = projects.filter((project) => matchesProjectQuery(project, query));
+    const knownMatches = projects.filter((project) =>
+      matchesProjectQuery(project, query),
+    );
     const pathMatches = await this.#suggestPathMatches(query, limit);
 
     const merged = new Map<string, ProjectSearchMatch>();
     for (const project of knownMatches) {
       merged.set(project.path, {
-        kind: "knownProject",
+        kind: 'knownProject',
         path: project.path,
         displayName: project.displayName,
         imported: project.imported,
         hasDerivedThreads: project.hasDerivedThreads,
-        available: project.available
+        available: project.available,
       });
       if (merged.size >= limit) {
         break;
@@ -89,18 +93,23 @@ export class ProjectService {
 
     return {
       query,
-      matches: [...merged.values()].slice(0, limit)
+      matches: [...merged.values()].slice(0, limit),
     };
   }
 
-  async importProject(request: ProjectImportRequest): Promise<ProjectImportResponse> {
+  async importProject(
+    request: ProjectImportRequest,
+  ): Promise<ProjectImportResponse> {
     const canonicalPath = await resolveImportProjectPath(request.path);
     this.registryStore.upsertProject(canonicalPath, nowInSeconds());
 
     const projects = await this.#buildProjectSummaries();
     const project = projects.find((entry) => entry.path === canonicalPath);
     if (!project) {
-      throw new ProjectServiceError("Imported project could not be resolved", 500);
+      throw new ProjectServiceError(
+        'Imported project could not be resolved',
+        500,
+      );
     }
 
     return { project };
@@ -113,7 +122,8 @@ export class ProjectService {
 
     for (const importedProject of importedProjects) {
       const pathInfo = await getProjectPathInfo(importedProject.path);
-      const accumulator = projectMap.get(pathInfo.path) ?? createProjectAccumulator(pathInfo);
+      const accumulator =
+        projectMap.get(pathInfo.path) ?? createProjectAccumulator(pathInfo);
       accumulator.imported = true;
       accumulator.available = accumulator.available || pathInfo.available;
       projectMap.set(accumulator.path, accumulator);
@@ -125,14 +135,18 @@ export class ProjectService {
         continue;
       }
 
-      const accumulator = projectMap.get(pathInfo.path) ?? createProjectAccumulator(pathInfo);
+      const accumulator =
+        projectMap.get(pathInfo.path) ?? createProjectAccumulator(pathInfo);
       accumulator.hasDerivedThreads = true;
       accumulator.available = accumulator.available || pathInfo.available;
       accumulator.sessionCount += 1;
       accumulator.pendingRequestCount += thread.pendingRequests.length;
       accumulator.hasActiveSession =
-        accumulator.hasActiveSession || thread.status.type === "active";
-      accumulator.lastActiveAt = Math.max(accumulator.lastActiveAt ?? 0, thread.updatedAt);
+        accumulator.hasActiveSession || thread.status.type === 'active';
+      accumulator.lastActiveAt = Math.max(
+        accumulator.lastActiveAt ?? 0,
+        thread.updatedAt,
+      );
       projectMap.set(accumulator.path, accumulator);
     }
 
@@ -146,23 +160,25 @@ export class ProjectService {
         pendingRequestCount: project.pendingRequestCount,
         hasActiveSession: project.hasActiveSession,
         available: project.available,
-        ...(project.lastActiveAt !== undefined ? { lastActiveAt: project.lastActiveAt } : {})
+        ...(project.lastActiveAt !== undefined
+          ? { lastActiveAt: project.lastActiveAt }
+          : {}),
       }))
       .sort(compareProjects);
   }
 
   async #suggestPathMatches(
     query: string,
-    limit: number
+    limit: number,
   ): Promise<ProjectSearchMatch[]> {
     const prepared = preparePathSuggestionQuery(query);
     if (!prepared) {
       return [];
     }
 
-    const entries = await readdir(prepared.directory, { withFileTypes: true }).catch(
-      () => null
-    );
+    const entries = await readdir(prepared.directory, {
+      withFileTypes: true,
+    }).catch(() => null);
     if (!entries) {
       return [];
     }
@@ -171,19 +187,19 @@ export class ProjectService {
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name)
       .filter((entryName) =>
-        entryName.toLowerCase().includes(prepared.prefix.toLowerCase())
+        entryName.toLowerCase().includes(prepared.prefix.toLowerCase()),
       )
       .sort((left, right) => left.localeCompare(right))
       .slice(0, limit)
       .map((entryName) => {
         const suggestedPath = path.join(prepared.directory, entryName);
         return {
-          kind: "pathSuggestion" as const,
+          kind: 'pathSuggestion' as const,
           path: suggestedPath,
           displayName: getProjectDisplayName(suggestedPath),
           imported: false,
           hasDerivedThreads: false,
-          available: true
+          available: true,
         };
       });
   }
@@ -210,7 +226,7 @@ function createProjectAccumulator(pathInfo: {
     sessionCount: 0,
     pendingRequestCount: 0,
     hasActiveSession: false,
-    available: pathInfo.available
+    available: pathInfo.available,
   };
 }
 
@@ -258,7 +274,7 @@ async function getProjectPathInfo(rawPath: string): Promise<{
     return {
       path: rawPath.trim(),
       displayName: getProjectDisplayName(rawPath.trim()),
-      available: false
+      available: false,
     };
   }
 
@@ -269,20 +285,20 @@ async function getProjectPathInfo(rawPath: string): Promise<{
       return {
         path: identityPath,
         displayName: getProjectDisplayName(identityPath),
-        available: false
+        available: false,
       };
     }
 
     return {
       path: resolvedPath,
       displayName: getProjectDisplayName(resolvedPath),
-      available: true
+      available: true,
     };
   } catch {
     return {
       path: identityPath,
       displayName: getProjectDisplayName(identityPath),
-      available: false
+      available: false,
     };
   }
 }
@@ -290,28 +306,30 @@ async function getProjectPathInfo(rawPath: string): Promise<{
 async function resolveImportProjectPath(inputPath: string): Promise<string> {
   const normalizedPath = normalizeAbsolutePath(inputPath, true);
   if (!normalizedPath) {
-    throw new ProjectServiceError("Project path is required", 400);
+    throw new ProjectServiceError('Project path is required', 400);
   }
 
-  const resolvedPath = await realpath(normalizedPath).catch((error: NodeJS.ErrnoException) => {
-    if (error.code === "ENOENT") {
-      throw new ProjectServiceError("Project path does not exist", 404);
-    }
-    throw new ProjectServiceError("Unable to resolve project path", 400);
-  });
+  const resolvedPath = await realpath(normalizedPath).catch(
+    (error: NodeJS.ErrnoException) => {
+      if (error.code === 'ENOENT') {
+        throw new ProjectServiceError('Project path does not exist', 404);
+      }
+      throw new ProjectServiceError('Unable to resolve project path', 400);
+    },
+  );
   const resolvedStats = await stat(resolvedPath).catch(() => {
-    throw new ProjectServiceError("Unable to read project path", 400);
+    throw new ProjectServiceError('Unable to read project path', 400);
   });
 
   if (!resolvedStats.isDirectory()) {
-    throw new ProjectServiceError("Project path must be a directory", 400);
+    throw new ProjectServiceError('Project path must be a directory', 400);
   }
 
   return resolvedPath;
 }
 
 function preparePathSuggestionQuery(
-  query: string
+  query: string,
 ): { directory: string; prefix: string } | null {
   const normalizedPath = normalizeAbsolutePath(query, false);
   if (!normalizedPath) {
@@ -319,13 +337,15 @@ function preparePathSuggestionQuery(
   }
 
   const endsWithSeparator =
-    normalizedPath.endsWith(path.sep) || normalizedPath.endsWith("/");
-  const directory = endsWithSeparator ? normalizedPath : path.dirname(normalizedPath);
-  const prefix = endsWithSeparator ? "" : path.basename(normalizedPath);
+    normalizedPath.endsWith(path.sep) || normalizedPath.endsWith('/');
+  const directory = endsWithSeparator
+    ? normalizedPath
+    : path.dirname(normalizedPath);
+  const prefix = endsWithSeparator ? '' : path.basename(normalizedPath);
 
   return {
     directory,
-    prefix
+    prefix,
   };
 }
 function nowInSeconds(): number {

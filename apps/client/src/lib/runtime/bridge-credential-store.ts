@@ -1,6 +1,9 @@
-import type { BridgeCredentialStore, BridgeSessionCredentials } from "@my-codex-app/sdk";
+import type {
+  BridgeCredentialStore,
+  BridgeSessionCredentials,
+} from '@my-codex-app/sdk';
 
-const STORAGE_KEY = "my-codex-app.bridge-session";
+const STORAGE_KEY = 'my-codex-app.bridge-session';
 
 export class BrowserBridgeCredentialStore implements BridgeCredentialStore {
   clear(): void {
@@ -33,7 +36,9 @@ function randomUUIDFallback(): string {
   crypto.getRandomValues(bytes);
   bytes[6]! = (bytes[6]! & 0x0f) | 0x40; // version 4
   bytes[8]! = (bytes[8]! & 0x3f) | 0x80; // variant 10
-  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+  const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join(
+    '',
+  );
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -43,13 +48,14 @@ export function createDefaultDeviceDraft(): {
   platform: string;
 } {
   const platform =
-    (navigator as Navigator & { userAgentData?: { platform?: string } }).userAgentData?.platform ??
+    (navigator as Navigator & { userAgentData?: { platform?: string } })
+      .userAgentData?.platform ??
     navigator.platform ??
-    "browser";
+    'browser';
   const isMobile = /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
   return {
     deviceId: crypto.randomUUID?.() ?? randomUUIDFallback(),
-    label: isMobile ? "Mobile Browser" : "Browser",
-    platform
+    label: isMobile ? 'Mobile Browser' : 'Browser',
+    platform,
   };
 }

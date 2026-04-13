@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback } from 'react';
 
 const BOTTOM_THRESHOLD = 100;
 
@@ -20,8 +20,8 @@ export function useAutoScroll<T extends HTMLElement>(deps: unknown[]) {
       isNearBottomRef.current = checkNearBottom();
     };
 
-    el.addEventListener("scroll", handleScroll, { passive: true });
-    return () => el.removeEventListener("scroll", handleScroll);
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
   }, [checkNearBottom]);
 
   useEffect(() => {

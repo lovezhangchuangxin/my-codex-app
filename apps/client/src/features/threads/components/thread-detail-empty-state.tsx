@@ -1,10 +1,10 @@
-import { Sparkles } from "lucide-react";
+import { Sparkles } from 'lucide-react';
 
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent } from '@/components/ui/card';
 
 export function ThreadDetailEmptyState({
   message,
-  title
+  title,
 }: {
   message: string;
   title: string;

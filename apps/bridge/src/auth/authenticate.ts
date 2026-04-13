@@ -1,6 +1,10 @@
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage } from 'node:http';
 
-import { BridgeAuthError, type AuthenticatedBridgeSession, type BridgeAuthService } from "./authService";
+import {
+  BridgeAuthError,
+  type AuthenticatedBridgeSession,
+  type BridgeAuthService,
+} from './authService';
 
 export function authenticateBridgeRequest(
   request: IncomingMessage,
@@ -8,11 +12,19 @@ export function authenticateBridgeRequest(
   authService: BridgeAuthService,
   options?: {
     allowQueryToken?: boolean;
-  }
+  },
 ): AuthenticatedBridgeSession {
-  const accessToken = getRequestAccessToken(request, url, options?.allowQueryToken ?? false);
+  const accessToken = getRequestAccessToken(
+    request,
+    url,
+    options?.allowQueryToken ?? false,
+  );
   if (!accessToken) {
-    throw new BridgeAuthError("Bridge credentials are missing", "missingCredentials", 401);
+    throw new BridgeAuthError(
+      'Bridge credentials are missing',
+      'missingCredentials',
+      401,
+    );
   }
 
   return authService.authenticateAccessToken(accessToken);
@@ -21,12 +33,12 @@ export function authenticateBridgeRequest(
 function getRequestAccessToken(
   request: IncomingMessage,
   url: URL,
-  allowQueryToken: boolean
+  allowQueryToken: boolean,
 ): string | null {
   const authorizationHeader = request.headers.authorization;
-  if (authorizationHeader?.startsWith("Bearer ")) {
-    return authorizationHeader.slice("Bearer ".length);
+  if (authorizationHeader?.startsWith('Bearer ')) {
+    return authorizationHeader.slice('Bearer '.length);
   }
 
-  return allowQueryToken ? url.searchParams.get("access_token") : null;
+  return allowQueryToken ? url.searchParams.get('access_token') : null;
 }

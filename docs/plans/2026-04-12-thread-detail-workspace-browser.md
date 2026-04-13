@@ -73,7 +73,7 @@ type WorkspaceReadDirectoryResponse = {
   entries: WorkspaceEntry[];
 };
 
-type WorkspaceFileKind = "text" | "binary" | "unsupported" | "tooLarge";
+type WorkspaceFileKind = 'text' | 'binary' | 'unsupported' | 'tooLarge';
 
 type WorkspaceReadFileRequest = {
   threadId: string;

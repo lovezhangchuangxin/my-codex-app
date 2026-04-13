@@ -87,13 +87,13 @@ my-codex-app/
 
 ## Tech Stack
 
-| Layer     | Technology                                                |
-| --------- | --------------------------------------------------------- |
-| Client    | React 19, Vite 8, TypeScript, Tailwind CSS, shadcn       |
-| Bridge    | Node.js, native `http`, stdio JSON-RPC                    |
-| Protocol  | Shared TypeScript types (no runtime dependencies)         |
-| SDK       | TypeScript, `fetch` + `EventSource` (browser-first)      |
-| Monorepo  | pnpm workspaces                                           |
+| Layer    | Technology                                          |
+| -------- | --------------------------------------------------- |
+| Client   | React 19, Vite 8, TypeScript, Tailwind CSS, shadcn  |
+| Bridge   | Node.js, native `http`, stdio JSON-RPC              |
+| Protocol | Shared TypeScript types (no runtime dependencies)   |
+| SDK      | TypeScript, `fetch` + `EventSource` (browser-first) |
+| Monorepo | pnpm workspaces                                     |
 
 ## Auth Model
 
@@ -113,12 +113,12 @@ Authenticating requests:
 
 ## Scripts
 
-| Command              | Description                      |
-| -------------------- | -------------------------------- |
-| `pnpm dev:bridge`    | Start bridge dev server          |
-| `pnpm dev:client`    | Start client dev server          |
-| `pnpm build`         | Build all packages               |
-| `pnpm typecheck`     | Type-check all packages          |
+| Command           | Description             |
+| ----------------- | ----------------------- |
+| `pnpm dev:bridge` | Start bridge dev server |
+| `pnpm dev:client` | Start client dev server |
+| `pnpm build`      | Build all packages      |
+| `pnpm typecheck`  | Type-check all packages |
 
 ## Roadmap
 

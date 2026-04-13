@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export interface AccessTokenPayload {
   sub: string;
@@ -13,10 +13,13 @@ export interface AccessTokenVerificationResult {
 }
 
 export function createSigningSecret(): string {
-  return randomBytes(32).toString("base64url");
+  return randomBytes(32).toString('base64url');
 }
 
-export function issueAccessToken(payload: AccessTokenPayload, secret: string): string {
+export function issueAccessToken(
+  payload: AccessTokenPayload,
+  secret: string,
+): string {
   const encodedPayload = encodeSegment(JSON.stringify(payload));
   const signature = signPayload(encodedPayload, secret);
   return `${encodedPayload}.${signature}`;
@@ -25,9 +28,9 @@ export function issueAccessToken(payload: AccessTokenPayload, secret: string): s
 export function verifyAccessToken(
   token: string,
   secret: string,
-  nowInSeconds: number
+  nowInSeconds: number,
 ): AccessTokenVerificationResult | null {
-  const [encodedPayload, actualSignature] = token.split(".");
+  const [encodedPayload, actualSignature] = token.split('.');
   if (!encodedPayload || !actualSignature) {
     return null;
   }
@@ -38,12 +41,14 @@ export function verifyAccessToken(
   }
 
   try {
-    const payload = JSON.parse(decodeSegment(encodedPayload)) as Partial<AccessTokenPayload>;
+    const payload = JSON.parse(
+      decodeSegment(encodedPayload),
+    ) as Partial<AccessTokenPayload>;
     if (
-      typeof payload.sub !== "string" ||
-      typeof payload.sid !== "string" ||
-      typeof payload.iat !== "number" ||
-      typeof payload.exp !== "number"
+      typeof payload.sub !== 'string' ||
+      typeof payload.sid !== 'string' ||
+      typeof payload.iat !== 'number' ||
+      typeof payload.exp !== 'number'
     ) {
       return null;
     }
@@ -53,9 +58,9 @@ export function verifyAccessToken(
         sub: payload.sub,
         sid: payload.sid,
         iat: payload.iat,
-        exp: payload.exp
+        exp: payload.exp,
       },
-      expired: payload.exp <= nowInSeconds
+      expired: payload.exp <= nowInSeconds,
     };
   } catch {
     return null;
@@ -63,15 +68,15 @@ export function verifyAccessToken(
 }
 
 function signPayload(encodedPayload: string, secret: string): string {
-  return createHmac("sha256", secret).update(encodedPayload).digest("hex");
+  return createHmac('sha256', secret).update(encodedPayload).digest('hex');
 }
 
 function encodeSegment(value: string): string {
-  return Buffer.from(value, "utf8").toString("base64url");
+  return Buffer.from(value, 'utf8').toString('base64url');
 }
 
 function decodeSegment(value: string): string {
-  return Buffer.from(value, "base64url").toString("utf8");
+  return Buffer.from(value, 'base64url').toString('utf8');
 }
 
 function safeEquals(left: string, right: string): boolean {

@@ -32,15 +32,15 @@ All turn items are flattened into a single ordered list. Each item renders direc
 
 ### Message styles
 
-| Item type | Style |
-|-----------|-------|
-| `userMessage` | Right-aligned chat bubble, user avatar icon, content rendered directly |
-| `agentMessage` | Left-aligned, agent avatar icon, markdown rendered directly |
-| `reasoning` | Left-aligned, compact collapsible block, "Thinking..." indicator |
-| `commandExecution` | Terminal-style inline card, output collapsed by default |
-| `fileChange` | File change card, diff collapsed by default |
-| `webSearch` | Inline small label |
-| `imageView` | Inline small label |
+| Item type          | Style                                                                  |
+| ------------------ | ---------------------------------------------------------------------- |
+| `userMessage`      | Right-aligned chat bubble, user avatar icon, content rendered directly |
+| `agentMessage`     | Left-aligned, agent avatar icon, markdown rendered directly            |
+| `reasoning`        | Left-aligned, compact collapsible block, "Thinking..." indicator       |
+| `commandExecution` | Terminal-style inline card, output collapsed by default                |
+| `fileChange`       | File change card, diff collapsed by default                            |
+| `webSearch`        | Inline small label                                                     |
+| `imageView`        | Inline small label                                                     |
 
 ### Header simplification
 

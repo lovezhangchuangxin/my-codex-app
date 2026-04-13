@@ -1,33 +1,39 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from 'react';
 
-import { useBridgeClient } from "@/lib/runtime/runtime-provider";
-import { upsertProjectSummary } from "@/features/projects/lib/project-utils";
-import type { ThreadListState } from "@my-codex-app/sdk";
+import { useBridgeClient } from '@/lib/runtime/runtime-provider';
+import { upsertProjectSummary } from '@/features/projects/lib/project-utils';
+import type { ThreadListState } from '@my-codex-app/sdk';
 import type {
   LocalConnectionState,
   ProjectImportRequest,
   ProjectSearchRequest,
   ProjectSearchResponse,
-  ProjectSummary
-} from "@my-codex-app/protocol";
+  ProjectSummary,
+} from '@my-codex-app/protocol';
 
 export type ProjectListState =
-  | { kind: "idle" }
-  | { kind: "loading" }
-  | { kind: "ready"; projects: ProjectSummary[] }
-  | { kind: "error"; message: string };
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ready'; projects: ProjectSummary[] }
+  | { kind: 'error'; message: string };
 
 export function useProjectHome(
   connectionState: LocalConnectionState,
   preferredProjectPath: string | null,
-  runtimeThreadsState: ThreadListState
+  runtimeThreadsState: ThreadListState,
 ) {
   const bridgeClient = useBridgeClient();
   const connectionKind = connectionState.kind;
   const lastPreferredProjectPathRef = useRef<string | null>(null);
-  const [projectsState, setProjectsState] = useState<ProjectListState>({ kind: "idle" });
-  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(null);
-  const [sessionsState, setSessionsState] = useState<ThreadListState>({ kind: "idle" });
+  const [projectsState, setProjectsState] = useState<ProjectListState>({
+    kind: 'idle',
+  });
+  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(
+    null,
+  );
+  const [sessionsState, setSessionsState] = useState<ThreadListState>({
+    kind: 'idle',
+  });
   const [projectsReloadToken, setProjectsReloadToken] = useState(0);
   const [sessionsReloadToken, setSessionsReloadToken] = useState(0);
 
@@ -41,20 +47,25 @@ export function useProjectHome(
       return;
     }
 
-    if (preferredProjectPath === null && lastPreferredProjectPathRef.current !== null) {
+    if (
+      preferredProjectPath === null &&
+      lastPreferredProjectPathRef.current !== null
+    ) {
       lastPreferredProjectPathRef.current = null;
     }
   }, [preferredProjectPath]);
 
   useEffect(() => {
     if (!canQueryBridge(connectionKind)) {
-      setProjectsState({ kind: "idle" });
+      setProjectsState({ kind: 'idle' });
       return;
     }
 
     let cancelled = false;
     const controller = new AbortController();
-    setProjectsState((current) => (current.kind === "ready" ? current : { kind: "loading" }));
+    setProjectsState((current) =>
+      current.kind === 'ready' ? current : { kind: 'loading' },
+    );
 
     void bridgeClient
       .listProjects({ signal: controller.signal })
@@ -63,22 +74,23 @@ export function useProjectHome(
           return;
         }
         setProjectsState({
-          kind: "ready",
-          projects: response.data
+          kind: 'ready',
+          projects: response.data,
         });
       })
       .catch((error: unknown) => {
         if (cancelled) {
           return;
         }
-        const message = error instanceof Error ? error.message : "Unable to load projects";
+        const message =
+          error instanceof Error ? error.message : 'Unable to load projects';
         setProjectsState((current) =>
-          current.kind === "ready"
+          current.kind === 'ready'
             ? current
             : {
-                kind: "error",
-                message
-              }
+                kind: 'error',
+                message,
+              },
         );
       });
 
@@ -90,18 +102,18 @@ export function useProjectHome(
 
   useEffect(() => {
     if (!canQueryBridge(connectionKind)) {
-      setSessionsState({ kind: "idle" });
+      setSessionsState({ kind: 'idle' });
       return;
     }
 
     if (!selectedProjectPath) {
-      setSessionsState({ kind: "idle" });
+      setSessionsState({ kind: 'idle' });
       return;
     }
 
     let cancelled = false;
     const controller = new AbortController();
-    setSessionsState({ kind: "loading" });
+    setSessionsState({ kind: 'loading' });
 
     void bridgeClient
       .listThreads({ cwd: selectedProjectPath }, { signal: controller.signal })
@@ -110,22 +122,23 @@ export function useProjectHome(
           return;
         }
         setSessionsState({
-          kind: "ready",
-          threads: response.data
+          kind: 'ready',
+          threads: response.data,
         });
       })
       .catch((error: unknown) => {
         if (cancelled) {
           return;
         }
-        const message = error instanceof Error ? error.message : "Unable to load sessions";
+        const message =
+          error instanceof Error ? error.message : 'Unable to load sessions';
         setSessionsState((current) =>
-          current.kind === "ready"
+          current.kind === 'ready'
             ? current
             : {
-                kind: "error",
-                message
-              }
+                kind: 'error',
+                message,
+              },
         );
       });
 
@@ -140,7 +153,7 @@ export function useProjectHome(
       return;
     }
 
-    if (runtimeThreadsState.kind !== "ready") {
+    if (runtimeThreadsState.kind !== 'ready') {
       return;
     }
 
@@ -168,20 +181,24 @@ export function useProjectHome(
     setSessionsReloadToken((current) => current + 1);
   }
 
-  async function searchProjects(request: ProjectSearchRequest): Promise<ProjectSearchResponse> {
+  async function searchProjects(
+    request: ProjectSearchRequest,
+  ): Promise<ProjectSearchResponse> {
     return bridgeClient.searchProjects(request);
   }
 
-  async function importProject(request: ProjectImportRequest): Promise<ProjectSummary> {
+  async function importProject(
+    request: ProjectImportRequest,
+  ): Promise<ProjectSummary> {
     const response = await bridgeClient.importProject(request);
     setSelectedProjectPath(response.project.path);
     setProjectsState((current) =>
-      current.kind === "ready"
+      current.kind === 'ready'
         ? {
-            kind: "ready",
-            projects: upsertProjectSummary(current.projects, response.project)
+            kind: 'ready',
+            projects: upsertProjectSummary(current.projects, response.project),
           }
-        : current
+        : current,
     );
     refreshProjects();
     refreshSessions();
@@ -196,15 +213,15 @@ export function useProjectHome(
     searchProjects,
     selectedProjectPath,
     selectProject,
-    sessionsState
+    sessionsState,
   };
 }
 
-function canQueryBridge(connectionKind: LocalConnectionState["kind"]): boolean {
+function canQueryBridge(connectionKind: LocalConnectionState['kind']): boolean {
   switch (connectionKind) {
-    case "unpaired":
-    case "revoked":
-    case "expired":
+    case 'unpaired':
+    case 'revoked':
+    case 'expired':
       return false;
     default:
       return true;

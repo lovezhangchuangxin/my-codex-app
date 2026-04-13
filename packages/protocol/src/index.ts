@@ -1,26 +1,26 @@
-export type ConnectionMode = "local" | "relay";
+export type ConnectionMode = 'local' | 'relay';
 
 export type JsonRpcRequestId = string | number;
 
 export type BridgeAuthErrorCode =
-  | "missingCredentials"
-  | "invalidAccessToken"
-  | "expiredAccessToken"
-  | "invalidRefreshToken"
-  | "expiredRefreshToken"
-  | "revokedDevice"
-  | "invalidPairingCode"
-  | "deviceIdConflict";
+  | 'missingCredentials'
+  | 'invalidAccessToken'
+  | 'expiredAccessToken'
+  | 'invalidRefreshToken'
+  | 'expiredRefreshToken'
+  | 'revokedDevice'
+  | 'invalidPairingCode'
+  | 'deviceIdConflict';
 
 export type LocalConnectionStateKind =
-  | "unpaired"
-  | "refreshing"
-  | "authenticated"
-  | "reconnecting"
-  | "resyncing"
-  | "revoked"
-  | "expired"
-  | "disconnected";
+  | 'unpaired'
+  | 'refreshing'
+  | 'authenticated'
+  | 'reconnecting'
+  | 'resyncing'
+  | 'revoked'
+  | 'expired'
+  | 'disconnected';
 
 export interface LocalConnectionState {
   kind: LocalConnectionStateKind;
@@ -91,17 +91,23 @@ export interface DeviceDeleteRequest {
 export interface DeviceDeleteResponse {}
 
 export type ThreadRuntimeStatus =
-  | { type: "notLoaded" }
-  | { type: "idle" }
-  | { type: "systemError" }
+  | { type: 'notLoaded' }
+  | { type: 'idle' }
+  | { type: 'systemError' }
   | {
-      type: "active";
-      activeFlags: Array<"waitingOnApproval" | "waitingOnUserInput">;
+      type: 'active';
+      activeFlags: Array<'waitingOnApproval' | 'waitingOnUserInput'>;
     };
 
-export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+export type ReasoningEffort =
+  | 'none'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh';
 
-export type ThreadPermissionPresetId = "read-only" | "auto" | "full-access";
+export type ThreadPermissionPresetId = 'read-only' | 'auto' | 'full-access';
 
 export interface ThreadSettings {
   model: string | null;
@@ -152,7 +158,7 @@ export interface ThreadSummary {
   name?: string;
 }
 
-export type TurnStatus = "completed" | "interrupted" | "failed" | "inProgress";
+export type TurnStatus = 'completed' | 'interrupted' | 'failed' | 'inProgress';
 
 export interface TurnError {
   message: string;
@@ -160,18 +166,18 @@ export interface TurnError {
 }
 
 export type UserInput =
-  | { type: "text"; text: string }
-  | { type: "image"; url: string }
-  | { type: "localImage"; path: string }
-  | { type: "skill"; name: string; path: string }
-  | { type: "mention"; name: string; path: string };
+  | { type: 'text'; text: string }
+  | { type: 'image'; url: string }
+  | { type: 'localImage'; path: string }
+  | { type: 'skill'; name: string; path: string }
+  | { type: 'mention'; name: string; path: string };
 
 export type ThreadItem =
-  | { type: "userMessage"; id: string; content: UserInput[] }
-  | { type: "agentMessage"; id: string; text: string }
-  | { type: "reasoning"; id: string; summary: string[]; content: string[] }
+  | { type: 'userMessage'; id: string; content: UserInput[] }
+  | { type: 'agentMessage'; id: string; text: string }
+  | { type: 'reasoning'; id: string; summary: string[]; content: string[] }
   | {
-      type: "commandExecution";
+      type: 'commandExecution';
       id: string;
       command: string;
       cwd: string;
@@ -181,17 +187,17 @@ export type ThreadItem =
       durationMs?: number;
     }
   | {
-      type: "fileChange";
+      type: 'fileChange';
       id: string;
       status: string;
       changes: Array<{ path: string; kind?: string; diff?: string }>;
     }
-  | { type: "webSearch"; id: string; query: string }
-  | { type: "imageView"; id: string; path: string }
-  | { type: "enteredReviewMode"; id: string; review: string }
-  | { type: "exitedReviewMode"; id: string; review: string }
-  | { type: "contextCompaction"; id: string }
-  | { type: "unknown"; id: string; title: string; raw: unknown };
+  | { type: 'webSearch'; id: string; query: string }
+  | { type: 'imageView'; id: string; path: string }
+  | { type: 'enteredReviewMode'; id: string; review: string }
+  | { type: 'exitedReviewMode'; id: string; review: string }
+  | { type: 'contextCompaction'; id: string }
+  | { type: 'unknown'; id: string; title: string; raw: unknown };
 
 export interface TurnDetail {
   id: string;
@@ -209,13 +215,25 @@ export interface ThreadDetail extends ThreadSummary {
   contextUsage: ThreadContextUsage | null;
 }
 
-export type PendingRequestKind = "command" | "fileChange" | "permissions" | "userInput";
+export type PendingRequestKind =
+  | 'command'
+  | 'fileChange'
+  | 'permissions'
+  | 'userInput';
 
-export type CommandApprovalDecision = "accept" | "acceptForSession" | "decline" | "cancel";
+export type CommandApprovalDecision =
+  | 'accept'
+  | 'acceptForSession'
+  | 'decline'
+  | 'cancel';
 
-export type FileChangeApprovalDecision = "accept" | "acceptForSession" | "decline" | "cancel";
+export type FileChangeApprovalDecision =
+  | 'accept'
+  | 'acceptForSession'
+  | 'decline'
+  | 'cancel';
 
-export type PermissionGrantScope = "turn" | "session";
+export type PermissionGrantScope = 'turn' | 'session';
 
 export interface FileSystemPermissionProfile {
   read?: string[];
@@ -245,7 +263,7 @@ export interface PendingRequestBase {
 }
 
 export interface PendingCommandRequest extends PendingRequestBase {
-  kind: "command";
+  kind: 'command';
   approvalId?: string;
   reason?: string;
   command?: string;
@@ -253,13 +271,13 @@ export interface PendingCommandRequest extends PendingRequestBase {
 }
 
 export interface PendingFileChangeRequest extends PendingRequestBase {
-  kind: "fileChange";
+  kind: 'fileChange';
   reason?: string;
   grantRoot?: string;
 }
 
 export interface PendingPermissionsRequest extends PendingRequestBase {
-  kind: "permissions";
+  kind: 'permissions';
   reason?: string;
   permissions: RequestPermissionProfile;
 }
@@ -279,7 +297,7 @@ export interface PendingUserInputQuestion {
 }
 
 export interface PendingUserInputRequest extends PendingRequestBase {
-  kind: "userInput";
+  kind: 'userInput';
   questions: PendingUserInputQuestion[];
 }
 
@@ -305,7 +323,7 @@ export interface ProjectListResponse {
   data: ProjectSummary[];
 }
 
-export type ProjectSearchMatchKind = "knownProject" | "pathSuggestion";
+export type ProjectSearchMatchKind = 'knownProject' | 'pathSuggestion';
 
 export interface ProjectSearchMatch {
   kind: ProjectSearchMatchKind;
@@ -393,10 +411,10 @@ export interface TurnInterruptRequest {
 export interface TurnInterruptResponse {}
 
 export type ReviewTarget =
-  | { type: "uncommittedChanges" }
-  | { type: "baseBranch"; branch: string }
-  | { type: "commit"; sha: string; title?: string }
-  | { type: "custom"; instructions: string };
+  | { type: 'uncommittedChanges' }
+  | { type: 'baseBranch'; branch: string }
+  | { type: 'commit'; sha: string; title?: string }
+  | { type: 'custom'; instructions: string };
 
 export interface ThreadCompactRequest {
   threadId: string;
@@ -432,7 +450,7 @@ export interface WorkspaceReadDirectoryResponse {
   entries: WorkspaceEntry[];
 }
 
-export type WorkspaceFileKind = "text" | "binary" | "unsupported" | "tooLarge";
+export type WorkspaceFileKind = 'text' | 'binary' | 'unsupported' | 'tooLarge';
 
 export interface WorkspaceReadFileRequest {
   threadId: string;
@@ -471,21 +489,21 @@ export type RequestRespondRequest =
   | {
       requestId: JsonRpcRequestId;
       response: {
-        kind: "command";
+        kind: 'command';
         decision: CommandApprovalDecision;
       };
     }
   | {
       requestId: JsonRpcRequestId;
       response: {
-        kind: "fileChange";
+        kind: 'fileChange';
         decision: FileChangeApprovalDecision;
       };
     }
   | {
       requestId: JsonRpcRequestId;
       response: {
-        kind: "permissions";
+        kind: 'permissions';
         permissions: GrantedPermissionProfile;
         scope: PermissionGrantScope;
       };
@@ -493,7 +511,7 @@ export type RequestRespondRequest =
   | {
       requestId: JsonRpcRequestId;
       response: {
-        kind: "userInput";
+        kind: 'userInput';
         answers: Record<string, { answers: string[] }>;
       };
     };
@@ -510,66 +528,66 @@ export interface ModelListResponse {
 
 export type BridgeEvent =
   | {
-      type: "threadStarted";
+      type: 'threadStarted';
       threadId: string;
       thread: ThreadDetail;
     }
   | {
-      type: "threadStatusChanged";
+      type: 'threadStatusChanged';
       threadId: string;
       status: ThreadRuntimeStatus;
     }
   | {
-      type: "threadNameUpdated";
+      type: 'threadNameUpdated';
       threadId: string;
       threadName: string | null;
     }
   | {
-      type: "turnStarted";
+      type: 'turnStarted';
       threadId: string;
       turn: TurnDetail;
     }
   | {
-      type: "turnCompleted";
+      type: 'turnCompleted';
       threadId: string;
       turn: TurnDetail;
     }
   | {
-      type: "itemStarted";
+      type: 'itemStarted';
       threadId: string;
       turnId: string;
       item: ThreadItem;
     }
   | {
-      type: "itemCompleted";
+      type: 'itemCompleted';
       threadId: string;
       turnId: string;
       item: ThreadItem;
     }
   | {
-      type: "agentMessageDelta";
+      type: 'agentMessageDelta';
       threadId: string;
       turnId: string;
       itemId: string;
       delta: string;
     }
   | {
-      type: "pendingRequestAdded";
+      type: 'pendingRequestAdded';
       threadId: string;
       request: PendingRequest;
     }
   | {
-      type: "pendingRequestResolved";
+      type: 'pendingRequestResolved';
       threadId: string;
       requestId: JsonRpcRequestId;
     }
   | {
-      type: "threadSettingsUpdated";
+      type: 'threadSettingsUpdated';
       threadId: string;
       settings: ThreadSettings;
     }
   | {
-      type: "threadContextUsageUpdated";
+      type: 'threadContextUsageUpdated';
       threadId: string;
       contextUsage: ThreadContextUsage;
     };

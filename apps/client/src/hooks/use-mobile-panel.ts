@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useState } from 'react';
 
-type MobilePanelView = "projects" | "project-sessions" | "thread-detail";
+type MobilePanelView = 'projects' | 'project-sessions' | 'thread-detail';
 
 export function useMobilePanel() {
-  const [view, setView] = useState<MobilePanelView>("projects");
-  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(null);
+  const [view, setView] = useState<MobilePanelView>('projects');
+  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(
+    null,
+  );
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
 
   const openProject = (projectPath: string) => {
     setSelectedProjectPath(projectPath);
     setSelectedThreadId(null);
-    setView("project-sessions");
+    setView('project-sessions');
   };
 
   const selectProject = (projectPath: string | null) => {
@@ -22,18 +24,18 @@ export function useMobilePanel() {
       setSelectedProjectPath(projectPath);
     }
     setSelectedThreadId(id);
-    setView("thread-detail");
+    setView('thread-detail');
   };
 
   const backFromDetail = () => {
     setSelectedThreadId(null);
-    setView(selectedProjectPath ? "project-sessions" : "projects");
+    setView(selectedProjectPath ? 'project-sessions' : 'projects');
   };
 
   const backToProjects = () => {
     setSelectedProjectPath(null);
     setSelectedThreadId(null);
-    setView("projects");
+    setView('projects');
   };
 
   return {
@@ -44,6 +46,6 @@ export function useMobilePanel() {
     selectProject,
     openThread,
     backFromDetail,
-    backToProjects
+    backToProjects,
   };
 }

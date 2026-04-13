@@ -41,30 +41,37 @@ import type {
   WorkspaceReadFileRequest,
   WorkspaceReadFileResponse,
   WorkspaceSearchFilesRequest,
-  WorkspaceSearchFilesResponse
-} from "@my-codex-app/protocol";
+  WorkspaceSearchFilesResponse,
+} from '@my-codex-app/protocol';
 
 export interface BridgeClientConfig {
   baseUrl: string;
   credentialStore?: BridgeCredentialStore;
 }
 
-type EventFrame = BridgeEvent | { type: "connected" } | { type: "error"; message: string };
+type EventFrame =
+  | BridgeEvent
+  | { type: 'connected' }
+  | { type: 'error'; message: string };
 
-export type BridgeClientErrorKind = "http" | "network" | "sessionUnavailable" | "stream";
+export type BridgeClientErrorKind =
+  | 'http'
+  | 'network'
+  | 'sessionUnavailable'
+  | 'stream';
 
 export class BridgeClientError extends Error {
   readonly kind: BridgeClientErrorKind;
   readonly status: number | undefined;
-  readonly code: ApiErrorPayload["error"]["code"] | undefined;
+  readonly code: ApiErrorPayload['error']['code'] | undefined;
 
   constructor(
     message: string,
     options: {
       kind: BridgeClientErrorKind;
       status?: number;
-      code?: ApiErrorPayload["error"]["code"];
-    }
+      code?: ApiErrorPayload['error']['code'];
+    },
   ) {
     super(message);
     this.kind = options.kind;
@@ -87,10 +94,10 @@ export interface BridgeCredentialStore {
 }
 
 export type BridgeSessionEvent =
-  | { type: "refreshing" }
-  | { type: "refreshed"; credentials: BridgeSessionCredentials }
+  | { type: 'refreshing' }
+  | { type: 'refreshed'; credentials: BridgeSessionCredentials }
   | {
-      type: "invalidated";
+      type: 'invalidated';
       code?: BridgeAuthErrorCode;
       message: string;
     };
@@ -124,7 +131,9 @@ export class BridgeClient {
     this.#credentialStore?.clear();
   }
 
-  subscribeToSessionEvents(listener: (event: BridgeSessionEvent) => void): () => void {
+  subscribeToSessionEvents(
+    listener: (event: BridgeSessionEvent) => void,
+  ): () => void {
     this.#sessionListeners.add(listener);
     return () => {
       this.#sessionListeners.delete(listener);
@@ -132,25 +141,32 @@ export class BridgeClient {
   }
 
   getPairingStatus(): Promise<PairingStatusResponse> {
-    return this.#requestJson<PairingStatusResponse>("/api/pairing", { method: "GET" }, undefined, {
-      requiresAuth: false
-    });
+    return this.#requestJson<PairingStatusResponse>(
+      '/api/pairing',
+      { method: 'GET' },
+      undefined,
+      {
+        requiresAuth: false,
+      },
+    );
   }
 
-  async completePairing(request: PairingCompleteRequest): Promise<PairingCompleteResponse> {
+  async completePairing(
+    request: PairingCompleteRequest,
+  ): Promise<PairingCompleteResponse> {
     const response = await this.#requestJson<PairingCompleteResponse>(
-      "/api/pairing/complete",
+      '/api/pairing/complete',
       {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify(request),
         headers: {
-          "Content-Type": "application/json"
-        }
+          'Content-Type': 'application/json',
+        },
       },
       undefined,
       {
-        requiresAuth: false
-      }
+        requiresAuth: false,
+      },
     );
     this.#storeSession(response.device, response.session);
     return response;
@@ -162,199 +178,219 @@ export class BridgeClient {
   }
 
   listDevices(): Promise<DeviceListResponse> {
-    return this.#requestJson<DeviceListResponse>("/api/devices", { method: "GET" });
+    return this.#requestJson<DeviceListResponse>('/api/devices', {
+      method: 'GET',
+    });
   }
 
   revokeDevice(request: DeviceRevokeRequest): Promise<DeviceRevokeResponse> {
-    return this.#requestJson<DeviceRevokeResponse>("/api/devices/revoke", {
-      method: "POST",
+    return this.#requestJson<DeviceRevokeResponse>('/api/devices/revoke', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   deleteDevice(request: DeviceDeleteRequest): Promise<DeviceDeleteResponse> {
-    return this.#requestJson<DeviceDeleteResponse>("/api/devices/delete", {
-      method: "POST",
+    return this.#requestJson<DeviceDeleteResponse>('/api/devices/delete', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   listThreads(
     request: ThreadListRequest = {},
-    options?: BridgeRequestOptions
+    options?: BridgeRequestOptions,
   ): Promise<ThreadListResponse> {
-    return this.#requestJson<ThreadListResponse>("/api/threads", {
-      method: "GET",
-      ...(options?.signal ? { signal: options.signal } : {})
-    }, request.cursor !== undefined || request.limit !== undefined || request.cwd !== undefined
-      ? {
-          ...(request.cursor !== undefined ? { cursor: request.cursor } : {}),
-          ...(request.limit !== undefined ? { limit: String(request.limit) } : {}),
-          ...(request.cwd !== undefined ? { cwd: request.cwd } : {})
-        }
-      : undefined);
+    return this.#requestJson<ThreadListResponse>(
+      '/api/threads',
+      {
+        method: 'GET',
+        ...(options?.signal ? { signal: options.signal } : {}),
+      },
+      request.cursor !== undefined ||
+        request.limit !== undefined ||
+        request.cwd !== undefined
+        ? {
+            ...(request.cursor !== undefined ? { cursor: request.cursor } : {}),
+            ...(request.limit !== undefined
+              ? { limit: String(request.limit) }
+              : {}),
+            ...(request.cwd !== undefined ? { cwd: request.cwd } : {}),
+          }
+        : undefined,
+    );
   }
 
   listProjects(options?: BridgeRequestOptions): Promise<ProjectListResponse> {
-    return this.#requestJson<ProjectListResponse>("/api/projects", {
-      method: "GET",
-      ...(options?.signal ? { signal: options.signal } : {})
+    return this.#requestJson<ProjectListResponse>('/api/projects', {
+      method: 'GET',
+      ...(options?.signal ? { signal: options.signal } : {}),
     });
   }
 
-  searchProjects(request: ProjectSearchRequest): Promise<ProjectSearchResponse> {
+  searchProjects(
+    request: ProjectSearchRequest,
+  ): Promise<ProjectSearchResponse> {
     return this.#requestJson<ProjectSearchResponse>(
-      "/api/projects/search",
-      { method: "GET" },
+      '/api/projects/search',
+      { method: 'GET' },
       {
         query: request.query,
-        ...(request.limit !== undefined ? { limit: String(request.limit) } : {})
-      }
+        ...(request.limit !== undefined
+          ? { limit: String(request.limit) }
+          : {}),
+      },
     );
   }
 
   importProject(request: ProjectImportRequest): Promise<ProjectImportResponse> {
-    return this.#requestJson<ProjectImportResponse>("/api/projects/import", {
-      method: "POST",
+    return this.#requestJson<ProjectImportResponse>('/api/projects/import', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   readThread(threadId: string): Promise<ThreadReadResponse> {
     return this.#requestJson<ThreadReadResponse>(
       `/api/threads/${encodeURIComponent(threadId)}`,
-      { method: "GET" }
+      { method: 'GET' },
     );
   }
 
   listModels(includeHidden = false): Promise<ModelListResponse> {
     return this.#requestJson<ModelListResponse>(
-      "/api/models",
-      { method: "GET" },
-      includeHidden ? { includeHidden: "true" } : undefined
+      '/api/models',
+      { method: 'GET' },
+      includeHidden ? { includeHidden: 'true' } : undefined,
     );
   }
 
   readWorkspaceDirectory(
-    request: WorkspaceReadDirectoryRequest
+    request: WorkspaceReadDirectoryRequest,
   ): Promise<WorkspaceReadDirectoryResponse> {
     return this.#requestJson<WorkspaceReadDirectoryResponse>(
-      "/api/workspace/directory",
+      '/api/workspace/directory',
       {
-        method: "GET"
+        method: 'GET',
       },
       {
         threadId: request.threadId,
-        ...(request.path !== undefined ? { path: request.path } : {})
-      }
+        ...(request.path !== undefined ? { path: request.path } : {}),
+      },
     );
   }
 
-  readWorkspaceFile(request: WorkspaceReadFileRequest): Promise<WorkspaceReadFileResponse> {
+  readWorkspaceFile(
+    request: WorkspaceReadFileRequest,
+  ): Promise<WorkspaceReadFileResponse> {
     return this.#requestJson<WorkspaceReadFileResponse>(
-      "/api/workspace/file",
+      '/api/workspace/file',
       {
-        method: "GET"
+        method: 'GET',
       },
       {
         threadId: request.threadId,
-        path: request.path
-      }
+        path: request.path,
+      },
     );
   }
 
   searchWorkspaceFiles(
-    request: WorkspaceSearchFilesRequest
+    request: WorkspaceSearchFilesRequest,
   ): Promise<WorkspaceSearchFilesResponse> {
     return this.#requestJson<WorkspaceSearchFilesResponse>(
-      "/api/workspace/search",
+      '/api/workspace/search',
       {
-        method: "GET"
+        method: 'GET',
       },
       {
         threadId: request.threadId,
         query: request.query,
-        ...(request.limit !== undefined ? { limit: String(request.limit) } : {})
-      }
+        ...(request.limit !== undefined
+          ? { limit: String(request.limit) }
+          : {}),
+      },
     );
   }
 
   startThread(request: ThreadStartRequest = {}): Promise<ThreadStartResponse> {
-    return this.#requestJson<ThreadStartResponse>("/api/threads/start", {
-      method: "POST",
+    return this.#requestJson<ThreadStartResponse>('/api/threads/start', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   renameThread(request: ThreadRenameRequest): Promise<ThreadRenameResponse> {
-    return this.#requestJson<ThreadRenameResponse>("/api/threads/rename", {
-      method: "POST",
+    return this.#requestJson<ThreadRenameResponse>('/api/threads/rename', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   startTurn(request: TurnStartRequest): Promise<TurnStartResponse> {
-    return this.#requestJson<TurnStartResponse>("/api/turns/start", {
-      method: "POST",
+    return this.#requestJson<TurnStartResponse>('/api/turns/start', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   interruptTurn(request: TurnInterruptRequest): Promise<TurnInterruptResponse> {
-    return this.#requestJson<TurnInterruptResponse>("/api/turns/interrupt", {
-      method: "POST",
+    return this.#requestJson<TurnInterruptResponse>('/api/turns/interrupt', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   compactThread(request: ThreadCompactRequest): Promise<ThreadCompactResponse> {
-    return this.#requestJson<ThreadCompactResponse>("/api/threads/compact", {
-      method: "POST",
+    return this.#requestJson<ThreadCompactResponse>('/api/threads/compact', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
   startReview(request: ThreadReviewRequest): Promise<ThreadReviewResponse> {
-    return this.#requestJson<ThreadReviewResponse>("/api/reviews/start", {
-      method: "POST",
+    return this.#requestJson<ThreadReviewResponse>('/api/reviews/start', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
-  respondToRequest(request: RequestRespondRequest): Promise<RequestRespondResponse> {
-    return this.#requestJson<RequestRespondResponse>("/api/requests/respond", {
-      method: "POST",
+  respondToRequest(
+    request: RequestRespondRequest,
+  ): Promise<RequestRespondResponse> {
+    return this.#requestJson<RequestRespondResponse>('/api/requests/respond', {
+      method: 'POST',
       body: JSON.stringify(request),
       headers: {
-        "Content-Type": "application/json"
-      }
+        'Content-Type': 'application/json',
+      },
     });
   }
 
@@ -363,7 +399,7 @@ export class BridgeClient {
     handlers: {
       onEvent: (event: BridgeEvent) => void;
       onDisconnect: (error: BridgeClientError) => void;
-    }
+    },
   ): () => void {
     let closed = false;
     let eventSource: EventSource | null = null;
@@ -374,30 +410,32 @@ export class BridgeClient {
         credentials = await this.#getValidCredentials();
       } catch (error) {
         if (!closed) {
-          handlers.onDisconnect(toBridgeClientError(error, "Bridge session is unavailable"));
+          handlers.onDisconnect(
+            toBridgeClientError(error, 'Bridge session is unavailable'),
+          );
         }
         return;
       }
 
       if (!credentials || closed) {
         handlers.onDisconnect(
-          new BridgeClientError("Bridge session is unavailable", {
-            kind: "sessionUnavailable",
-            code: "missingCredentials"
-          })
+          new BridgeClientError('Bridge session is unavailable', {
+            kind: 'sessionUnavailable',
+            code: 'missingCredentials',
+          }),
         );
         return;
       }
 
       eventSource = new EventSource(
         this.#buildUrl(
-          "/api/events",
+          '/api/events',
           {
             threadId,
-            access_token: credentials.accessToken
+            access_token: credentials.accessToken,
           },
-          false
-        )
+          false,
+        ),
       );
 
       eventSource.onmessage = (message) => {
@@ -409,25 +447,28 @@ export class BridgeClient {
           eventSource = null;
           if (!closed) {
             handlers.onDisconnect(
-              new BridgeClientError("Bridge event stream returned invalid data", {
-                kind: "stream"
-              })
+              new BridgeClientError(
+                'Bridge event stream returned invalid data',
+                {
+                  kind: 'stream',
+                },
+              ),
             );
           }
           return;
         }
 
-        if (payload.type === "connected") {
+        if (payload.type === 'connected') {
           return;
         }
 
-        if (payload.type === "error") {
+        if (payload.type === 'error') {
           eventSource?.close();
           eventSource = null;
           handlers.onDisconnect(
             new BridgeClientError(payload.message, {
-              kind: "stream"
-            })
+              kind: 'stream',
+            }),
           );
           return;
         }
@@ -443,9 +484,9 @@ export class BridgeClient {
         eventSource?.close();
         eventSource = null;
         handlers.onDisconnect(
-          new BridgeClientError("Bridge event stream disconnected", {
-            kind: "network"
-          })
+          new BridgeClientError('Bridge event stream disconnected', {
+            kind: 'network',
+          }),
         );
       };
     };
@@ -465,7 +506,7 @@ export class BridgeClient {
     options?: {
       requiresAuth?: boolean;
       retryOnAuthFailure?: boolean;
-    }
+    },
   ): Promise<TResponse> {
     const requiresAuth = options?.requiresAuth ?? true;
     const retryOnAuthFailure = options?.retryOnAuthFailure ?? true;
@@ -475,14 +516,14 @@ export class BridgeClient {
     const controller = new AbortController();
     const timeoutId = window.setTimeout(() => {
       timedOut = true;
-      controller.abort(new Error("Bridge request timed out"));
+      controller.abort(new Error('Bridge request timed out'));
     }, BRIDGE_REQUEST_TIMEOUT_MS);
     const externalSignal = init.signal;
     const abortFromExternalSignal = () => {
       controller.abort(
-        externalSignal instanceof AbortSignal && "reason" in externalSignal
+        externalSignal instanceof AbortSignal && 'reason' in externalSignal
           ? externalSignal.reason
-          : new Error("Bridge request was aborted")
+          : new Error('Bridge request was aborted'),
       );
     };
 
@@ -490,7 +531,9 @@ export class BridgeClient {
       if (externalSignal.aborted) {
         abortFromExternalSignal();
       } else {
-        externalSignal.addEventListener("abort", abortFromExternalSignal, { once: true });
+        externalSignal.addEventListener('abort', abortFromExternalSignal, {
+          once: true,
+        });
       }
     }
 
@@ -499,22 +542,25 @@ export class BridgeClient {
         ...init,
         signal: controller.signal,
         headers: {
-          ...(init.headers ? Object.fromEntries(new Headers(init.headers).entries()) : {}),
-          ...(credentials ? { Authorization: `Bearer ${credentials.accessToken}` } : {})
-        }
+          ...(init.headers
+            ? Object.fromEntries(new Headers(init.headers).entries())
+            : {}),
+          ...(credentials
+            ? { Authorization: `Bearer ${credentials.accessToken}` }
+            : {}),
+        },
       });
     } catch (error) {
-      const fallbackMessage =
-        timedOut
-          ? "Bridge request timed out"
-          : controller.signal.aborted
-            ? toAbortFallbackMessage(controller.signal.reason)
-          : "Bridge request failed before receiving a response";
+      const fallbackMessage = timedOut
+        ? 'Bridge request timed out'
+        : controller.signal.aborted
+          ? toAbortFallbackMessage(controller.signal.reason)
+          : 'Bridge request failed before receiving a response';
       throw toBridgeClientError(error, fallbackMessage);
     } finally {
       window.clearTimeout(timeoutId);
       if (externalSignal) {
-        externalSignal.removeEventListener("abort", abortFromExternalSignal);
+        externalSignal.removeEventListener('abort', abortFromExternalSignal);
       }
     }
 
@@ -522,13 +568,13 @@ export class BridgeClient {
       await this.#refreshCredentials();
       return this.#requestJson<TResponse>(path, init, searchParams, {
         requiresAuth,
-        retryOnAuthFailure: false
+        retryOnAuthFailure: false,
       });
     }
 
     if (!response.ok) {
       let message = `Bridge request failed with ${response.status}`;
-      let code: ApiErrorPayload["error"]["code"] | undefined;
+      let code: ApiErrorPayload['error']['code'] | undefined;
       try {
         const payload = (await response.json()) as ApiErrorPayload;
         message = payload.error.message ?? message;
@@ -537,9 +583,9 @@ export class BridgeClient {
         // Ignore malformed error payloads.
       }
       throw new BridgeClientError(message, {
-        kind: "http",
+        kind: 'http',
         status: response.status,
-        ...(code ? { code } : {})
+        ...(code ? { code } : {}),
       });
     }
 
@@ -569,32 +615,37 @@ export class BridgeClient {
     const startingCredentials = this.getCredentials();
     if (!startingCredentials) {
       return Promise.reject(
-        new BridgeClientError("Bridge session is unavailable", {
-          kind: "sessionUnavailable",
-          code: "missingCredentials"
-        })
+        new BridgeClientError('Bridge session is unavailable', {
+          kind: 'sessionUnavailable',
+          code: 'missingCredentials',
+        }),
       );
     }
 
-    this.#emitSessionEvent({ type: "refreshing" });
+    this.#emitSessionEvent({ type: 'refreshing' });
     this.#refreshPromise = this.#performRefresh(startingCredentials)
       .then((credentials) => {
-        this.#emitSessionEvent({ type: "refreshed", credentials });
+        this.#emitSessionEvent({ type: 'refreshed', credentials });
         return credentials;
       })
       .catch((error) => {
-        const recovered = this.#recoverConcurrentCredentials(startingCredentials.refreshToken);
+        const recovered = this.#recoverConcurrentCredentials(
+          startingCredentials.refreshToken,
+        );
         if (recovered) {
           return recovered;
         }
 
         if (isCredentialInvalidatingRefreshError(error)) {
-          const nextError = toBridgeClientError(error, "Bridge session is no longer valid");
+          const nextError = toBridgeClientError(
+            error,
+            'Bridge session is no longer valid',
+          );
           this.clearCredentials();
           this.#emitSessionEvent({
-            type: "invalidated",
+            type: 'invalidated',
             message: nextError.message,
-            ...(nextError.code ? { code: nextError.code } : {})
+            ...(nextError.code ? { code: nextError.code } : {}),
           });
         }
         throw error;
@@ -606,37 +657,46 @@ export class BridgeClient {
     return this.#refreshPromise;
   }
 
-  async #performRefresh(credentials: BridgeSessionCredentials): Promise<BridgeSessionCredentials> {
+  async #performRefresh(
+    credentials: BridgeSessionCredentials,
+  ): Promise<BridgeSessionCredentials> {
     const response = await this.#requestJson<SessionRefreshResponse>(
-      "/api/session/refresh",
+      '/api/session/refresh',
       {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify({
           deviceId: credentials.device.deviceId,
-          refreshToken: credentials.refreshToken
+          refreshToken: credentials.refreshToken,
         } satisfies SessionRefreshRequest),
         headers: {
-          "Content-Type": "application/json"
-        }
+          'Content-Type': 'application/json',
+        },
       },
       undefined,
       {
         requiresAuth: false,
-        retryOnAuthFailure: false
-      }
+        retryOnAuthFailure: false,
+      },
     );
-    const nextCredentials = this.#toStoredCredentials(response.device, response.session);
+    const nextCredentials = this.#toStoredCredentials(
+      response.device,
+      response.session,
+    );
     this.#credentialStore?.save(nextCredentials);
     return nextCredentials;
   }
 
-  #recoverConcurrentCredentials(refreshTokenUsedForAttempt: string): BridgeSessionCredentials | null {
+  #recoverConcurrentCredentials(
+    refreshTokenUsedForAttempt: string,
+  ): BridgeSessionCredentials | null {
     const latestCredentials = this.getCredentials();
     if (!latestCredentials) {
       return null;
     }
 
-    return latestCredentials.refreshToken !== refreshTokenUsedForAttempt ? latestCredentials : null;
+    return latestCredentials.refreshToken !== refreshTokenUsedForAttempt
+      ? latestCredentials
+      : null;
   }
 
   #storeSession(
@@ -645,7 +705,7 @@ export class BridgeClient {
       accessToken: string;
       accessTokenExpiresAt: number;
       refreshToken: string;
-    }
+    },
   ): void {
     this.#credentialStore?.save(this.#toStoredCredentials(device, session));
   }
@@ -656,31 +716,33 @@ export class BridgeClient {
       accessToken: string;
       accessTokenExpiresAt: number;
       refreshToken: string;
-    }
+    },
   ): BridgeSessionCredentials {
     return {
       device,
       accessToken: session.accessToken,
       accessTokenExpiresAt: session.accessTokenExpiresAt,
-      refreshToken: session.refreshToken
+      refreshToken: session.refreshToken,
     };
   }
 
-  #toSessionRefreshResponse(credentials: BridgeSessionCredentials): SessionRefreshResponse {
+  #toSessionRefreshResponse(
+    credentials: BridgeSessionCredentials,
+  ): SessionRefreshResponse {
     return {
       device: credentials.device,
       session: {
         accessToken: credentials.accessToken,
         accessTokenExpiresAt: credentials.accessTokenExpiresAt,
-        refreshToken: credentials.refreshToken
-      }
+        refreshToken: credentials.refreshToken,
+      },
     };
   }
 
   #buildUrl(
     path: string,
     searchParams?: Record<string, string>,
-    includeAccessToken = true
+    includeAccessToken = true,
   ): string {
     const url = new URL(path, this.#baseUrl);
     if (searchParams) {
@@ -691,7 +753,7 @@ export class BridgeClient {
     if (includeAccessToken) {
       const credentials = this.getCredentials();
       if (credentials?.accessToken) {
-        url.searchParams.set("access_token", credentials.accessToken);
+        url.searchParams.set('access_token', credentials.accessToken);
       }
     }
     return url.toString();
@@ -707,28 +769,33 @@ export class BridgeClient {
 function isCredentialInvalidatingRefreshError(error: unknown): boolean {
   return (
     error instanceof BridgeClientError &&
-    (error.code === "invalidRefreshToken" ||
-      error.code === "expiredRefreshToken" ||
-      error.code === "revokedDevice" ||
-      error.code === "missingCredentials")
+    (error.code === 'invalidRefreshToken' ||
+      error.code === 'expiredRefreshToken' ||
+      error.code === 'revokedDevice' ||
+      error.code === 'missingCredentials')
   );
 }
 
-function toBridgeClientError(error: unknown, fallbackMessage: string): BridgeClientError {
+function toBridgeClientError(
+  error: unknown,
+  fallbackMessage: string,
+): BridgeClientError {
   if (error instanceof BridgeClientError) {
     return error;
   }
 
   const message =
-    error instanceof Error && !isAbortLikeError(error) ? error.message : fallbackMessage;
+    error instanceof Error && !isAbortLikeError(error)
+      ? error.message
+      : fallbackMessage;
   return new BridgeClientError(message || fallbackMessage, {
-    kind: "network"
+    kind: 'network',
   });
 }
 
 function isAbortLikeError(error: Error): boolean {
   const normalizedMessage = error.message.toLowerCase();
-  return error.name === "AbortError" || normalizedMessage.includes("abort");
+  return error.name === 'AbortError' || normalizedMessage.includes('abort');
 }
 
 function toAbortFallbackMessage(reason: unknown): string {
@@ -736,5 +803,5 @@ function toAbortFallbackMessage(reason: unknown): string {
     return reason.message;
   }
 
-  return "Bridge request was aborted";
+  return 'Bridge request was aborted';
 }

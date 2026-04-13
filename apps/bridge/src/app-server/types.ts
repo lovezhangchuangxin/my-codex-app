@@ -33,8 +33,8 @@ export interface InitializeParams {
 }
 
 export interface AppServerThreadStatus {
-  type: "notLoaded" | "idle" | "systemError" | "active";
-  activeFlags?: Array<"waitingOnApproval" | "waitingOnUserInput">;
+  type: 'notLoaded' | 'idle' | 'systemError' | 'active';
+  activeFlags?: Array<'waitingOnApproval' | 'waitingOnUserInput'>;
 }
 
 export interface AppServerThread {
@@ -50,18 +50,18 @@ export interface AppServerThread {
 }
 
 export type AppServerReasoningEffort =
-  | "none"
-  | "minimal"
-  | "low"
-  | "medium"
-  | "high"
-  | "xhigh";
+  | 'none'
+  | 'minimal'
+  | 'low'
+  | 'medium'
+  | 'high'
+  | 'xhigh';
 
 export type AppServerApprovalPolicy =
-  | "untrusted"
-  | "on-failure"
-  | "on-request"
-  | "never"
+  | 'untrusted'
+  | 'on-failure'
+  | 'on-request'
+  | 'never'
   | {
       granular: {
         sandbox_approval: boolean;
@@ -73,11 +73,11 @@ export type AppServerApprovalPolicy =
     };
 
 export type AppServerSandboxPolicy =
-  | { type: "dangerFullAccess" }
-  | { type: "readOnly"; access: unknown; networkAccess: boolean }
-  | { type: "externalSandbox"; networkAccess: "restricted" | "enabled" }
+  | { type: 'dangerFullAccess' }
+  | { type: 'readOnly'; access: unknown; networkAccess: boolean }
+  | { type: 'externalSandbox'; networkAccess: 'restricted' | 'enabled' }
   | {
-      type: "workspaceWrite";
+      type: 'workspaceWrite';
       writableRoots: string[];
       readOnlyAccess: unknown;
       networkAccess: boolean;
@@ -102,7 +102,7 @@ export interface AppServerTurnError {
 }
 
 export interface AppServerUserInput {
-  type: "text" | "image" | "localImage" | "skill" | "mention";
+  type: 'text' | 'image' | 'localImage' | 'skill' | 'mention';
   text?: string;
   textElements?: unknown[];
   url?: string;
@@ -118,7 +118,7 @@ export interface AppServerThreadItem {
 
 export interface AppServerTurn {
   id: string;
-  status: "completed" | "interrupted" | "failed" | "inProgress";
+  status: 'completed' | 'interrupted' | 'failed' | 'inProgress';
   error?: AppServerTurnError;
   startedAt?: number;
   completedAt?: number;
@@ -184,13 +184,13 @@ export interface ThreadCompactStartParams {
 
 export interface ThreadCompactStartResult {}
 
-export type AppServerReviewDelivery = "inline" | "detached";
+export type AppServerReviewDelivery = 'inline' | 'detached';
 
 export type AppServerReviewTarget =
-  | { type: "uncommittedChanges" }
-  | { type: "baseBranch"; branch: string }
-  | { type: "commit"; sha: string; title?: string }
-  | { type: "custom"; instructions: string };
+  | { type: 'uncommittedChanges' }
+  | { type: 'baseBranch'; branch: string }
+  | { type: 'commit'; sha: string; title?: string }
+  | { type: 'custom'; instructions: string };
 
 export interface ReviewStartParams {
   threadId: string;

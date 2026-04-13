@@ -1,7 +1,7 @@
-import type { Dirent } from "node:fs";
-import { readFile, readdir, realpath, stat } from "node:fs/promises";
-import ignore, { type Ignore } from "ignore";
-import * as path from "node:path";
+import type { Dirent } from 'node:fs';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
+import ignore, { type Ignore } from 'ignore';
+import * as path from 'node:path';
 
 import type {
   WorkspaceEntry,
@@ -10,29 +10,29 @@ import type {
   WorkspaceReadFileRequest,
   WorkspaceReadFileResponse,
   WorkspaceSearchFilesRequest,
-  WorkspaceSearchFilesResponse
-} from "@my-codex-app/protocol";
+  WorkspaceSearchFilesResponse,
+} from '@my-codex-app/protocol';
 
-import { AppServerClient } from "./appServerClient";
+import { AppServerClient } from './appServerClient';
 
 const MAX_TEXT_PREVIEW_BYTES = 512 * 1024;
 const DEFAULT_WORKSPACE_SEARCH_LIMIT = 12;
 const MAX_WORKSPACE_SEARCH_LIMIT = 40;
 const MAX_WORKSPACE_SEARCH_ENTRIES = 12_000;
 const WORKSPACE_SEARCH_SKIPPED_DIRECTORIES = new Set([
-  ".git",
-  ".next",
-  ".nuxt",
-  ".svelte-kit",
-  ".turbo",
-  ".cache",
-  ".parcel-cache",
-  "node_modules",
-  "dist",
-  "build",
-  "coverage",
-  "out",
-  "target"
+  '.git',
+  '.next',
+  '.nuxt',
+  '.svelte-kit',
+  '.turbo',
+  '.cache',
+  '.parcel-cache',
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  'out',
+  'target',
 ]);
 
 export class WorkspaceServiceError extends Error {
@@ -50,11 +50,17 @@ export class WorkspaceService {
   constructor(private readonly appServerClient: AppServerClient) {}
 
   async readDirectory(
-    request: WorkspaceReadDirectoryRequest
+    request: WorkspaceReadDirectoryRequest,
   ): Promise<WorkspaceReadDirectoryResponse> {
     const normalizedPath = normalizeWorkspacePath(request.path);
-    const resolved = await this.#resolveTarget(request.threadId, normalizedPath, "directory");
-    const result = await this.appServerClient.readDirectory(resolved.targetPath);
+    const resolved = await this.#resolveTarget(
+      request.threadId,
+      normalizedPath,
+      'directory',
+    );
+    const result = await this.appServerClient.readDirectory(
+      resolved.targetPath,
+    );
 
     return {
       root: resolved.rootPath,
@@ -64,19 +70,25 @@ export class WorkspaceService {
           name: entry.fileName,
           path: joinWorkspacePath(normalizedPath, entry.fileName),
           isDirectory: entry.isDirectory,
-          isFile: entry.isFile
+          isFile: entry.isFile,
         }))
-        .sort(compareWorkspaceEntries)
+        .sort(compareWorkspaceEntries),
     };
   }
 
-  async readFile(request: WorkspaceReadFileRequest): Promise<WorkspaceReadFileResponse> {
+  async readFile(
+    request: WorkspaceReadFileRequest,
+  ): Promise<WorkspaceReadFileResponse> {
     const normalizedPath = normalizeWorkspacePath(request.path);
     if (normalizedPath.length === 0) {
-      throw new WorkspaceServiceError("Workspace file path is required", 400);
+      throw new WorkspaceServiceError('Workspace file path is required', 400);
     }
 
-    const resolved = await this.#resolveTarget(request.threadId, normalizedPath, "file");
+    const resolved = await this.#resolveTarget(
+      request.threadId,
+      normalizedPath,
+      'file',
+    );
     const sizeBytes = toNumber(resolved.stats.size);
     const modifiedAtMs = Math.round(toNumber(resolved.stats.mtimeMs));
 
@@ -84,36 +96,36 @@ export class WorkspaceService {
       return {
         root: resolved.rootPath,
         path: normalizedPath,
-        kind: "tooLarge",
+        kind: 'tooLarge',
         sizeBytes,
-        modifiedAtMs
+        modifiedAtMs,
       };
     }
 
     const result = await this.appServerClient.readFile(resolved.targetPath);
-    const decoded = Buffer.from(result.dataBase64, "base64");
+    const decoded = Buffer.from(result.dataBase64, 'base64');
     if (!isLikelyTextBuffer(decoded)) {
       return {
         root: resolved.rootPath,
         path: normalizedPath,
-        kind: "binary",
+        kind: 'binary',
         sizeBytes,
-        modifiedAtMs
+        modifiedAtMs,
       };
     }
 
     return {
       root: resolved.rootPath,
       path: normalizedPath,
-      kind: "text",
+      kind: 'text',
       sizeBytes,
       modifiedAtMs,
-      content: decoded.toString("utf8")
+      content: decoded.toString('utf8'),
     };
   }
 
   async searchFiles(
-    request: WorkspaceSearchFilesRequest
+    request: WorkspaceSearchFilesRequest,
   ): Promise<WorkspaceSearchFilesResponse> {
     const query = normalizeWorkspaceSearchQuery(request.query);
     const limit = normalizeWorkspaceSearchLimit(request.limit);
@@ -123,7 +135,7 @@ export class WorkspaceService {
       return {
         root: rootPath,
         query,
-        matches: []
+        matches: [],
       };
     }
 
@@ -136,8 +148,8 @@ export class WorkspaceService {
         name: getPathBaseName(match.path),
         path: match.path,
         isDirectory: match.isDirectory,
-        isFile: match.isFile
-      }))
+        isFile: match.isFile,
+      })),
     };
   }
 
@@ -150,7 +162,7 @@ export class WorkspaceService {
     const result = await this.appServerClient.readThreadSummary(threadId);
     const cwd = result.thread.cwd.trim();
     if (cwd.length === 0) {
-      throw new WorkspaceServiceError("Thread workspace is unavailable", 409);
+      throw new WorkspaceServiceError('Thread workspace is unavailable', 409);
     }
 
     const workspaceRoot = await realpath(cwd).catch((error: unknown) => {
@@ -161,7 +173,10 @@ export class WorkspaceService {
     });
 
     if (!workspaceStats.isDirectory()) {
-      throw new WorkspaceServiceError("Thread workspace root is not a directory", 409);
+      throw new WorkspaceServiceError(
+        'Thread workspace root is not a directory',
+        409,
+      );
     }
 
     this.#workspaceRootByThreadId.set(threadId, workspaceRoot);
@@ -171,12 +186,16 @@ export class WorkspaceService {
   async #resolveTarget(
     threadId: string,
     normalizedPath: string,
-    expectedKind: "directory" | "file"
-  ): Promise<{ rootPath: string; targetPath: string; stats: Awaited<ReturnType<typeof stat>> }> {
+    expectedKind: 'directory' | 'file',
+  ): Promise<{
+    rootPath: string;
+    targetPath: string;
+    stats: Awaited<ReturnType<typeof stat>>;
+  }> {
     const rootPath = await this.#resolveWorkspaceRoot(threadId);
     const candidatePath =
       normalizedPath.length > 0
-        ? path.resolve(rootPath, ...normalizedPath.split("/"))
+        ? path.resolve(rootPath, ...normalizedPath.split('/'))
         : rootPath;
 
     const targetPath = await realpath(candidatePath).catch((error: unknown) => {
@@ -185,8 +204,8 @@ export class WorkspaceService {
 
     if (!isPathWithinRoot(rootPath, targetPath)) {
       throw new WorkspaceServiceError(
-        "Workspace path must stay within the thread workspace root",
-        403
+        'Workspace path must stay within the thread workspace root',
+        403,
       );
     }
 
@@ -194,54 +213,60 @@ export class WorkspaceService {
       throw toWorkspacePathError(error, targetPath);
     });
 
-    if (expectedKind === "directory" && !targetStats.isDirectory()) {
-      throw new WorkspaceServiceError("Requested workspace path is not a directory", 400);
+    if (expectedKind === 'directory' && !targetStats.isDirectory()) {
+      throw new WorkspaceServiceError(
+        'Requested workspace path is not a directory',
+        400,
+      );
     }
 
-    if (expectedKind === "file" && !targetStats.isFile()) {
-      throw new WorkspaceServiceError("Requested workspace path is not a file", 400);
+    if (expectedKind === 'file' && !targetStats.isFile()) {
+      throw new WorkspaceServiceError(
+        'Requested workspace path is not a file',
+        400,
+      );
     }
 
     return {
       rootPath,
       targetPath,
-      stats: targetStats
+      stats: targetStats,
     };
   }
 }
 
 function normalizeWorkspacePath(value: string | undefined): string {
-  const trimmed = value?.trim() ?? "";
+  const trimmed = value?.trim() ?? '';
   if (trimmed.length === 0) {
-    return "";
+    return '';
   }
 
-  const normalized = trimmed.replace(/\\/g, "/");
+  const normalized = trimmed.replace(/\\/g, '/');
   if (
-    normalized.startsWith("/") ||
-    normalized.startsWith("\\") ||
+    normalized.startsWith('/') ||
+    normalized.startsWith('\\') ||
     /^[A-Za-z]:/.test(normalized) ||
     path.win32.isAbsolute(normalized)
   ) {
-    throw new WorkspaceServiceError("Workspace paths must be relative", 400);
+    throw new WorkspaceServiceError('Workspace paths must be relative', 400);
   }
 
   const segments = normalized
-    .split("/")
-    .filter((segment) => segment.length > 0 && segment !== ".");
+    .split('/')
+    .filter((segment) => segment.length > 0 && segment !== '.');
 
-  if (segments.some((segment) => segment === "..")) {
+  if (segments.some((segment) => segment === '..')) {
     throw new WorkspaceServiceError(
-      "Workspace path must stay within the thread workspace root",
-      403
+      'Workspace path must stay within the thread workspace root',
+      403,
     );
   }
 
-  return segments.join("/");
+  return segments.join('/');
 }
 
 function normalizeWorkspaceSearchQuery(value: string): string {
-  return value.trim().replace(/\\/g, "/");
+  return value.trim().replace(/\\/g, '/');
 }
 
 function normalizeWorkspaceSearchLimit(value: number | undefined): number {
@@ -257,12 +282,15 @@ function joinWorkspacePath(parentPath: string, entryName: string): string {
 }
 
 function getPathBaseName(workspacePath: string): string {
-  const normalized = workspacePath.replace(/\\/g, "/");
-  const segments = normalized.split("/").filter(Boolean);
+  const normalized = workspacePath.replace(/\\/g, '/');
+  const segments = normalized.split('/').filter(Boolean);
   return segments.at(-1) ?? workspacePath;
 }
 
-function compareWorkspaceEntries(left: WorkspaceEntry, right: WorkspaceEntry): number {
+function compareWorkspaceEntries(
+  left: WorkspaceEntry,
+  right: WorkspaceEntry,
+): number {
   if (left.isDirectory !== right.isDirectory) {
     return left.isDirectory ? -1 : 1;
   }
@@ -273,8 +301,8 @@ function compareWorkspaceEntries(left: WorkspaceEntry, right: WorkspaceEntry): n
 function isPathWithinRoot(rootPath: string, targetPath: string): boolean {
   const relativePath = path.relative(rootPath, targetPath);
   return (
-    relativePath === "" ||
-    (!relativePath.startsWith("..") &&
+    relativePath === '' ||
+    (!relativePath.startsWith('..') &&
       !relativePath.startsWith(`..${path.sep}`) &&
       !path.isAbsolute(relativePath) &&
       !path.win32.isAbsolute(relativePath))
@@ -290,39 +318,45 @@ function isLikelyTextBuffer(value: Buffer): boolean {
     return false;
   }
 
-  const decoded = value.toString("utf8");
-  return Buffer.from(decoded, "utf8").equals(value);
+  const decoded = value.toString('utf8');
+  return Buffer.from(decoded, 'utf8').equals(value);
 }
 
-function toWorkspacePathError(error: unknown, targetPath: string): WorkspaceServiceError {
+function toWorkspacePathError(
+  error: unknown,
+  targetPath: string,
+): WorkspaceServiceError {
   if (isErrnoException(error)) {
     switch (error.code) {
-      case "ENOENT":
-      case "ENOTDIR":
-        return new WorkspaceServiceError("Workspace path not found", 404);
-      case "EACCES":
-      case "EPERM":
-        return new WorkspaceServiceError("Workspace path cannot be accessed", 403);
+      case 'ENOENT':
+      case 'ENOTDIR':
+        return new WorkspaceServiceError('Workspace path not found', 404);
+      case 'EACCES':
+      case 'EPERM':
+        return new WorkspaceServiceError(
+          'Workspace path cannot be accessed',
+          403,
+        );
     }
   }
 
   void targetPath;
-  return new WorkspaceServiceError("Workspace path cannot be resolved", 500);
+  return new WorkspaceServiceError('Workspace path cannot be resolved', 500);
 }
 
 function isErrnoException(error: unknown): error is NodeJS.ErrnoException {
-  return error instanceof Error && "code" in error;
+  return error instanceof Error && 'code' in error;
 }
 
 function toNumber(value: number | bigint): number {
-  return typeof value === "bigint" ? Number(value) : value;
+  return typeof value === 'bigint' ? Number(value) : value;
 }
 
 async function searchWorkspaceEntries(
   rootPath: string,
   query: string,
   limit: number,
-  ig: Ignore | null
+  ig: Ignore | null,
 ): Promise<
   Array<{
     path: string;
@@ -336,11 +370,14 @@ async function searchWorkspaceEntries(
     isFile: boolean;
     score: number;
   }> = [];
-  const queue = [{ absolutePath: rootPath, relativePath: "" }];
+  const queue = [{ absolutePath: rootPath, relativePath: '' }];
   let queueIndex = 0;
   let scannedEntries = 0;
 
-  while (queueIndex < queue.length && scannedEntries < MAX_WORKSPACE_SEARCH_ENTRIES) {
+  while (
+    queueIndex < queue.length &&
+    scannedEntries < MAX_WORKSPACE_SEARCH_ENTRIES
+  ) {
     const current = queue[queueIndex];
     queueIndex += 1;
     if (!current) {
@@ -350,7 +387,7 @@ async function searchWorkspaceEntries(
     let entries: Dirent[];
     try {
       entries = await readdir(current.absolutePath, {
-        withFileTypes: true
+        withFileTypes: true,
       });
     } catch (error) {
       if (isSkippableWorkspaceSearchError(error)) {
@@ -389,14 +426,14 @@ async function searchWorkspaceEntries(
           path: relativePath,
           isDirectory,
           isFile,
-          score
+          score,
         });
       }
 
       if (isDirectory) {
         queue.push({
           absolutePath: path.join(current.absolutePath, entry.name),
-          relativePath
+          relativePath,
         });
       }
     }
@@ -415,7 +452,10 @@ async function searchWorkspaceEntries(
   return matches.slice(0, limit).map(({ score: _score, ...match }) => match);
 }
 
-function scoreWorkspaceSearchMatch(pathValue: string, query: string): number | null {
+function scoreWorkspaceSearchMatch(
+  pathValue: string,
+  query: string,
+): number | null {
   const normalizedPath = pathValue.toLocaleLowerCase();
   const normalizedQuery = query.toLocaleLowerCase();
   const baseName = getPathBaseName(normalizedPath);
@@ -465,7 +505,11 @@ function getSubsequenceScore(value: string, query: string): number | null {
   let firstMatch = -1;
   let lastMatch = -1;
 
-  for (let index = 0; index < value.length && queryIndex < query.length; index += 1) {
+  for (
+    let index = 0;
+    index < value.length && queryIndex < query.length;
+    index += 1
+  ) {
     if (value[index] !== query[queryIndex]) {
       continue;
     }
@@ -484,7 +528,10 @@ function getSubsequenceScore(value: string, query: string): number | null {
 }
 
 function isSkippableWorkspaceSearchError(error: unknown): boolean {
-  return isErrnoException(error) && ["ENOENT", "ENOTDIR", "EACCES", "EPERM"].includes(error.code ?? "");
+  return (
+    isErrnoException(error) &&
+    ['ENOENT', 'ENOTDIR', 'EACCES', 'EPERM'].includes(error.code ?? '')
+  );
 }
 
 function shouldSkipWorkspaceSearchDirectory(name: string): boolean {
@@ -492,13 +539,15 @@ function shouldSkipWorkspaceSearchDirectory(name: string): boolean {
 }
 
 async function loadGitignore(rootPath: string): Promise<Ignore | null> {
-  const gitignorePath = path.join(rootPath, ".gitignore");
+  const gitignorePath = path.join(rootPath, '.gitignore');
   let content: string;
   try {
-    content = await readFile(gitignorePath, "utf8");
+    content = await readFile(gitignorePath, 'utf8');
   } catch (error) {
-    if (isErrnoException(error) && error.code !== "ENOENT") {
-      console.warn(`[workspaceService] Failed to read .gitignore: ${error.message}`);
+    if (isErrnoException(error) && error.code !== 'ENOENT') {
+      console.warn(
+        `[workspaceService] Failed to read .gitignore: ${error.message}`,
+      );
     }
     return null;
   }
@@ -511,7 +560,7 @@ async function loadGitignore(rootPath: string): Promise<Ignore | null> {
 function isIgnoredByGitignore(
   relativePath: string,
   isDirectory: boolean,
-  ig: Ignore
+  ig: Ignore,
 ): boolean {
   const testPath = isDirectory ? `${relativePath}/` : relativePath;
   return ig.ignores(testPath);

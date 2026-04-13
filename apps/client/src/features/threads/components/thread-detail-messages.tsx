@@ -3,8 +3,8 @@ import {
   Suspense,
   useState,
   type ReactNode,
-  type RefObject
-} from "react";
+  type RefObject,
+} from 'react';
 import {
   Brain,
   ChevronDown,
@@ -12,34 +12,38 @@ import {
   FileCode2,
   GalleryHorizontal,
   Search,
-  SquareTerminal
-} from "lucide-react";
+  SquareTerminal,
+} from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { StatusBadge } from "@/features/threads/components/status-badge";
-import type { WorkspaceBrowserRequestedTargetKind } from "@/features/threads/components/use-workspace-browser";
+import { Button } from '@/components/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { StatusBadge } from '@/features/threads/components/status-badge';
+import type { WorkspaceBrowserRequestedTargetKind } from '@/features/threads/components/use-workspace-browser';
 import {
   getCommandDisplay,
-  looksLikeMarkdownContent
-} from "@/features/threads/components/thread-detail-utils";
-import type { FlatThreadItem } from "@/features/threads/lib/thread-utils";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import { cn } from "@/lib/utils";
-import type { ThreadItem } from "@my-codex-app/protocol";
+  looksLikeMarkdownContent,
+} from '@/features/threads/components/thread-detail-utils';
+import type { FlatThreadItem } from '@/features/threads/lib/thread-utils';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import { cn } from '@/lib/utils';
+import type { ThreadItem } from '@my-codex-app/protocol';
 
 const LazyMarkdownContent = lazy(async () => {
-  const module = await import("@/components/common/markdown-content");
+  const module = await import('@/components/common/markdown-content');
   return { default: module.MarkdownContent };
 });
 
 const LazyCodeBlock = lazy(async () => {
-  const module = await import("@/components/common/code-block");
+  const module = await import('@/components/common/code-block');
   return { default: module.CodeBlock };
 });
 
 const LazyTerminalOutput = lazy(async () => {
-  const module = await import("@/components/common/terminal-output");
+  const module = await import('@/components/common/terminal-output');
   return { default: module.TerminalOutput };
 });
 
@@ -48,11 +52,14 @@ export function ThreadMessageStream({
   onFilePathClick,
   onOpenWorkspacePath,
   resolveWorkspacePath,
-  scrollRef
+  scrollRef,
 }: {
   flatItems: FlatThreadItem[];
   onFilePathClick?: ((href: string) => void) | undefined;
-  onOpenWorkspacePath: (path: string, targetKind: WorkspaceBrowserRequestedTargetKind) => void;
+  onOpenWorkspacePath: (
+    path: string,
+    targetKind: WorkspaceBrowserRequestedTargetKind,
+  ) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
   scrollRef: RefObject<HTMLDivElement | null>;
 }) {
@@ -82,18 +89,21 @@ function FlatItemRenderer({
   nextItem,
   onFilePathClick,
   onOpenWorkspacePath,
-  resolveWorkspacePath
+  resolveWorkspacePath,
 }: {
   item: FlatThreadItem;
   nextItem: FlatThreadItem | null;
   onFilePathClick?: ((href: string) => void) | undefined;
-  onOpenWorkspacePath: (path: string, targetKind: WorkspaceBrowserRequestedTargetKind) => void;
+  onOpenWorkspacePath: (
+    path: string,
+    targetKind: WorkspaceBrowserRequestedTargetKind,
+  ) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
 }) {
   const { t } = useI18n();
 
   switch (item.type) {
-    case "userMessage":
+    case 'userMessage':
       return (
         <UserMessageBubble>
           {item.content.map((input, index) => (
@@ -105,26 +115,29 @@ function FlatItemRenderer({
           ))}
         </UserMessageBubble>
       );
-    case "agentMessage":
+    case 'agentMessage':
       return (
         <AgentMessageBlock>
           {item.text ? (
-            <RichMarkdown content={item.text} onFilePathClick={onFilePathClick} />
+            <RichMarkdown
+              content={item.text}
+              onFilePathClick={onFilePathClick}
+            />
           ) : (
             <p className="text-sm leading-6 text-muted-foreground">
-              {t("detail.agent.noTextReturned")}
+              {t('detail.agent.noTextReturned')}
             </p>
           )}
         </AgentMessageBlock>
       );
-    case "reasoning":
+    case 'reasoning':
       if (item.summary.length === 0 && item.content.length === 0) {
         return null;
       }
       return <ThinkingBlock item={item} />;
-    case "commandExecution":
+    case 'commandExecution':
       return <CommandCard item={item} />;
-    case "fileChange":
+    case 'fileChange':
       return (
         <FileChangeCard
           item={item}
@@ -132,47 +145,47 @@ function FlatItemRenderer({
           resolveWorkspacePath={resolveWorkspacePath}
         />
       );
-    case "webSearch":
+    case 'webSearch':
       return (
         <ToolLabel
           icon={<Search className="size-3" />}
-          label={t("detail.tool.webSearch")}
+          label={t('detail.tool.webSearch')}
           value={item.query}
         />
       );
-    case "imageView":
+    case 'imageView':
       return (
         <ToolLabel
           icon={<GalleryHorizontal className="size-3" />}
-          label={t("detail.tool.image")}
+          label={t('detail.tool.image')}
           value={item.path}
         />
       );
-    case "enteredReviewMode":
+    case 'enteredReviewMode':
       return (
         <SystemActivityLabel
           icon={<Search className="size-3" />}
-          label={t("detail.review.inProgress")}
+          label={t('detail.review.inProgress')}
           value={item.review}
         />
       );
-    case "exitedReviewMode":
+    case 'exitedReviewMode':
       if (
-        nextItem?.type === "agentMessage" &&
+        nextItem?.type === 'agentMessage' &&
         nextItem.text.trim() === item.review.trim()
       ) {
         return null;
       }
       return <ReviewResultCard review={item.review} />;
-    case "contextCompaction":
+    case 'contextCompaction':
       return (
         <SystemActivityLabel
           icon={<Brain className="size-3" />}
-          label={t("detail.compaction.label")}
-          value={t("detail.compaction.description")}
+          label={t('detail.compaction.label')}
+          value={t('detail.compaction.description')}
         />
       );
-    case "unknown":
+    case 'unknown':
       return (
         <div className="lg:ml-9">
           <Collapsible>
@@ -214,7 +227,11 @@ function AgentMessageBlock({ children }: { children: ReactNode }) {
   );
 }
 
-function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning" }> }) {
+function ThinkingBlock({
+  item,
+}: {
+  item: Extract<ThreadItem, { type: 'reasoning' }>;
+}) {
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
 
@@ -227,9 +244,12 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
         type="button"
       >
         <Brain className="size-3.5" />
-        <span>{t("detail.reasoning.thinking")}</span>
+        <span>{t('detail.reasoning.thinking')}</span>
         <ChevronDown
-          className={cn("size-3 transition-transform duration-200", !open ? "-rotate-90" : "")}
+          className={cn(
+            'size-3 transition-transform duration-200',
+            !open ? '-rotate-90' : '',
+          )}
         />
       </button>
       {open ? (
@@ -244,9 +264,15 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
           {item.content.length > 0 ? (
             <div className="space-y-2">
               {item.content.map((content, index) => (
-                <div className="rounded-lg bg-background/50 px-3 py-2" key={index}>
+                <div
+                  className="rounded-lg bg-background/50 px-3 py-2"
+                  key={index}
+                >
                   {looksLikeMarkdownContent(content) ? (
-                    <RichMarkdown className="text-sm text-muted-foreground" content={content} />
+                    <RichMarkdown
+                      className="text-sm text-muted-foreground"
+                      content={content}
+                    />
                   ) : (
                     <ReasoningPreformatted content={content} />
                   )}
@@ -260,7 +286,11 @@ function ThinkingBlock({ item }: { item: Extract<ThreadItem, { type: "reasoning"
   );
 }
 
-function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecution" }> }) {
+function CommandCard({
+  item,
+}: {
+  item: Extract<ThreadItem, { type: 'commandExecution' }>;
+}) {
   const { t } = useI18n();
   const displayCommand = getCommandDisplay(item.command);
   const commandExpanded = displayCommand !== item.command;
@@ -278,12 +308,14 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
             {displayCommand}
           </span>
           {item.durationMs ? (
-            <CommandMetaBadge label={`${Math.round(item.durationMs / 1000)}s`} />
+            <CommandMetaBadge
+              label={`${Math.round(item.durationMs / 1000)}s`}
+            />
           ) : null}
-          {item.status === "inProgress" || item.status === "failed" ? (
+          {item.status === 'inProgress' || item.status === 'failed' ? (
             <StatusBadge
               label={formatExecutionStatus(item.status, t)}
-              tone={item.status === "failed" ? "error" : "active"}
+              tone={item.status === 'failed' ? 'error' : 'active'}
             />
           ) : null}
           {hasDetails ? (
@@ -305,9 +337,13 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
               <div className="border-t border-subtle/4 p-3">
                 <Collapsible>
                   <CollapsibleTrigger asChild>
-                    <Button className="text-muted-foreground" size="xs" variant="ghost">
+                    <Button
+                      className="text-muted-foreground"
+                      size="xs"
+                      variant="ghost"
+                    >
                       <ChevronDown className="mr-0.5 size-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                      {t("detail.command.output")}
+                      {t('detail.command.output')}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent>
@@ -331,10 +367,13 @@ function CommandCard({ item }: { item: Extract<ThreadItem, { type: "commandExecu
 function FileChangeCard({
   item,
   onOpenWorkspacePath,
-  resolveWorkspacePath
+  resolveWorkspacePath,
 }: {
-  item: Extract<ThreadItem, { type: "fileChange" }>;
-  onOpenWorkspacePath: (path: string, targetKind: WorkspaceBrowserRequestedTargetKind) => void;
+  item: Extract<ThreadItem, { type: 'fileChange' }>;
+  onOpenWorkspacePath: (
+    path: string,
+    targetKind: WorkspaceBrowserRequestedTargetKind,
+  ) => void;
   resolveWorkspacePath: (candidatePath: string) => string | null;
 }) {
   const { t } = useI18n();
@@ -363,13 +402,13 @@ function FileChangeCard({
                   if (!workspacePath) {
                     return;
                   }
-                  onOpenWorkspacePath(workspacePath, "file");
+                  onOpenWorkspacePath(workspacePath, 'file');
                 }}
                 size="xs"
                 type="button"
                 variant="ghost"
               >
-                {t("detail.workspace.action.openFile")}
+                {t('detail.workspace.action.openFile')}
               </Button>
             ) : null}
           </div>
@@ -377,8 +416,12 @@ function FileChangeCard({
             <Collapsible>
               <div className="border-t border-subtle/4 px-3 py-1">
                 <CollapsibleTrigger asChild>
-                  <Button className="text-muted-foreground" size="xs" variant="ghost">
-                    {t("detail.fileChange.showDiff")}
+                  <Button
+                    className="text-muted-foreground"
+                    size="xs"
+                    variant="ghost"
+                  >
+                    {t('detail.fileChange.showDiff')}
                   </Button>
                 </CollapsibleTrigger>
               </div>
@@ -400,7 +443,7 @@ function FileChangeCard({
 function ToolLabel({
   icon,
   label,
-  value
+  value,
 }: {
   icon: ReactNode;
   label: string;
@@ -409,8 +452,12 @@ function ToolLabel({
   return (
     <div className="flex items-center gap-1.5 rounded-lg bg-accent/60 px-2.5 py-1.5 text-muted-foreground lg:ml-9">
       {icon}
-      <span className="font-mono text-[0.7rem] uppercase tracking-wide">{label}:</span>
-      <span className="min-w-0 flex-1 truncate text-xs text-foreground">{value}</span>
+      <span className="font-mono text-[0.7rem] uppercase tracking-wide">
+        {label}:
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+        {value}
+      </span>
     </div>
   );
 }
@@ -418,7 +465,7 @@ function ToolLabel({
 function SystemActivityLabel({
   icon,
   label,
-  value
+  value,
 }: {
   icon: ReactNode;
   label: string;
@@ -427,8 +474,12 @@ function SystemActivityLabel({
   return (
     <div className="flex items-center gap-1.5 rounded-lg border border-subtle/8 bg-background/72 px-3 py-2 text-muted-foreground lg:ml-9">
       {icon}
-      <span className="font-mono text-[0.7rem] uppercase tracking-wide">{label}:</span>
-      <span className="min-w-0 flex-1 truncate text-xs text-foreground">{value}</span>
+      <span className="font-mono text-[0.7rem] uppercase tracking-wide">
+        {label}:
+      </span>
+      <span className="min-w-0 flex-1 truncate text-xs text-foreground">
+        {value}
+      </span>
     </div>
   );
 }
@@ -441,12 +492,12 @@ function ReviewResultCard({ review }: { review: string }) {
       <div className="flex items-center gap-2 px-3 py-2">
         <Search className="size-3.5 shrink-0 text-muted-foreground" />
         <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-          {t("detail.review.completed")}
+          {t('detail.review.completed')}
         </p>
         <CollapsibleTrigger asChild>
           <Button className="text-muted-foreground" size="xs" variant="ghost">
             <ChevronDown className="mr-0.5 size-3 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-            {t("detail.review.show")}
+            {t('detail.review.show')}
           </Button>
         </CollapsibleTrigger>
       </div>
@@ -459,31 +510,43 @@ function ReviewResultCard({ review }: { review: string }) {
 
 function UserInputRenderer({
   input,
-  onFilePathClick
+  onFilePathClick,
 }: {
-  input: Extract<ThreadItem, { type: "userMessage" }>["content"][number];
+  input: Extract<ThreadItem, { type: 'userMessage' }>['content'][number];
   onFilePathClick?: ((href: string) => void) | undefined;
 }) {
   const { t } = useI18n();
 
   switch (input.type) {
-    case "text":
-      return <RichMarkdown content={input.text} onFilePathClick={onFilePathClick} />;
-    case "image":
-      return <StructuredUserInput label={t("detail.userInput.image")} value={input.url} />;
-    case "localImage":
-      return <StructuredUserInput label={t("detail.userInput.localImage")} value={input.path} />;
-    case "skill":
+    case 'text':
+      return (
+        <RichMarkdown content={input.text} onFilePathClick={onFilePathClick} />
+      );
+    case 'image':
       return (
         <StructuredUserInput
-          label={t("detail.userInput.skill")}
+          label={t('detail.userInput.image')}
+          value={input.url}
+        />
+      );
+    case 'localImage':
+      return (
+        <StructuredUserInput
+          label={t('detail.userInput.localImage')}
+          value={input.path}
+        />
+      );
+    case 'skill':
+      return (
+        <StructuredUserInput
+          label={t('detail.userInput.skill')}
           value={`${input.name} (${input.path})`}
         />
       );
-    case "mention":
+    case 'mention':
       return (
         <StructuredUserInput
-          label={t("detail.userInput.mention")}
+          label={t('detail.userInput.mention')}
           value={`${input.name} (${input.path})`}
         />
       );
@@ -491,30 +554,32 @@ function UserInputRenderer({
 }
 
 function formatExecutionStatus(
-  status: "completed" | "failed" | "inProgress",
-  t: (key: string) => string
+  status: 'completed' | 'failed' | 'inProgress',
+  t: (key: string) => string,
 ) {
   switch (status) {
-    case "completed":
-      return t("turn.status.completed");
-    case "failed":
-      return t("turn.status.failed");
-    case "inProgress":
-      return t("turn.status.inProgress");
+    case 'completed':
+      return t('turn.status.completed');
+    case 'failed':
+      return t('turn.status.failed');
+    case 'inProgress':
+      return t('turn.status.inProgress');
   }
 }
 
 function RichMarkdown({
   className,
   content,
-  onFilePathClick
+  onFilePathClick,
 }: {
   className?: string | undefined;
   content: string;
   onFilePathClick?: ((href: string) => void) | undefined;
 }) {
   return (
-    <Suspense fallback={<PlainTextFallback className={className} content={content} />}>
+    <Suspense
+      fallback={<PlainTextFallback className={className} content={content} />}
+    >
       <LazyMarkdownContent
         {...(className ? { className } : {})}
         content={content}
@@ -529,7 +594,7 @@ function RichCodeBlock({
   chrome = true,
   className,
   language,
-  shellPrompt = false
+  shellPrompt = false,
 }: {
   children: string;
   chrome?: boolean;
@@ -540,7 +605,11 @@ function RichCodeBlock({
   return (
     <Suspense
       fallback={
-        <PlainCodeFallback className={className} content={children} shellPrompt={shellPrompt} />
+        <PlainCodeFallback
+          className={className}
+          content={children}
+          shellPrompt={shellPrompt}
+        />
       }
     >
       <LazyCodeBlock
@@ -557,14 +626,19 @@ function RichCodeBlock({
 
 function RichTerminalOutput({
   className,
-  content
+  content,
 }: {
   className?: string | undefined;
   content: string;
 }) {
   return (
-    <Suspense fallback={<PlainCodeFallback className={className} content={content} />}>
-      <LazyTerminalOutput {...(className ? { className } : {})} content={content} />
+    <Suspense
+      fallback={<PlainCodeFallback className={className} content={content} />}
+    >
+      <LazyTerminalOutput
+        {...(className ? { className } : {})}
+        content={content}
+      />
     </Suspense>
   );
 }
@@ -579,13 +653,18 @@ function CommandMetaBadge({ label }: { label: string }) {
 
 function PlainTextFallback({
   className,
-  content
+  content,
 }: {
   className?: string | undefined;
   content: string;
 }) {
   return (
-    <div className={cn("whitespace-pre-wrap break-words text-sm leading-6 text-foreground", className)}>
+    <div
+      className={cn(
+        'whitespace-pre-wrap break-words text-sm leading-6 text-foreground',
+        className,
+      )}
+    >
       {content}
     </div>
   );
@@ -594,7 +673,7 @@ function PlainTextFallback({
 function PlainCodeFallback({
   className,
   content,
-  shellPrompt = false
+  shellPrompt = false,
 }: {
   className?: string | undefined;
   content: string;
@@ -603,14 +682,14 @@ function PlainCodeFallback({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-2xl border border-subtle/8 bg-code-bg shadow-[inset_0_0_0_1px_var(--color-subtle)/3]",
-        className
+        'overflow-hidden rounded-2xl border border-subtle/8 bg-code-bg shadow-[inset_0_0_0_1px_var(--color-subtle)/3]',
+        className,
       )}
     >
       <pre
         className={cn(
-          "m-0 overflow-x-auto whitespace-pre-wrap break-words p-4 font-mono text-[0.8rem] leading-[1.65] text-foreground",
-          shellPrompt ? "pl-8" : ""
+          'm-0 overflow-x-auto whitespace-pre-wrap break-words p-4 font-mono text-[0.8rem] leading-[1.65] text-foreground',
+          shellPrompt ? 'pl-8' : '',
         )}
       >
         {shellPrompt ? `$ ${content}` : content}
@@ -629,7 +708,7 @@ function ReasoningPreformatted({ content }: { content: string }) {
 
 function StructuredUserInput({
   label,
-  value
+  value,
 }: {
   label: string;
   value: string;
@@ -639,7 +718,9 @@ function StructuredUserInput({
       <p className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
         {label}
       </p>
-      <p className="mt-1 break-words font-mono text-sm leading-6 text-foreground">{value}</p>
+      <p className="mt-1 break-words font-mono text-sm leading-6 text-foreground">
+        {value}
+      </p>
     </div>
   );
 }

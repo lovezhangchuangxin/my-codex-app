@@ -1,27 +1,30 @@
-import { useDeferredValue, useState } from "react";
-import { ArrowLeft, Folder, Play, Search } from "lucide-react";
+import { useDeferredValue, useState } from 'react';
+import { ArrowLeft, Folder, Play, Search } from 'lucide-react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ThreadCard } from "@/features/threads/components/thread-card";
-import { ThreadStatusTabs } from "@/features/threads/components/thread-status-tabs";
+  CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { ThreadCard } from '@/features/threads/components/thread-card';
+import { ThreadStatusTabs } from '@/features/threads/components/thread-status-tabs';
 import {
   matchesThreadFilter,
-  type ThreadStatusFilter
-} from "@/features/threads/lib/thread-utils";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import { cn } from "@/lib/utils";
-import type { ThreadListState } from "@my-codex-app/sdk";
-import type { LocalConnectionState, ProjectSummary } from "@my-codex-app/protocol";
+  type ThreadStatusFilter,
+} from '@/features/threads/lib/thread-utils';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import { cn } from '@/lib/utils';
+import type { ThreadListState } from '@my-codex-app/sdk';
+import type {
+  LocalConnectionState,
+  ProjectSummary,
+} from '@my-codex-app/protocol';
 
 export function ProjectSessionsPanel({
   className,
@@ -33,7 +36,7 @@ export function ProjectSessionsPanel({
   onOpenThread,
   project,
   selectedThreadId,
-  sessionsState
+  sessionsState,
 }: {
   className?: string;
   connectionState: LocalConnectionState;
@@ -47,30 +50,35 @@ export function ProjectSessionsPanel({
   sessionsState: ThreadListState;
 }) {
   const { t } = useI18n();
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<ThreadStatusFilter>("all");
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<ThreadStatusFilter>('all');
   const deferredSearch = useDeferredValue(search);
 
   const visibleThreads =
-    sessionsState.kind === "ready"
+    sessionsState.kind === 'ready'
       ? sessionsState.threads.filter((thread) =>
-          matchesThreadFilter(thread, deferredSearch, statusFilter)
+          matchesThreadFilter(thread, deferredSearch, statusFilter),
         )
       : [];
 
   if (project === null) {
     return (
-      <Card className={cn("flex h-full flex-col overflow-hidden bg-card/65", className)}>
+      <Card
+        className={cn(
+          'flex h-full flex-col overflow-hidden bg-card/65',
+          className,
+        )}
+      >
         <CardContent className="flex h-full items-center justify-center p-6 text-center">
           <div className="space-y-3">
             <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-accent text-primary">
               <Folder className="size-5" />
             </div>
             <p className="font-heading text-xl tracking-[-0.04em]">
-              {t("project.sessions.empty.noProject.title")}
+              {t('project.sessions.empty.noProject.title')}
             </p>
             <p className="text-sm text-muted-foreground">
-              {t("project.sessions.empty.noProject.message")}
+              {t('project.sessions.empty.noProject.message')}
             </p>
           </div>
         </CardContent>
@@ -79,7 +87,12 @@ export function ProjectSessionsPanel({
   }
 
   return (
-    <Card className={cn("flex h-full flex-col overflow-hidden bg-card/65", className)}>
+    <Card
+      className={cn(
+        'flex h-full flex-col overflow-hidden bg-card/65',
+        className,
+      )}
+    >
       <CardHeader className="gap-4 border-b border-subtle/6 bg-background/35 pt-4">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 space-y-1">
@@ -87,7 +100,9 @@ export function ProjectSessionsPanel({
               {!isDesktop ? (
                 <Button onClick={onBack} size="icon-sm" variant="ghost">
                   <ArrowLeft className="size-4" />
-                  <span className="sr-only">{t("project.sessions.action.back")}</span>
+                  <span className="sr-only">
+                    {t('project.sessions.action.back')}
+                  </span>
                 </Button>
               ) : null}
               <CardTitle className="truncate text-xl tracking-[-0.04em]">
@@ -100,7 +115,9 @@ export function ProjectSessionsPanel({
           </div>
           <Button
             disabled={
-              createPending || !project.available || connectionState.kind !== "authenticated"
+              createPending ||
+              !project.available ||
+              connectionState.kind !== 'authenticated'
             }
             onClick={() => {
               onCreateThread(project.path);
@@ -108,7 +125,7 @@ export function ProjectSessionsPanel({
             size="sm"
           >
             <Play className="size-4" />
-            {t("project.sessions.action.new")}
+            {t('project.sessions.action.new')}
           </Button>
         </div>
 
@@ -120,7 +137,7 @@ export function ProjectSessionsPanel({
               onChange={(event) => {
                 setSearch(event.target.value);
               }}
-              placeholder={t("project.sessions.searchPlaceholder")}
+              placeholder={t('project.sessions.searchPlaceholder')}
               value={search}
             />
           </div>
@@ -139,14 +156,16 @@ export function ProjectSessionsPanel({
           <div className="space-y-4 pb-4">
             {!project.available ? (
               <Alert className="mt-4 border-destructive/20 bg-destructive/5">
-                <AlertTitle>{t("project.sessions.unavailable.title")}</AlertTitle>
+                <AlertTitle>
+                  {t('project.sessions.unavailable.title')}
+                </AlertTitle>
                 <AlertDescription>
-                  {t("project.sessions.unavailable.message")}
+                  {t('project.sessions.unavailable.message')}
                 </AlertDescription>
               </Alert>
             ) : null}
 
-            {sessionsState.kind === "loading" ? (
+            {sessionsState.kind === 'loading' ? (
               <div className="grid gap-3 pt-2">
                 {Array.from({ length: 4 }).map((_, index) => (
                   <div className="rounded-[18px] bg-accent/70 p-4" key={index}>
@@ -160,35 +179,38 @@ export function ProjectSessionsPanel({
               </div>
             ) : null}
 
-            {sessionsState.kind === "error" ? (
+            {sessionsState.kind === 'error' ? (
               <Card className="bg-destructive/8">
                 <CardContent className="space-y-2 pt-4">
                   <p className="font-medium text-destructive">
-                    {t("project.sessions.error.loadTitle")}
+                    {t('project.sessions.error.loadTitle')}
                   </p>
-                  <p className="text-sm text-muted-foreground">{sessionsState.message}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {sessionsState.message}
+                  </p>
                 </CardContent>
               </Card>
             ) : null}
 
-            {sessionsState.kind === "ready" && sessionsState.threads.length === 0 ? (
+            {sessionsState.kind === 'ready' &&
+            sessionsState.threads.length === 0 ? (
               <Card className="bg-background/45">
                 <CardContent className="space-y-3 pt-5 text-center">
                   <div className="mx-auto flex size-12 items-center justify-center rounded-full bg-accent text-primary">
                     <Play className="size-5" />
                   </div>
                   <p className="font-heading text-xl tracking-[-0.04em]">
-                    {t("project.sessions.empty.noSessions.title")}
+                    {t('project.sessions.empty.noSessions.title')}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {t("project.sessions.empty.noSessions.message")}
+                    {t('project.sessions.empty.noSessions.message')}
                   </p>
                   <div className="pt-1">
                     <Button
                       disabled={
                         createPending ||
                         !project.available ||
-                        connectionState.kind !== "authenticated"
+                        connectionState.kind !== 'authenticated'
                       }
                       onClick={() => {
                         onCreateThread(project.path);
@@ -196,14 +218,14 @@ export function ProjectSessionsPanel({
                       size="sm"
                     >
                       <Play className="size-4" />
-                      {t("project.sessions.action.new")}
+                      {t('project.sessions.action.new')}
                     </Button>
                   </div>
                 </CardContent>
               </Card>
             ) : null}
 
-            {sessionsState.kind === "ready" &&
+            {sessionsState.kind === 'ready' &&
             sessionsState.threads.length > 0 &&
             visibleThreads.length === 0 ? (
               <Card className="bg-background/45">
@@ -212,16 +234,16 @@ export function ProjectSessionsPanel({
                     <Search className="size-5" />
                   </div>
                   <p className="font-heading text-xl tracking-[-0.04em]">
-                    {t("project.sessions.empty.noMatches.title")}
+                    {t('project.sessions.empty.noMatches.title')}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {t("project.sessions.empty.noMatches.message")}
+                    {t('project.sessions.empty.noMatches.message')}
                   </p>
                 </CardContent>
               </Card>
             ) : null}
 
-            {sessionsState.kind === "ready"
+            {sessionsState.kind === 'ready'
               ? visibleThreads.map((thread) => (
                   <ThreadCard
                     isSelected={selectedThreadId === thread.id}

@@ -107,7 +107,7 @@ Explicitly out of scope in this slice:
 - Allow both:
   - the existing header button
   - composer `/resume`
-  to open the same sheet
+    to open the same sheet
 
 ### Task 5: Expand thread detail controller actions
 

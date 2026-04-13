@@ -1,29 +1,29 @@
-import { startTransition } from "react";
-import { MoreHorizontal } from "lucide-react";
-import { toast } from "sonner";
+import { startTransition } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import { toast } from 'sonner';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 import {
   buildThreadTitle,
   formatStatusLabel,
   getStatusTone,
   getWorkspaceLabel,
   summarizePendingKinds,
-} from "@/features/threads/lib/thread-utils";
-import { formatPendingRequestKind } from "@/features/requests/lib/request-utils";
-import { useI18n } from "@/lib/i18n/use-i18n";
-import type { ThreadSummary } from "@my-codex-app/protocol";
+} from '@/features/threads/lib/thread-utils';
+import { formatPendingRequestKind } from '@/features/requests/lib/request-utils';
+import { useI18n } from '@/lib/i18n/use-i18n';
+import type { ThreadSummary } from '@my-codex-app/protocol';
 
-import { StatusBadge } from "./status-badge";
+import { StatusBadge } from './status-badge';
 
 export function ThreadCard({
   isSelected,
@@ -45,9 +45,9 @@ export function ThreadCard({
   return (
     <Card
       className={[
-        "rounded-lg border border-subtle/8 bg-card/78 transition-all duration-200 hover:border-subtle/12 hover:bg-card/92",
-        isSelected ? "border-primary/22 bg-card" : "",
-      ].join(" ")}
+        'rounded-lg border border-subtle/8 bg-card/78 transition-all duration-200 hover:border-subtle/12 hover:bg-card/92',
+        isSelected ? 'border-primary/22 bg-card' : '',
+      ].join(' ')}
     >
       <CardContent className="space-y-3 pt-1">
         <div className="flex items-start justify-between gap-2.5">
@@ -68,7 +68,7 @@ export function ThreadCard({
               />
             </div>
             <p className="mt-1.5 line-clamp-2 text-sm leading-5 text-muted-foreground">
-              {thread.preview || t("thread.list.previewEmpty")}
+              {thread.preview || t('thread.list.previewEmpty')}
             </p>
           </button>
 
@@ -77,7 +77,7 @@ export function ThreadCard({
               <Button size="icon-sm" variant="ghost">
                 <MoreHorizontal className="size-4" />
                 <span className="sr-only">
-                  {t("thread.list.action.threadActions")}
+                  {t('thread.list.action.threadActions')}
                 </span>
               </Button>
             </DropdownMenuTrigger>
@@ -87,7 +87,7 @@ export function ThreadCard({
                   onOpen(thread.id);
                 }}
               >
-                {t("thread.list.action.openThread")}
+                {t('thread.list.action.openThread')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
@@ -97,7 +97,7 @@ export function ThreadCard({
                   });
                 }}
               >
-                {t("thread.list.action.copyThreadId")}
+                {t('thread.list.action.copyThreadId')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -117,7 +117,7 @@ export function ThreadCard({
               className="bg-secondary/16 text-secondary pulse-secondary"
               variant="secondary"
             >
-              {t("thread.list.badge.pending", {
+              {t('thread.list.badge.pending', {
                 count: thread.pendingRequests.length,
               })}
             </Badge>
@@ -140,7 +140,7 @@ export function ThreadCard({
 
         <div className="flex items-center justify-between gap-3 rounded-[10px] border border-subtle/8 bg-background/45 px-3 py-2 font-mono text-[0.7rem] uppercase tracking-[0.1em] text-muted-foreground">
           <span>
-            {t("thread.list.updated", {
+            {t('thread.list.updated', {
               relative: formatLocalizedRelativeTime(thread.updatedAt),
             })}
           </span>
@@ -156,8 +156,8 @@ export function ThreadCard({
 async function copyThreadId(threadId: string, t: (key: string) => string) {
   try {
     await navigator.clipboard.writeText(threadId);
-    toast.success(t("thread.list.toast.copySuccess"));
+    toast.success(t('thread.list.toast.copySuccess'));
   } catch {
-    toast.error(t("thread.list.toast.copyError"));
+    toast.error(t('thread.list.toast.copyError'));
   }
 }

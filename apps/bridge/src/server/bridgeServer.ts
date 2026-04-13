@@ -1,4 +1,8 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from 'node:http';
 
 import type {
   DeviceDeleteRequest,
@@ -19,32 +23,32 @@ import type {
   TurnStartRequest,
   WorkspaceReadDirectoryRequest,
   WorkspaceReadFileRequest,
-  WorkspaceSearchFilesRequest
-} from "@my-codex-app/protocol";
+  WorkspaceSearchFilesRequest,
+} from '@my-codex-app/protocol';
 
-import { authenticateBridgeRequest } from "../auth/authenticate";
-import { BridgeAuthService } from "../auth/authService";
-import { ProjectService } from "../projectService";
-import { ThreadService } from "../threadService";
-import { WorkspaceService } from "../workspaceService";
-import type { BridgeServerConfig } from "./config";
+import { authenticateBridgeRequest } from '../auth/authenticate';
+import { BridgeAuthService } from '../auth/authService';
+import { ProjectService } from '../projectService';
+import { ThreadService } from '../threadService';
+import { WorkspaceService } from '../workspaceService';
+import type { BridgeServerConfig } from './config';
 import {
   classifyAppServerError,
   isRecord,
   parseOptionalInt,
   readJsonBody,
   writeError,
-  writeJson
-} from "./http";
-import { logPairingStatus } from "./logging";
-import { ThreadEventStreamRegistry } from "./threadEventStreamRegistry";
+  writeJson,
+} from './http';
+import { logPairingStatus } from './logging';
+import { ThreadEventStreamRegistry } from './threadEventStreamRegistry';
 
 class RateLimiter {
   readonly #entries = new Map<string, { count: number; resetAt: number }>();
 
   constructor(
     private readonly max: number,
-    private readonly windowMs: number
+    private readonly windowMs: number,
   ) {}
 
   check(key: string): boolean {
@@ -76,7 +80,7 @@ export class BridgeServer {
 
   constructor(
     private readonly config: BridgeServerConfig,
-    private readonly services: BridgeServerServices
+    private readonly services: BridgeServerServices,
   ) {}
 
   listen(onListening: () => void): void {
@@ -96,28 +100,35 @@ export class BridgeServer {
     });
   }
 
-  async #handleRequest(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  async #handleRequest(
+    request: IncomingMessage,
+    response: ServerResponse,
+  ): Promise<void> {
     this.#setCorsHeaders(response);
 
-    if (request.method === "OPTIONS") {
+    if (request.method === 'OPTIONS') {
       response.writeHead(204);
       response.end();
       return;
     }
 
     if (!request.url) {
-      writeJson(response, 400, { error: { message: "Missing request URL" } });
+      writeJson(response, 400, { error: { message: 'Missing request URL' } });
       return;
     }
 
-    const url = new URL(request.url, `http://${request.headers.host ?? "127.0.0.1"}`);
+    const url = new URL(
+      request.url,
+      `http://${request.headers.host ?? '127.0.0.1'}`,
+    );
     if (await this.#handlePublicRoutes(request, response, url)) {
       return;
     }
 
     try {
       authenticateBridgeRequest(request, url, this.services.authService, {
-        allowQueryToken: request.method === "GET" && url.pathname === "/api/events"
+        allowQueryToken:
+          request.method === 'GET' && url.pathname === '/api/events',
       });
     } catch (error) {
       writeError(response, error, 401);
@@ -128,20 +139,20 @@ export class BridgeServer {
       return;
     }
 
-    writeJson(response, 404, { error: { message: "Route not found" } });
+    writeJson(response, 404, { error: { message: 'Route not found' } });
   }
 
   async #handlePublicRoutes(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
-    if (request.method === "GET" && url.pathname === "/healthz") {
-      writeJson(response, 200, { status: "ok" });
+    if (request.method === 'GET' && url.pathname === '/healthz') {
+      writeJson(response, 200, { status: 'ok' });
       return true;
     }
 
-    if (request.method === "GET" && url.pathname === "/api/pairing") {
+    if (request.method === 'GET' && url.pathname === '/api/pairing') {
       try {
         const status = this.services.authService.getPairingStatus();
         if (status.regenerated) {
@@ -150,7 +161,7 @@ export class BridgeServer {
         const payload: PairingStatusResponse = {
           pairingRequired: status.pairingRequired,
           instructions: status.instructions,
-          expiresAt: status.expiresAt
+          expiresAt: status.expiresAt,
         };
         writeJson(response, 200, payload);
       } catch (error) {
@@ -159,15 +170,23 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/pairing/complete") {
-      if (!this.#pairingLimiter.check(request.socket.remoteAddress ?? "unknown")) {
-        writeJson(response, 429, { error: { message: "Too many requests" } });
+    if (request.method === 'POST' && url.pathname === '/api/pairing/complete') {
+      if (
+        !this.#pairingLimiter.check(request.socket.remoteAddress ?? 'unknown')
+      ) {
+        writeJson(response, 429, { error: { message: 'Too many requests' } });
         return true;
       }
       try {
         const payload = await readJsonBody<PairingCompleteRequest>(request);
-        if (!isRecord(payload) || !isRecord(payload.device) || typeof payload.code !== "string") {
-          writeJson(response, 400, { error: { message: "Invalid pairing payload" } });
+        if (
+          !isRecord(payload) ||
+          !isRecord(payload.device) ||
+          typeof payload.code !== 'string'
+        ) {
+          writeJson(response, 400, {
+            error: { message: 'Invalid pairing payload' },
+          });
           return true;
         }
 
@@ -180,19 +199,23 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/session/refresh") {
-      if (!this.#refreshLimiter.check(request.socket.remoteAddress ?? "unknown")) {
-        writeJson(response, 429, { error: { message: "Too many requests" } });
+    if (request.method === 'POST' && url.pathname === '/api/session/refresh') {
+      if (
+        !this.#refreshLimiter.check(request.socket.remoteAddress ?? 'unknown')
+      ) {
+        writeJson(response, 429, { error: { message: 'Too many requests' } });
         return true;
       }
       try {
         const payload = await readJsonBody<SessionRefreshRequest>(request);
         if (
           !isRecord(payload) ||
-          typeof payload.deviceId !== "string" ||
-          typeof payload.refreshToken !== "string"
+          typeof payload.deviceId !== 'string' ||
+          typeof payload.refreshToken !== 'string'
         ) {
-          writeJson(response, 400, { error: { message: "Invalid session/refresh payload" } });
+          writeJson(response, 400, {
+            error: { message: 'Invalid session/refresh payload' },
+          });
           return true;
         }
 
@@ -210,7 +233,7 @@ export class BridgeServer {
   async #handleProtectedRoutes(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
     if (await this.#handleDeviceRoutes(request, response, url)) {
       return true;
@@ -242,9 +265,9 @@ export class BridgeServer {
   async #handleDeviceRoutes(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
-    if (request.method === "GET" && url.pathname === "/api/devices") {
+    if (request.method === 'GET' && url.pathname === '/api/devices') {
       try {
         const result = this.services.authService.listDevices();
         writeJson(response, 200, result);
@@ -254,11 +277,13 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/devices/revoke") {
+    if (request.method === 'POST' && url.pathname === '/api/devices/revoke') {
       try {
         const payload = await readJsonBody<DeviceRevokeRequest>(request);
-        if (!isRecord(payload) || typeof payload.deviceId !== "string") {
-          writeJson(response, 400, { error: { message: "Invalid device/revoke payload" } });
+        if (!isRecord(payload) || typeof payload.deviceId !== 'string') {
+          writeJson(response, 400, {
+            error: { message: 'Invalid device/revoke payload' },
+          });
           return true;
         }
 
@@ -270,11 +295,13 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/devices/delete") {
+    if (request.method === 'POST' && url.pathname === '/api/devices/delete') {
       try {
         const payload = await readJsonBody<DeviceDeleteRequest>(request);
-        if (!isRecord(payload) || typeof payload.deviceId !== "string") {
-          writeJson(response, 400, { error: { message: "Invalid device/delete payload" } });
+        if (!isRecord(payload) || typeof payload.deviceId !== 'string') {
+          writeJson(response, 400, {
+            error: { message: 'Invalid device/delete payload' },
+          });
           return true;
         }
 
@@ -292,22 +319,26 @@ export class BridgeServer {
   async #handleWorkspaceRoutes(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
-    if (request.method === "GET" && url.pathname === "/api/workspace/directory") {
+    if (
+      request.method === 'GET' &&
+      url.pathname === '/api/workspace/directory'
+    ) {
       try {
-        const threadId = url.searchParams.get("threadId") ?? "";
-        const path = url.searchParams.get("path") ?? undefined;
+        const threadId = url.searchParams.get('threadId') ?? '';
+        const path = url.searchParams.get('path') ?? undefined;
         if (threadId.length === 0) {
-          writeJson(response, 400, { error: { message: "Missing threadId" } });
+          writeJson(response, 400, { error: { message: 'Missing threadId' } });
           return true;
         }
 
         const payload: WorkspaceReadDirectoryRequest = {
           threadId,
-          ...(path !== undefined ? { path } : {})
+          ...(path !== undefined ? { path } : {}),
         };
-        const result = await this.services.workspaceService.readDirectory(payload);
+        const result =
+          await this.services.workspaceService.readDirectory(payload);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));
@@ -315,18 +346,20 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "GET" && url.pathname === "/api/workspace/file") {
+    if (request.method === 'GET' && url.pathname === '/api/workspace/file') {
       try {
-        const threadId = url.searchParams.get("threadId") ?? "";
-        const path = url.searchParams.get("path") ?? "";
+        const threadId = url.searchParams.get('threadId') ?? '';
+        const path = url.searchParams.get('path') ?? '';
         if (threadId.length === 0 || path.length === 0) {
-          writeJson(response, 400, { error: { message: "Missing threadId or path" } });
+          writeJson(response, 400, {
+            error: { message: 'Missing threadId or path' },
+          });
           return true;
         }
 
         const payload: WorkspaceReadFileRequest = {
           threadId,
-          path
+          path,
         };
         const result = await this.services.workspaceService.readFile(payload);
         writeJson(response, 200, result);
@@ -336,22 +369,23 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "GET" && url.pathname === "/api/workspace/search") {
+    if (request.method === 'GET' && url.pathname === '/api/workspace/search') {
       try {
-        const threadId = url.searchParams.get("threadId") ?? "";
-        const query = url.searchParams.get("query") ?? "";
-        const limit = parseOptionalInt(url.searchParams.get("limit"));
+        const threadId = url.searchParams.get('threadId') ?? '';
+        const query = url.searchParams.get('query') ?? '';
+        const limit = parseOptionalInt(url.searchParams.get('limit'));
         if (threadId.length === 0) {
-          writeJson(response, 400, { error: { message: "Missing threadId" } });
+          writeJson(response, 400, { error: { message: 'Missing threadId' } });
           return true;
         }
 
         const payload: WorkspaceSearchFilesRequest = {
           threadId,
           query,
-          ...(limit !== undefined ? { limit } : {})
+          ...(limit !== undefined ? { limit } : {}),
         };
-        const result = await this.services.workspaceService.searchFiles(payload);
+        const result =
+          await this.services.workspaceService.searchFiles(payload);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));
@@ -365,9 +399,9 @@ export class BridgeServer {
   async #handleProjectRoutes(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
-    if (request.method === "GET" && url.pathname === "/api/projects") {
+    if (request.method === 'GET' && url.pathname === '/api/projects') {
       try {
         const result = await this.services.projectService.listProjects();
         writeJson(response, 200, result);
@@ -377,14 +411,15 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "GET" && url.pathname === "/api/projects/search") {
+    if (request.method === 'GET' && url.pathname === '/api/projects/search') {
       try {
-        const limit = parseOptionalInt(url.searchParams.get("limit"));
+        const limit = parseOptionalInt(url.searchParams.get('limit'));
         const payload: ProjectSearchRequest = {
-          query: url.searchParams.get("query") ?? "",
-          ...(limit !== undefined ? { limit } : {})
+          query: url.searchParams.get('query') ?? '',
+          ...(limit !== undefined ? { limit } : {}),
         };
-        const result = await this.services.projectService.searchProjects(payload);
+        const result =
+          await this.services.projectService.searchProjects(payload);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));
@@ -392,15 +427,18 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/projects/import") {
+    if (request.method === 'POST' && url.pathname === '/api/projects/import') {
       try {
         const payload = await readJsonBody<ProjectImportRequest>(request);
-        if (!isRecord(payload) || typeof payload.path !== "string") {
-          writeJson(response, 400, { error: { message: "Invalid project/import payload" } });
+        if (!isRecord(payload) || typeof payload.path !== 'string') {
+          writeJson(response, 400, {
+            error: { message: 'Invalid project/import payload' },
+          });
           return true;
         }
 
-        const result = await this.services.projectService.importProject(payload);
+        const result =
+          await this.services.projectService.importProject(payload);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));
@@ -414,17 +452,17 @@ export class BridgeServer {
   async #handleThreadRoutes(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
-    if (request.method === "GET" && url.pathname === "/api/threads") {
+    if (request.method === 'GET' && url.pathname === '/api/threads') {
       try {
-        const cursor = url.searchParams.get("cursor") ?? undefined;
-        const limit = parseOptionalInt(url.searchParams.get("limit"));
-        const cwd = url.searchParams.get("cwd") ?? undefined;
+        const cursor = url.searchParams.get('cursor') ?? undefined;
+        const limit = parseOptionalInt(url.searchParams.get('limit'));
+        const cwd = url.searchParams.get('cwd') ?? undefined;
         const payload: ThreadListRequest = {
           ...(cursor ? { cursor } : {}),
           ...(limit !== undefined ? { limit } : {}),
-          ...(cwd ? { cwd } : {})
+          ...(cwd ? { cwd } : {}),
         };
         const result = await this.services.threadService.listThreads(payload);
         writeJson(response, 200, result);
@@ -434,11 +472,13 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "GET" && url.pathname === "/api/models") {
+    if (request.method === 'GET' && url.pathname === '/api/models') {
       try {
-        const includeHidden = url.searchParams.get("includeHidden");
+        const includeHidden = url.searchParams.get('includeHidden');
         const payload: ModelListRequest = {
-          ...(includeHidden !== null ? { includeHidden: includeHidden === "true" } : {})
+          ...(includeHidden !== null
+            ? { includeHidden: includeHidden === 'true' }
+            : {}),
         };
         const result = await this.services.threadService.listModels(payload);
         writeJson(response, 200, result);
@@ -448,11 +488,13 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "GET" && url.pathname.startsWith("/api/threads/")) {
+    if (request.method === 'GET' && url.pathname.startsWith('/api/threads/')) {
       try {
-        const threadId = decodeURIComponent(url.pathname.replace("/api/threads/", ""));
+        const threadId = decodeURIComponent(
+          url.pathname.replace('/api/threads/', ''),
+        );
         if (threadId.length === 0) {
-          writeJson(response, 400, { error: { message: "Missing thread id" } });
+          writeJson(response, 400, { error: { message: 'Missing thread id' } });
           return true;
         }
         const result = await this.services.threadService.readThread(threadId);
@@ -463,7 +505,7 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/threads/start") {
+    if (request.method === 'POST' && url.pathname === '/api/threads/start') {
       try {
         const payload = await readJsonBody<ThreadStartRequest>(request);
         const result = await this.services.threadService.startThread(payload);
@@ -474,27 +516,31 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/threads/rename") {
+    if (request.method === 'POST' && url.pathname === '/api/threads/rename') {
       try {
         const payload = await readJsonBody<ThreadRenameRequest>(request);
         if (
           !isRecord(payload) ||
-          typeof payload.threadId !== "string" ||
-          typeof payload.name !== "string"
+          typeof payload.threadId !== 'string' ||
+          typeof payload.name !== 'string'
         ) {
-          writeJson(response, 400, { error: { message: "Invalid thread/rename payload" } });
+          writeJson(response, 400, {
+            error: { message: 'Invalid thread/rename payload' },
+          });
           return true;
         }
 
         const normalizedName = payload.name.trim();
         if (normalizedName.length === 0) {
-          writeJson(response, 400, { error: { message: "Thread name cannot be empty" } });
+          writeJson(response, 400, {
+            error: { message: 'Thread name cannot be empty' },
+          });
           return true;
         }
 
         const result = await this.services.threadService.renameThread({
           ...payload,
-          name: normalizedName
+          name: normalizedName,
         });
         writeJson(response, 200, result);
       } catch (error) {
@@ -503,11 +549,13 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/threads/compact") {
+    if (request.method === 'POST' && url.pathname === '/api/threads/compact') {
       try {
         const payload = await readJsonBody<ThreadCompactRequest>(request);
-        if (!isRecord(payload) || typeof payload.threadId !== "string") {
-          writeJson(response, 400, { error: { message: "Invalid thread/compact payload" } });
+        if (!isRecord(payload) || typeof payload.threadId !== 'string') {
+          writeJson(response, 400, {
+            error: { message: 'Invalid thread/compact payload' },
+          });
           return true;
         }
 
@@ -525,13 +573,15 @@ export class BridgeServer {
   async #handleTurnRoutes(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
-    if (request.method === "POST" && url.pathname === "/api/turns/start") {
+    if (request.method === 'POST' && url.pathname === '/api/turns/start') {
       try {
         const payload = await readJsonBody<TurnStartRequest>(request);
         if (!payload.threadId || !Array.isArray(payload.input)) {
-          writeJson(response, 400, { error: { message: "Invalid turn/start payload" } });
+          writeJson(response, 400, {
+            error: { message: 'Invalid turn/start payload' },
+          });
           return true;
         }
 
@@ -543,11 +593,13 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/turns/interrupt") {
+    if (request.method === 'POST' && url.pathname === '/api/turns/interrupt') {
       try {
         const payload = await readJsonBody<TurnInterruptRequest>(request);
         if (!payload.threadId || !payload.turnId) {
-          writeJson(response, 400, { error: { message: "Invalid turn/interrupt payload" } });
+          writeJson(response, 400, {
+            error: { message: 'Invalid turn/interrupt payload' },
+          });
           return true;
         }
 
@@ -559,15 +611,17 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/reviews/start") {
+    if (request.method === 'POST' && url.pathname === '/api/reviews/start') {
       try {
         const payload = await readJsonBody<ThreadReviewRequest>(request);
         if (
           !isRecord(payload) ||
-          typeof payload.threadId !== "string" ||
+          typeof payload.threadId !== 'string' ||
           !isValidReviewTarget(payload.target)
         ) {
-          writeJson(response, 400, { error: { message: "Invalid review/start payload" } });
+          writeJson(response, 400, {
+            error: { message: 'Invalid review/start payload' },
+          });
           return true;
         }
 
@@ -579,15 +633,22 @@ export class BridgeServer {
       return true;
     }
 
-    if (request.method === "POST" && url.pathname === "/api/requests/respond") {
+    if (request.method === 'POST' && url.pathname === '/api/requests/respond') {
       try {
         const payload = await readJsonBody<RequestRespondRequest>(request);
-        if (!isRecord(payload) || !("requestId" in payload) || !("response" in payload)) {
-          writeJson(response, 400, { error: { message: "Invalid request/respond payload" } });
+        if (
+          !isRecord(payload) ||
+          !('requestId' in payload) ||
+          !('response' in payload)
+        ) {
+          writeJson(response, 400, {
+            error: { message: 'Invalid request/respond payload' },
+          });
           return true;
         }
 
-        const result = await this.services.threadService.respondToRequest(payload);
+        const result =
+          await this.services.threadService.respondToRequest(payload);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));
@@ -601,35 +662,41 @@ export class BridgeServer {
   async #handleEventRoute(
     request: IncomingMessage,
     response: ServerResponse,
-    url: URL
+    url: URL,
   ): Promise<boolean> {
-    if (!(request.method === "GET" && url.pathname === "/api/events")) {
+    if (!(request.method === 'GET' && url.pathname === '/api/events')) {
       return false;
     }
 
-    const threadId = url.searchParams.get("threadId");
+    const threadId = url.searchParams.get('threadId');
     if (!threadId) {
-      writeJson(response, 400, { error: { message: "Missing threadId for event stream" } });
+      writeJson(response, 400, {
+        error: { message: 'Missing threadId for event stream' },
+      });
       return true;
     }
 
     response.writeHead(200, {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "Access-Control-Allow-Origin": this.config.bridgeOrigin
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': this.config.bridgeOrigin,
     });
     response.flushHeaders();
-    response.write(`data: ${JSON.stringify({ type: "connected" })}\n\n`);
+    response.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
 
     try {
-      const client = await this.services.eventRegistry.addClient(response, threadId);
-      request.on("close", () => {
+      const client = await this.services.eventRegistry.addClient(
+        response,
+        threadId,
+      );
+      request.on('close', () => {
         this.services.eventRegistry.removeClient(client);
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown bridge error";
-      response.write(`data: ${JSON.stringify({ type: "error", message })}\n\n`);
+      const message =
+        error instanceof Error ? error.message : 'Unknown bridge error';
+      response.write(`data: ${JSON.stringify({ type: 'error', message })}\n\n`);
       response.end();
     }
 
@@ -637,30 +704,38 @@ export class BridgeServer {
   }
 
   #setCorsHeaders(response: ServerResponse): void {
-    response.setHeader("Access-Control-Allow-Origin", this.config.bridgeOrigin);
-    response.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    response.setHeader("Access-Control-Allow-Headers", "Authorization,Content-Type");
+    response.setHeader('Access-Control-Allow-Origin', this.config.bridgeOrigin);
+    response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+    response.setHeader(
+      'Access-Control-Allow-Headers',
+      'Authorization,Content-Type',
+    );
   }
 }
 
-function isValidReviewTarget(value: unknown): value is ThreadReviewRequest["target"] {
-  if (!isRecord(value) || typeof value.type !== "string") {
+function isValidReviewTarget(
+  value: unknown,
+): value is ThreadReviewRequest['target'] {
+  if (!isRecord(value) || typeof value.type !== 'string') {
     return false;
   }
 
   switch (value.type) {
-    case "uncommittedChanges":
+    case 'uncommittedChanges':
       return true;
-    case "baseBranch":
-      return typeof value.branch === "string" && value.branch.trim().length > 0;
-    case "commit":
+    case 'baseBranch':
+      return typeof value.branch === 'string' && value.branch.trim().length > 0;
+    case 'commit':
       return (
-        typeof value.sha === "string" &&
+        typeof value.sha === 'string' &&
         value.sha.trim().length > 0 &&
-        (value.title === undefined || typeof value.title === "string")
+        (value.title === undefined || typeof value.title === 'string')
       );
-    case "custom":
-      return typeof value.instructions === "string" && value.instructions.trim().length > 0;
+    case 'custom':
+      return (
+        typeof value.instructions === 'string' &&
+        value.instructions.trim().length > 0
+      );
     default:
       return false;
   }

@@ -177,17 +177,17 @@ not backed by real thread state.
 
 ## File-Level Summary
 
-| File | Purpose |
-| --- | --- |
-| `packages/protocol/src/index.ts` | Shared contract additions |
-| `apps/bridge/src/appServerClient.ts` | App-server request / response typing |
-| `apps/bridge/src/threadService.ts` | Settings cache, usage cache, preset mapping, event emission |
-| `apps/bridge/src/server.ts` | New client-facing route wiring |
-| `packages/sdk/src/bridgeClient.ts` | Richer client API methods |
-| `packages/sdk/src/threadState.ts` | State reducers for settings and usage |
-| `packages/sdk/src/threadRuntime.ts` | Send-message overrides and event application |
-| `apps/client/src/features/threads/components/thread-detail-panel.tsx` | Composer UI redesign |
-| `apps/client/src/lib/i18n/messages/*.ts` | New labels and fallback states |
+| File                                                                  | Purpose                                                     |
+| --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `packages/protocol/src/index.ts`                                      | Shared contract additions                                   |
+| `apps/bridge/src/appServerClient.ts`                                  | App-server request / response typing                        |
+| `apps/bridge/src/threadService.ts`                                    | Settings cache, usage cache, preset mapping, event emission |
+| `apps/bridge/src/server.ts`                                           | New client-facing route wiring                              |
+| `packages/sdk/src/bridgeClient.ts`                                    | Richer client API methods                                   |
+| `packages/sdk/src/threadState.ts`                                     | State reducers for settings and usage                       |
+| `packages/sdk/src/threadRuntime.ts`                                   | Send-message overrides and event application                |
+| `apps/client/src/features/threads/components/thread-detail-panel.tsx` | Composer UI redesign                                        |
+| `apps/client/src/lib/i18n/messages/*.ts`                              | New labels and fallback states                              |
 
 ## Risks And Mitigations
 
