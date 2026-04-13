@@ -196,7 +196,7 @@ export const zhCnMessages: typeof enMessages = {
   'pairing.bridgeUnavailablePrefix':
     '未检测到 Bridge。请确认你的电脑上正在运行 ',
   'pairing.bridgeUnavailableSuffix': '。',
-  'pairing.codePlaceholder': '例如 ABCD-1234',
+  'pairing.codePlaceholder': '例如 ABCD1234',
   'pairing.connect': '连接',
   'pairing.connecting': '连接中...',
   'pairing.error.generic': '配对失败，请重试。',

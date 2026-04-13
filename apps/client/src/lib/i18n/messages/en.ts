@@ -212,7 +212,7 @@ export const enMessages = {
     'Bridge not detected. Make sure pnpm dev:bridge is running on your computer.',
   'pairing.bridgeUnavailablePrefix': 'Bridge not detected. Make sure ',
   'pairing.bridgeUnavailableSuffix': ' is running on your computer.',
-  'pairing.codePlaceholder': 'e.g. ABCD-1234',
+  'pairing.codePlaceholder': 'e.g. ABCD1234',
   'pairing.connect': 'Connect',
   'pairing.connecting': 'Connecting...',
   'pairing.error.generic': 'Pairing failed. Please try again.',

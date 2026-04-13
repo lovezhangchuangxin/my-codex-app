@@ -85,7 +85,7 @@ export function PairingScreen() {
   const isSubmitting = pairingState.status === 'submitting';
 
   return (
-    <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center px-8 lg:min-h-[calc(100dvh-60px)]">
+    <div className="flex min-h-[calc(100dvh-8rem)] items-center justify-center px-8 lg:min-h-[calc(100dvh-60px)]">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center space-y-1.5 text-center">
           <div className="flex size-10 items-center justify-center rounded-full border bg-muted">
@@ -111,7 +111,7 @@ export function PairingScreen() {
             value={pairingCode}
           />
 
-          <p className="text-[13px] text-muted-foreground">
+          <p className="text-[13px] text-muted-foreground text-center">
             {t('pairing.helperPrefix')}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
               pnpm dev:bridge
