@@ -6,6 +6,16 @@ import { useI18n } from '@/lib/i18n/use-i18n';
 import { cn } from '@/lib/utils';
 import type { ProjectSummary } from '@my-codex-app/protocol';
 
+const PALETTE_HUES = [210, 265, 155, 35, 340, 190, 25, 170];
+
+function projectHue(name: string): number {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return PALETTE_HUES[Math.abs(hash) % PALETTE_HUES.length]!;
+}
+
 export function ProjectCard({
   isSelected,
   onOpen,
@@ -16,6 +26,7 @@ export function ProjectCard({
   project: ProjectSummary;
 }) {
   const { formatRelativeTime, t } = useI18n();
+  const iconColor = `hsl(${projectHue(project.displayName)}, 65%, 55%)`;
 
   return (
     <Card
@@ -36,7 +47,10 @@ export function ProjectCard({
         <CardContent className="space-y-3 pt-1">
           <div className="space-y-1.5">
             <div className="flex items-center gap-2">
-              <Folder className="size-[1.15rem] shrink-0 text-primary/50" />
+              <Folder
+                className="size-[1.15rem] shrink-0"
+                style={{ color: iconColor }}
+              />
               <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                 <p className="truncate font-heading text-base tracking-[-0.04em] md:text-[1.05rem]">
                   {project.displayName}
