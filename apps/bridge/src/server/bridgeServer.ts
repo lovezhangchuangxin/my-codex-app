@@ -6,6 +6,8 @@ import type {
   ModelListRequest,
   PairingCompleteRequest,
   PairingStatusResponse,
+  ProjectImportRequest,
+  ProjectSearchRequest,
   RequestRespondRequest,
   SessionRefreshRequest,
   ThreadCompactRequest,
@@ -21,6 +23,7 @@ import type {
 
 import { authenticateBridgeRequest } from "../auth/authenticate";
 import { BridgeAuthService } from "../auth/authService";
+import { ProjectService } from "../projectService";
 import { ThreadService } from "../threadService";
 import { WorkspaceService } from "../workspaceService";
 import type { BridgeServerConfig } from "./config";
@@ -57,6 +60,7 @@ class RateLimiter {
 
 export interface BridgeServerServices {
   authService: BridgeAuthService;
+  projectService: ProjectService;
   threadService: ThreadService;
   workspaceService: WorkspaceService;
   eventRegistry: ThreadEventStreamRegistry;
@@ -211,6 +215,10 @@ export class BridgeServer {
       return true;
     }
 
+    if (await this.#handleProjectRoutes(request, response, url)) {
+      return true;
+    }
+
     if (await this.#handleWorkspaceRoutes(request, response, url)) {
       return true;
     }
@@ -353,6 +361,55 @@ export class BridgeServer {
     return false;
   }
 
+  async #handleProjectRoutes(
+    request: IncomingMessage,
+    response: ServerResponse,
+    url: URL
+  ): Promise<boolean> {
+    if (request.method === "GET" && url.pathname === "/api/projects") {
+      try {
+        const result = await this.services.projectService.listProjects();
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return true;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/projects/search") {
+      try {
+        const limit = parseOptionalInt(url.searchParams.get("limit"));
+        const payload: ProjectSearchRequest = {
+          query: url.searchParams.get("query") ?? "",
+          ...(limit !== undefined ? { limit } : {})
+        };
+        const result = await this.services.projectService.searchProjects(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return true;
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/projects/import") {
+      try {
+        const payload = await readJsonBody<ProjectImportRequest>(request);
+        if (!isRecord(payload) || typeof payload.path !== "string") {
+          writeJson(response, 400, { error: { message: "Invalid project/import payload" } });
+          return true;
+        }
+
+        const result = await this.services.projectService.importProject(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return true;
+    }
+
+    return false;
+  }
+
   async #handleThreadRoutes(
     request: IncomingMessage,
     response: ServerResponse,
@@ -362,9 +419,11 @@ export class BridgeServer {
       try {
         const cursor = url.searchParams.get("cursor") ?? undefined;
         const limit = parseOptionalInt(url.searchParams.get("limit"));
+        const cwd = url.searchParams.get("cwd") ?? undefined;
         const payload: ThreadListRequest = {
           ...(cursor ? { cursor } : {}),
-          ...(limit !== undefined ? { limit } : {})
+          ...(limit !== undefined ? { limit } : {}),
+          ...(cwd ? { cwd } : {})
         };
         const result = await this.services.threadService.listThreads(payload);
         writeJson(response, 200, result);

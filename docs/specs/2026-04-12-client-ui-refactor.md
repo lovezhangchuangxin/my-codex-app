@@ -17,6 +17,7 @@ The approved design proposal lives at:
 This document remains the product-level UI refactor spec, but detailed module
 ownership and file layout were later refined by:
 
+- `docs/specs/2026-04-13-project-centered-threads-home.md`
 - `docs/specs/2026-04-12-thread-chat-flow.md`
 - `docs/specs/2026-04-13-thread-detail-composer-controls.md`
 - `docs/specs/2026-04-13-client-modular-refactor.md`
@@ -26,6 +27,8 @@ Current implementation rule:
 - thread and request business UI lives under `features/*`
 - `components/*` is reserved for app chrome, pairing, settings, common
   renderers, and UI primitives
+- the `/threads` page hierarchy described below should be read as historical
+  where it conflicts with the newer project-centered threads home spec
 
 ## Background
 

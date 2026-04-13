@@ -21,6 +21,8 @@ This plan remains the historical implementation plan for the mobile-first UI
 rewrite, but detailed file ownership and component extraction were later
 refined by:
 
+- `docs/specs/2026-04-13-project-centered-threads-home.md`
+- `docs/plans/2026-04-13-project-centered-threads-home.md`
 - `docs/specs/2026-04-13-client-modular-refactor.md`
 - `docs/plans/2026-04-13-client-modular-refactor.md`
 
@@ -29,6 +31,8 @@ Current implementation rule:
 - thread and request business UI lives under `features/*`
 - older `components/threads/*` and `components/requests/*` references below
   should be read as historical unless explicitly updated
+- the `/threads` page structure described below should be read as historical
+  where it conflicts with the newer project-centered threads home docs
 
 ## Implementation Strategy
 

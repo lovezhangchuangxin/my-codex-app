@@ -28,10 +28,12 @@ import { StatusBadge } from "./status-badge";
 export function ThreadCard({
   isSelected,
   onOpen,
+  showWorkspace = true,
   thread
 }: {
   isSelected: boolean;
   onOpen: (threadId: string) => void;
+  showWorkspace?: boolean;
   thread: ThreadSummary;
 }) {
   const { formatDateTime, formatRelativeTime: formatLocalizedRelativeTime, t } = useI18n();
@@ -99,9 +101,11 @@ export function ThreadCard({
           <Badge className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
             {thread.modelProvider}
           </Badge>
-          <Badge className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
-            {getWorkspaceLabel(thread.cwd, t)}
-          </Badge>
+          {showWorkspace ? (
+            <Badge className="border border-subtle/8 bg-background/55 font-mono text-[0.7rem] uppercase text-muted-foreground" variant="outline">
+              {getWorkspaceLabel(thread.cwd, t)}
+            </Badge>
+          ) : null}
           {thread.pendingRequests.length > 0 ? (
             <Badge className="bg-secondary/16 text-secondary pulse-secondary" variant="secondary">
               {t("thread.list.badge.pending", { count: thread.pendingRequests.length })}

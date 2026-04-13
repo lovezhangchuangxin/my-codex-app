@@ -1,11 +1,12 @@
-import { startTransition, useEffect } from "react";
-import { PenSquare } from "lucide-react";
+import { startTransition, useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
+import { ProjectImportSheet } from "@/features/projects/components/project-import-sheet";
+import { ProjectsPanel } from "@/features/projects/components/projects-panel";
+import { ProjectSessionsPanel } from "@/features/projects/components/project-sessions-panel";
+import { useProjectHome } from "@/features/projects/hooks/use-project-home";
 import { ThreadDetailPanel } from "@/features/threads/components/thread-detail-panel";
-import { ThreadListPanel } from "@/features/threads/components/thread-list-panel";
 import { useMobilePanel } from "@/hooks/use-mobile-panel";
 import { useMediaQuery } from "@/hooks/use-media-query";
 import { useI18n } from "@/lib/i18n/use-i18n";
@@ -27,9 +28,25 @@ export function ThreadsLayout() {
   const { threadId } = useParams();
   const isDesktop = useMediaQuery("(min-width: 1024px)");
   const mobilePanel = useMobilePanel();
+  const [projectImportOpen, setProjectImportOpen] = useState(false);
 
   const routeThreadId = threadId ?? null;
   const highlightedRequestKey = new URLSearchParams(location.search).get("request");
+  const routeProjectPath = resolveThreadProjectPath(
+    routeThreadId,
+    snapshot.selectedThreadId,
+    snapshot.detail,
+    snapshot.threads
+  );
+  const projectHome = useProjectHome(snapshot.connection, routeProjectPath, snapshot.threads);
+  const selectedProjectPath = isDesktop
+    ? projectHome.selectedProjectPath ?? routeProjectPath
+    : routeProjectPath ?? projectHome.selectedProjectPath;
+  const selectedProject =
+    projectHome.projectsState.kind === "ready" && selectedProjectPath
+      ? projectHome.projectsState.projects.find((project) => project.path === selectedProjectPath) ??
+        null
+      : null;
 
   // Desktop: use URL param. Mobile: use panel state machine.
   const activeThreadId = isDesktop ? routeThreadId : mobilePanel.selectedThreadId;
@@ -45,24 +62,47 @@ export function ThreadsLayout() {
     void runtime.selectThread(isDesktop ? routeThreadId : mobilePanel.selectedThreadId);
   }, [runtime, isDesktop, routeThreadId, mobilePanel.selectedThreadId]);
 
-  // Sync mobile panel with URL on initial load
   useEffect(() => {
-    if (!isDesktop && routeThreadId && mobilePanel.view === "thread-list") {
-      mobilePanel.openThread(routeThreadId);
+    if (
+      !isDesktop &&
+      selectedProjectPath !== null &&
+      mobilePanel.selectedProjectPath !== selectedProjectPath
+    ) {
+      mobilePanel.selectProject(selectedProjectPath);
     }
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isDesktop, mobilePanel, selectedProjectPath]);
 
-  function handleCreateThread() {
+  useEffect(() => {
+    if (
+      !isDesktop &&
+      routeThreadId &&
+      (mobilePanel.view !== "thread-detail" ||
+        mobilePanel.selectedThreadId !== routeThreadId ||
+        (selectedProjectPath !== null &&
+          mobilePanel.selectedProjectPath !== selectedProjectPath))
+    ) {
+      mobilePanel.openThread(routeThreadId, selectedProjectPath ?? undefined);
+    }
+  }, [isDesktop, mobilePanel, routeThreadId, selectedProjectPath]);
+
+  function handleOpenProject(projectPath: string) {
+    projectHome.selectProject(projectPath);
+    if (!isDesktop) {
+      mobilePanel.openProject(projectPath);
+    }
+  }
+
+  function handleCreateThread(projectPath: string) {
     void (async () => {
       try {
-        const nextThreadId = await runtime.startThread();
+        const nextThreadId = await runtime.startThread({ cwd: projectPath });
+        projectHome.refreshProjects();
+        projectHome.refreshSessions();
         startTransition(() => {
           if (isDesktop) {
             navigate(`/threads/${encodeURIComponent(nextThreadId)}`);
           } else {
-            mobilePanel.openThread(nextThreadId);
+            mobilePanel.openThread(nextThreadId, projectPath);
           }
         });
       } catch (error) {
@@ -77,8 +117,18 @@ export function ThreadsLayout() {
         navigate(`/threads/${encodeURIComponent(nextThreadId)}`);
       });
     } else {
-      mobilePanel.openThread(nextThreadId);
+      mobilePanel.openThread(nextThreadId, selectedProjectPath);
     }
+  }
+
+  async function handleImportProject(request: Parameters<typeof projectHome.importProject>[0]) {
+    const project = await projectHome.importProject(request);
+    if (isDesktop) {
+      projectHome.selectProject(project.path);
+    } else {
+      mobilePanel.openProject(project.path);
+    }
+    return project;
   }
 
   async function handleSendMessage(
@@ -139,65 +189,99 @@ export function ThreadsLayout() {
       return (
         <div className="h-full">
           <ThreadDetailPanel
-          connectionState={snapshot.connection}
-          compactPending={
-            mobilePanel.selectedThreadId !== null &&
-            snapshot.mutations.compactingThreadIds.includes(mobilePanel.selectedThreadId)
-          }
-          detailState={displayedDetailState}
-          highlightedRequestKey={highlightedRequestKey}
-          interruptPending={snapshot.mutations.interruptPending}
-          isDesktop={false}
-          lastError={snapshot.mutations.lastError}
-          onBack={mobilePanel.backToList}
-          onCompactThread={handleCompactThread}
-          onOpenThread={handleOpenThread}
-          onRespondToRequest={handleRespond}
-          onSendMessage={handleSendMessage}
-          onInterrupt={handleInterrupt}
-          onStartReview={handleStartReview}
-          respondingRequestIds={snapshot.mutations.respondingRequestIds}
-          selectedThreadId={mobilePanel.selectedThreadId}
-          sendMessagePending={snapshot.mutations.sendMessagePending}
-          threadsState={snapshot.threads}
-        />
+            connectionState={snapshot.connection}
+            compactPending={
+              mobilePanel.selectedThreadId !== null &&
+              snapshot.mutations.compactingThreadIds.includes(mobilePanel.selectedThreadId)
+            }
+            detailState={displayedDetailState}
+            highlightedRequestKey={highlightedRequestKey}
+            interruptPending={snapshot.mutations.interruptPending}
+            isDesktop={false}
+            lastError={snapshot.mutations.lastError}
+            onBack={mobilePanel.backFromDetail}
+            onCompactThread={handleCompactThread}
+            onOpenThread={handleOpenThread}
+            onRespondToRequest={handleRespond}
+            onSendMessage={handleSendMessage}
+            onInterrupt={handleInterrupt}
+            onStartReview={handleStartReview}
+            respondingRequestIds={snapshot.mutations.respondingRequestIds}
+            selectedThreadId={mobilePanel.selectedThreadId}
+            sendMessagePending={snapshot.mutations.sendMessagePending}
+            threadsState={selectedProjectPath !== null ? projectHome.sessionsState : snapshot.threads}
+          />
+        </div>
+      );
+    }
+
+    if (mobilePanel.view === "project-sessions" && selectedProjectPath) {
+      return (
+        <div className="h-full">
+          <ProjectSessionsPanel
+            className="h-full min-h-0 rounded-none py-0"
+            connectionState={snapshot.connection}
+            createPending={snapshot.mutations.startThreadPending}
+            isDesktop={false}
+            onBack={mobilePanel.backToProjects}
+            onCreateThread={handleCreateThread}
+            onOpenThread={handleOpenThread}
+            project={selectedProject}
+            selectedThreadId={null}
+            sessionsState={projectHome.sessionsState}
+          />
         </div>
       );
     }
 
     return (
-      <div className="relative h-full">
-        <ThreadListPanel
+      <div className="h-full">
+        <ProjectsPanel
           className="h-full min-h-0 rounded-none py-0"
           connectionState={snapshot.connection}
-          onOpenThread={handleOpenThread}
-          selectedThreadId={null}
-          threadsState={snapshot.threads}
+          onImportProject={() => {
+            setProjectImportOpen(true);
+          }}
+          onOpenProject={handleOpenProject}
+          projectsState={projectHome.projectsState}
+          selectedProjectPath={selectedProjectPath}
         />
-        <Button
-          className="fixed right-4 bottom-6 z-20 size-12 rounded-full shadow-lg"
-          disabled={
-            snapshot.mutations.startThreadPending ||
-            snapshot.connection.kind !== "authenticated"
-          }
-          onClick={handleCreateThread}
-          size="icon"
-        >
-          <PenSquare className="size-5" />
-        </Button>
+        <ProjectImportSheet
+          isDesktop={false}
+          onImportProject={handleImportProject}
+          onOpenChange={setProjectImportOpen}
+          onSearchProjects={projectHome.searchProjects}
+          open={projectImportOpen}
+        />
       </div>
     );
   }
 
-  // Desktop: side-by-side panels
+  // Desktop: three-column project -> session -> detail layout
   return (
     <div className="flex h-full">
-      <div className="w-[280px] shrink-0 overflow-hidden border-r border-subtle/6">
-        <ThreadListPanel
+      <div className="w-[320px] shrink-0 overflow-hidden border-r border-subtle/6">
+        <ProjectsPanel
           connectionState={snapshot.connection}
+          onImportProject={() => {
+            setProjectImportOpen(true);
+          }}
+          onOpenProject={handleOpenProject}
+          projectsState={projectHome.projectsState}
+          selectedProjectPath={selectedProjectPath}
+        />
+      </div>
+      <div className="w-[360px] shrink-0 overflow-hidden border-r border-subtle/6">
+        <ProjectSessionsPanel
+          connectionState={snapshot.connection}
+          createPending={snapshot.mutations.startThreadPending}
+          isDesktop
+          onBack={() => {}}
+          onCreateThread={handleCreateThread}
           onOpenThread={handleOpenThread}
+          project={selectedProject}
           selectedThreadId={routeThreadId}
-          threadsState={snapshot.threads}
+          sessionsState={projectHome.sessionsState}
         />
       </div>
       <div className="min-w-0 flex-1">
@@ -226,9 +310,16 @@ export function ThreadsLayout() {
           respondingRequestIds={snapshot.mutations.respondingRequestIds}
           selectedThreadId={routeThreadId}
           sendMessagePending={snapshot.mutations.sendMessagePending}
-          threadsState={snapshot.threads}
+          threadsState={selectedProjectPath !== null ? projectHome.sessionsState : snapshot.threads}
         />
       </div>
+      <ProjectImportSheet
+        isDesktop
+        onImportProject={handleImportProject}
+        onOpenChange={setProjectImportOpen}
+        onSearchProjects={projectHome.searchProjects}
+        open={projectImportOpen}
+      />
     </div>
   );
 }
@@ -270,4 +361,25 @@ function unresolvedRouteDetailState(
     default:
       return { kind: "loading", threadId };
   }
+}
+
+function resolveThreadProjectPath(
+  threadId: string | null,
+  selectedThreadId: string | null,
+  detailState: ThreadDetailState,
+  threadsState: ReturnType<typeof useRuntimeSnapshot>["threads"]
+): string | null {
+  if (threadId === null) {
+    return null;
+  }
+
+  if (selectedThreadId === threadId && detailState.kind === "ready") {
+    return detailState.thread.cwd;
+  }
+
+  if (threadsState.kind !== "ready") {
+    return null;
+  }
+
+  return threadsState.threads.find((thread) => thread.id === threadId)?.cwd ?? null;
 }

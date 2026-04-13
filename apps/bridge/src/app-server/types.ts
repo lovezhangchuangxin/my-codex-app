@@ -88,6 +88,7 @@ export type AppServerSandboxPolicy =
 export interface ThreadListParams {
   limit?: number;
   cursor?: string;
+  cwd?: string;
 }
 
 export interface ThreadListResult {

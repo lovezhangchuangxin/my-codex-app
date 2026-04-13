@@ -22,6 +22,7 @@ import type {
 
 import { AppServerClient } from "./appServerClient";
 import type { AppServerReviewTarget } from "./appServerClient";
+import { resolveProjectIdentityPath } from "./projects/projectPathUtils";
 import { toAppServerPermissionPreset } from "./threads/permissionPresets";
 import { ThreadEventTranslator } from "./threads/threadEventTranslator";
 import {
@@ -42,25 +43,79 @@ export class ThreadService {
   readonly #cache = new ThreadRuntimeCache();
   readonly #eventTranslator = new ThreadEventTranslator(this.#cache);
   readonly #listeners = new Set<(event: BridgeEvent) => void>();
+  static readonly ALL_THREADS_PAGE_SIZE = 100;
 
   constructor(private readonly appServerClient: AppServerClient) {}
 
   async listThreads(request: ThreadListRequest): Promise<ThreadListResponse> {
-    const params = {
-      ...(request.cursor !== undefined ? { cursor: request.cursor } : {}),
-      ...(request.limit !== undefined ? { limit: request.limit } : {})
-    };
-    const result = await this.appServerClient.listThreads({
-      ...params
-    });
+    if (request.cwd !== undefined) {
+      return this.#listThreadsForProject(request);
+    }
 
+    if (request.cursor !== undefined || request.limit !== undefined) {
+      const result = await this.appServerClient.listThreads({
+        ...(request.cursor !== undefined ? { cursor: request.cursor } : {}),
+        ...(request.limit !== undefined ? { limit: request.limit } : {})
+      });
+
+      return {
+        data: result.data.map((thread) => {
+          this.#cache.setThreadCwd(thread.id, thread.cwd);
+          return toThreadSummary(thread, this.#cache.listPendingRequests(thread.id));
+        }),
+        ...(result.nextCursor !== undefined ? { nextCursor: result.nextCursor } : {})
+      };
+    }
+
+    return this.#listAllThreads();
+  }
+
+  async #listAllThreads(): Promise<ThreadListResponse> {
+    const threads = await this.#collectAllThreads();
     return {
-      data: result.data.map((thread) => {
+      data: threads.map((thread) => {
         this.#cache.setThreadCwd(thread.id, thread.cwd);
         return toThreadSummary(thread, this.#cache.listPendingRequests(thread.id));
-      }),
-      ...(result.nextCursor !== undefined ? { nextCursor: result.nextCursor } : {})
+      })
     };
+  }
+
+  async #listThreadsForProject(request: ThreadListRequest): Promise<ThreadListResponse> {
+    const projectPathKey = resolveProjectIdentityPath(request.cwd);
+    if (projectPathKey === null) {
+      return { data: [] };
+    }
+
+    const threads = await this.#collectAllThreads();
+    const matchedThreads = threads.filter(
+      (thread) => resolveProjectIdentityPath(thread.cwd) === projectPathKey
+    );
+
+    const limitedThreads =
+      request.limit !== undefined ? matchedThreads.slice(0, request.limit) : matchedThreads;
+
+    return {
+      data: limitedThreads.map((thread) => {
+        this.#cache.setThreadCwd(thread.id, thread.cwd);
+        return toThreadSummary(thread, this.#cache.listPendingRequests(thread.id));
+      })
+    };
+  }
+
+  async #collectAllThreads() {
+    const threads = [];
+    let cursor: string | undefined;
+
+    do {
+      const result = await this.appServerClient.listThreads({
+        ...(cursor !== undefined ? { cursor } : {}),
+        limit: ThreadService.ALL_THREADS_PAGE_SIZE
+      });
+      threads.push(...result.data);
+      cursor = result.nextCursor;
+    } while (cursor !== undefined);
+
+    return threads;
   }
 
   async listModels(request: ModelListRequest): Promise<ModelListResponse> {

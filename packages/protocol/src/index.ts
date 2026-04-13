@@ -289,9 +289,55 @@ export type PendingRequest =
   | PendingPermissionsRequest
   | PendingUserInputRequest;
 
+export interface ProjectSummary {
+  path: string;
+  displayName: string;
+  imported: boolean;
+  hasDerivedThreads: boolean;
+  sessionCount: number;
+  pendingRequestCount: number;
+  hasActiveSession: boolean;
+  available: boolean;
+  lastActiveAt?: number;
+}
+
+export interface ProjectListResponse {
+  data: ProjectSummary[];
+}
+
+export type ProjectSearchMatchKind = "knownProject" | "pathSuggestion";
+
+export interface ProjectSearchMatch {
+  kind: ProjectSearchMatchKind;
+  path: string;
+  displayName: string;
+  imported: boolean;
+  hasDerivedThreads: boolean;
+  available: boolean;
+}
+
+export interface ProjectSearchRequest {
+  query: string;
+  limit?: number;
+}
+
+export interface ProjectSearchResponse {
+  query: string;
+  matches: ProjectSearchMatch[];
+}
+
+export interface ProjectImportRequest {
+  path: string;
+}
+
+export interface ProjectImportResponse {
+  project: ProjectSummary;
+}
+
 export interface ThreadListRequest {
   limit?: number;
   cursor?: string;
+  cwd?: string;
 }
 
 export interface ThreadListResponse {

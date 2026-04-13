@@ -1,6 +1,8 @@
 import { AppServerClient } from "./appServerClient";
 import { BridgeAuthService } from "./auth/authService";
 import { DeviceTrustStore } from "./auth/deviceTrustStore";
+import { ProjectService } from "./projectService";
+import { ProjectRegistryStore } from "./projects/projectRegistryStore";
 import { BridgeServer } from "./server/bridgeServer";
 import { loadBridgeServerConfig } from "./server/config";
 import { logPairingStatus } from "./server/logging";
@@ -15,6 +17,10 @@ async function main(): Promise<void> {
 
   const authService = new BridgeAuthService(new DeviceTrustStore(config.bridgeStatePath));
   const threadService = new ThreadService(appServerClient);
+  const projectService = new ProjectService(
+    new ProjectRegistryStore(config.bridgeProjectStatePath),
+    threadService
+  );
   const workspaceService = new WorkspaceService(appServerClient);
   const eventRegistry = new ThreadEventStreamRegistry(
     threadService,
@@ -25,6 +31,7 @@ async function main(): Promise<void> {
   });
   const bridgeServer = new BridgeServer(config, {
     authService,
+    projectService,
     threadService,
     workspaceService,
     eventRegistry
@@ -54,6 +61,7 @@ async function main(): Promise<void> {
   bridgeServer.listen(() => {
     console.log(`Bridge listening on http://${config.host}:${config.port}`);
     console.log(`Bridge auth state path: ${config.bridgeStatePath}`);
+    console.log(`Bridge project state path: ${config.bridgeProjectStatePath}`);
   });
 }
 

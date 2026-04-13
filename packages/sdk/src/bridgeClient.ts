@@ -12,6 +12,11 @@ import type {
   PairingCompleteRequest,
   PairingCompleteResponse,
   PairingStatusResponse,
+  ProjectImportRequest,
+  ProjectImportResponse,
+  ProjectListResponse,
+  ProjectSearchRequest,
+  ProjectSearchResponse,
   RequestRespondRequest,
   RequestRespondResponse,
   SessionRefreshRequest,
@@ -175,12 +180,38 @@ export class BridgeClient {
   listThreads(request: ThreadListRequest = {}): Promise<ThreadListResponse> {
     return this.#requestJson<ThreadListResponse>("/api/threads", {
       method: "GET"
-    }, request.cursor !== undefined || request.limit !== undefined
+    }, request.cursor !== undefined || request.limit !== undefined || request.cwd !== undefined
       ? {
           ...(request.cursor !== undefined ? { cursor: request.cursor } : {}),
-          ...(request.limit !== undefined ? { limit: String(request.limit) } : {})
+          ...(request.limit !== undefined ? { limit: String(request.limit) } : {}),
+          ...(request.cwd !== undefined ? { cwd: request.cwd } : {})
         }
       : undefined);
+  }
+
+  listProjects(): Promise<ProjectListResponse> {
+    return this.#requestJson<ProjectListResponse>("/api/projects", { method: "GET" });
+  }
+
+  searchProjects(request: ProjectSearchRequest): Promise<ProjectSearchResponse> {
+    return this.#requestJson<ProjectSearchResponse>(
+      "/api/projects/search",
+      { method: "GET" },
+      {
+        query: request.query,
+        ...(request.limit !== undefined ? { limit: String(request.limit) } : {})
+      }
+    );
+  }
+
+  importProject(request: ProjectImportRequest): Promise<ProjectImportResponse> {
+    return this.#requestJson<ProjectImportResponse>("/api/projects/import", {
+      method: "POST",
+      body: JSON.stringify(request),
+      headers: {
+        "Content-Type": "application/json"
+      }
+    });
   }
 
   readThread(threadId: string): Promise<ThreadReadResponse> {
