@@ -99,6 +99,47 @@ export type ThreadRuntimeStatus =
       activeFlags: Array<"waitingOnApproval" | "waitingOnUserInput">;
     };
 
+export type ReasoningEffort = "none" | "minimal" | "low" | "medium" | "high" | "xhigh";
+
+export type ThreadPermissionPresetId = "read-only" | "auto" | "full-access";
+
+export interface ThreadSettings {
+  model: string | null;
+  reasoningEffort: ReasoningEffort | null;
+  permissionsPreset: ThreadPermissionPresetId | null;
+}
+
+export interface ModelReasoningEffortOption {
+  reasoningEffort: ReasoningEffort;
+  description: string;
+}
+
+export interface AvailableModel {
+  id: string;
+  model: string;
+  displayName: string;
+  description: string;
+  hidden: boolean;
+  defaultReasoningEffort: ReasoningEffort;
+  supportedReasoningEfforts: ModelReasoningEffortOption[];
+  supportsPersonality: boolean;
+  isDefault: boolean;
+}
+
+export interface TokenUsageBreakdown {
+  totalTokens: number;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+}
+
+export interface ThreadContextUsage {
+  total: TokenUsageBreakdown;
+  last: TokenUsageBreakdown;
+  modelContextWindow: number | null;
+}
+
 export interface ThreadSummary {
   id: string;
   preview: string;
@@ -161,6 +202,8 @@ export interface TurnDetail {
 
 export interface ThreadDetail extends ThreadSummary {
   turns: TurnDetail[];
+  settings: ThreadSettings | null;
+  contextUsage: ThreadContextUsage | null;
 }
 
 export type PendingRequestKind = "command" | "fileChange" | "permissions" | "userInput";
@@ -269,13 +312,21 @@ export interface ThreadStartResponse {
   thread: ThreadDetail;
 }
 
+export interface ThreadTurnSettingsOverrides {
+  model?: string | null;
+  reasoningEffort?: ReasoningEffort | null;
+  permissionsPreset?: ThreadPermissionPresetId | null;
+}
+
 export interface TurnStartRequest {
   threadId: string;
   input: UserInput[];
+  settings?: ThreadTurnSettingsOverrides;
 }
 
 export interface TurnStartResponse {
   turn: TurnDetail;
+  settings?: ThreadSettings | null;
 }
 
 export interface TurnInterruptRequest {
@@ -352,6 +403,14 @@ export type RequestRespondRequest =
 
 export interface RequestRespondResponse {}
 
+export interface ModelListRequest {
+  includeHidden?: boolean;
+}
+
+export interface ModelListResponse {
+  data: AvailableModel[];
+}
+
 export type BridgeEvent =
   | {
       type: "threadStarted";
@@ -401,6 +460,16 @@ export type BridgeEvent =
       type: "pendingRequestResolved";
       threadId: string;
       requestId: JsonRpcRequestId;
+    }
+  | {
+      type: "threadSettingsUpdated";
+      threadId: string;
+      settings: ThreadSettings;
+    }
+  | {
+      type: "threadContextUsageUpdated";
+      threadId: string;
+      contextUsage: ThreadContextUsage;
     };
 
 export interface ApiErrorPayload {

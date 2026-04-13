@@ -1,20 +1,27 @@
 import type {
+  AvailableModel,
   BridgeEvent,
   CommandApprovalDecision,
   FileChangeApprovalDecision,
   GrantedPermissionProfile,
   JsonRpcRequestId,
+  ModelListRequest,
+  ModelListResponse,
   PendingRequest,
   PendingUserInputQuestion,
+  ReasoningEffort,
   RequestPermissionProfile,
   RequestRespondRequest,
   RequestRespondResponse,
+  ThreadContextUsage,
   ThreadDetail,
   ThreadItem,
+  ThreadPermissionPresetId,
   ThreadListRequest,
   ThreadListResponse,
   ThreadReadResponse,
   ThreadRuntimeStatus,
+  ThreadSettings,
   ThreadStartRequest,
   ThreadStartResponse,
   ThreadSummary,
@@ -26,49 +33,21 @@ import type {
   UserInput
 } from "@my-codex-app/protocol";
 
-import { AppServerClient } from "./appServerClient";
+import {
+  AppServerClient,
+  type AppServerApprovalPolicy,
+  type AppServerModel,
+  type AppServerReasoningEffort,
+  type AppServerSandboxPolicy,
+  type AppServerThread,
+  type AppServerThreadItem,
+  type AppServerThreadTokenUsage,
+  type AppServerTurn,
+  type AppServerUserInput,
+  type ThreadResumeResult,
+  type ThreadStartResult
+} from "./appServerClient";
 import { PendingRequestState } from "./pendingRequestState";
-
-interface AppServerThread {
-  id: string;
-  preview: string;
-  createdAt: number;
-  updatedAt: number;
-  cwd: string;
-  modelProvider: string;
-  status: {
-    type: "notLoaded" | "idle" | "systemError" | "active";
-    activeFlags?: Array<"waitingOnApproval" | "waitingOnUserInput">;
-  };
-  name?: string;
-  turns?: AppServerTurn[];
-}
-
-interface AppServerTurn {
-  id: string;
-  status: "completed" | "interrupted" | "failed" | "inProgress";
-  error?: {
-    message: string;
-    additionalDetails?: string;
-  };
-  startedAt?: number;
-  completedAt?: number;
-  durationMs?: number;
-  items: AppServerThreadItem[];
-}
-
-interface AppServerThreadItem {
-  type: string;
-  id: string;
-  [key: string]: unknown;
-}
-
-type AppServerUserInput =
-  | { type: "text"; text: string; textElements: [] }
-  | { type: "image"; url: string }
-  | { type: "localImage"; path: string }
-  | { type: "skill"; name: string; path: string }
-  | { type: "mention"; name: string; path: string };
 
 type JsonRpcParams = Record<string, unknown>;
 
@@ -85,6 +64,10 @@ export class ThreadService {
   readonly #pendingRequestState = new PendingRequestState();
   readonly #requestMethodById = new Map<string, string>();
   readonly #commandItemCache = new Map<string, Map<string, CachedCommandItem>>();
+  readonly #threadCwdCache = new Map<string, string>();
+  readonly #threadSettingsCache = new Map<string, ThreadSettings>();
+  readonly #contextUsageCache = new Map<string, ThreadContextUsage>();
+  readonly #listeners = new Set<(event: BridgeEvent) => void>();
 
   constructor(private readonly appServerClient: AppServerClient) {}
 
@@ -103,11 +86,20 @@ export class ThreadService {
     };
   }
 
-  async readThread(threadId: string): Promise<ThreadReadResponse> {
-    const result = await this.appServerClient.readThread(threadId);
-    const thread = this.#toThreadDetail(result.thread);
+  async listModels(request: ModelListRequest): Promise<ModelListResponse> {
+    const result = await this.appServerClient.listModels({
+      ...(request.includeHidden !== undefined ? { includeHidden: request.includeHidden } : {})
+    });
+
     return {
-      thread: this.#mergeCachedCommandItems(threadId, thread)
+      data: result.data.map((model) => this.#toAvailableModel(model))
+    };
+  }
+
+  async readThread(threadId: string): Promise<ThreadReadResponse> {
+    const thread = await this.#readThreadWithSettings(threadId);
+    return {
+      thread
     };
   }
 
@@ -115,14 +107,22 @@ export class ThreadService {
     const result = await this.appServerClient.startThread({
       ...(request.cwd !== undefined ? { cwd: request.cwd } : {})
     });
+    const thread = this.#toThreadDetail(result.thread);
+    const settings = this.#cacheThreadSettings(result.thread.id, result);
 
     return {
-      thread: this.#toThreadDetail(result.thread)
+      thread: this.#attachThreadRuntime(thread, result.thread.id, settings)
     };
   }
 
   async resumeThread(threadId: string): Promise<void> {
-    await this.appServerClient.resumeThread(threadId);
+    const result = await this.appServerClient.resumeThread(threadId);
+    const settings = this.#cacheThreadSettings(threadId, result);
+    this.#emitBridgeEvent({
+      type: "threadSettingsUpdated",
+      threadId,
+      settings
+    });
   }
 
   async unsubscribeThread(threadId: string): Promise<void> {
@@ -130,13 +130,27 @@ export class ThreadService {
   }
 
   async startTurn(request: TurnStartRequest): Promise<TurnStartResponse> {
+    const currentSettings = await this.#ensureThreadSettings(request.threadId);
     const result = await this.appServerClient.startTurn({
       threadId: request.threadId,
-      input: request.input.map((input) => this.#toAppServerUserInput(input))
+      input: request.input.map((input) => this.#toAppServerUserInput(input)),
+      ...this.#toAppServerTurnOverrides(request.threadId, request.settings)
     });
+    const nextSettings = this.#mergeThreadSettings(currentSettings, request.settings);
+    if (nextSettings) {
+      this.#threadSettingsCache.set(request.threadId, nextSettings);
+      if (request.settings) {
+        this.#emitBridgeEvent({
+          type: "threadSettingsUpdated",
+          threadId: request.threadId,
+          settings: nextSettings
+        });
+      }
+    }
 
     return {
-      turn: this.#toTurnDetail(result.turn)
+      turn: this.#toTurnDetail(result.turn),
+      settings: nextSettings ?? currentSettings
     };
   }
 
@@ -203,29 +217,38 @@ export class ThreadService {
   }
 
   onBridgeEvent(listener: (event: BridgeEvent) => void): () => void {
+    this.#listeners.add(listener);
     const onNotification = (notification: { method: string; params?: unknown }) => {
       const event = this.#toBridgeEvent(notification.method, notification.params);
       if (event) {
         this.#cacheCommandEvent(event);
-        listener(event);
+        this.#emitBridgeEvent(event);
       }
     };
     const onRequest = (request: AppServerRequestEnvelope) => {
       const event = this.#toRequestBridgeEvent(request);
       if (event) {
-        listener(event);
+        this.#emitBridgeEvent(event);
       }
     };
 
     this.appServerClient.on("notification", onNotification);
     this.appServerClient.on("request", onRequest);
     return () => {
+      this.#listeners.delete(listener);
       this.appServerClient.off("notification", onNotification);
       this.appServerClient.off("request", onRequest);
     };
   }
 
+  #emitBridgeEvent(event: BridgeEvent): void {
+    for (const listener of this.#listeners) {
+      listener(event);
+    }
+  }
+
   #toThreadSummary(thread: AppServerThread): ThreadSummary {
+    this.#threadCwdCache.set(thread.id, thread.cwd);
     return {
       id: thread.id,
       preview: thread.preview,
@@ -242,7 +265,9 @@ export class ThreadService {
   #toThreadDetail(thread: AppServerThread): ThreadDetail {
     return {
       ...this.#toThreadSummary(thread),
-      turns: (thread.turns ?? []).map((turn) => this.#toTurnDetail(turn))
+      turns: (thread.turns ?? []).map((turn) => this.#toTurnDetail(turn)),
+      settings: null,
+      contextUsage: null
     };
   }
 
@@ -322,6 +347,202 @@ export class ThreadService {
     return { ...thread, turns: thread.turns.map((turn) => turnMap.get(turn.id) ?? turn) };
   }
 
+  async #readThreadWithSettings(threadId: string): Promise<ThreadDetail> {
+    const result = await this.appServerClient.readThread(threadId);
+    const thread = this.#toThreadDetail(result.thread);
+    return this.#attachThreadRuntime(
+      thread,
+      threadId,
+      this.#threadSettingsCache.get(threadId) ?? null
+    );
+  }
+
+  async #ensureThreadSettings(threadId: string): Promise<ThreadSettings | null> {
+    return this.#threadSettingsCache.get(threadId) ?? null;
+  }
+
+  #attachThreadRuntime(
+    thread: ThreadDetail,
+    threadId: string,
+    settings: ThreadSettings | null
+  ): ThreadDetail {
+    const merged = this.#mergeCachedCommandItems(threadId, thread);
+    return {
+      ...merged,
+      settings,
+      contextUsage: this.#contextUsageCache.get(threadId) ?? null
+    };
+  }
+
+  #cacheThreadSettings(
+    threadId: string,
+    result: ThreadStartResult | ThreadResumeResult
+  ): ThreadSettings {
+    this.#threadCwdCache.set(threadId, result.thread.cwd);
+
+    const settings: ThreadSettings = {
+      model: result.model,
+      reasoningEffort: this.#toReasoningEffort(result.reasoningEffort),
+      permissionsPreset: this.#derivePermissionPreset(result.approvalPolicy, result.sandbox)
+    };
+    this.#threadSettingsCache.set(threadId, settings);
+    return settings;
+  }
+
+  #mergeThreadSettings(
+    current: ThreadSettings | null,
+    overrides: TurnStartRequest["settings"] | undefined
+  ): ThreadSettings | null {
+    if (!current && !overrides) {
+      return null;
+    }
+
+    return {
+      model: overrides?.model !== undefined ? overrides.model : current?.model ?? null,
+      reasoningEffort:
+        overrides?.reasoningEffort !== undefined
+          ? overrides.reasoningEffort
+          : current?.reasoningEffort ?? null,
+      permissionsPreset:
+        overrides?.permissionsPreset !== undefined
+          ? overrides.permissionsPreset
+          : current?.permissionsPreset ?? null
+    };
+  }
+
+  #toAppServerTurnOverrides(
+    threadId: string,
+    overrides: TurnStartRequest["settings"] | undefined
+  ): Partial<{
+    model: string | null;
+    effort: AppServerReasoningEffort | null;
+    approvalPolicy: AppServerApprovalPolicy;
+    sandboxPolicy: AppServerSandboxPolicy;
+  }> {
+    if (!overrides) {
+      return {};
+    }
+
+    const permissionPreset = overrides.permissionsPreset
+      ? this.#toAppServerPermissionPreset(threadId, overrides.permissionsPreset)
+      : null;
+
+    return {
+      ...(overrides.model !== undefined ? { model: overrides.model } : {}),
+      ...(overrides.reasoningEffort !== undefined
+        ? { effort: this.#toAppServerReasoningEffort(overrides.reasoningEffort) }
+        : {}),
+      ...(permissionPreset
+        ? {
+            approvalPolicy: permissionPreset.approvalPolicy,
+            sandboxPolicy: permissionPreset.sandboxPolicy
+          }
+        : {})
+    };
+  }
+
+  #toAppServerPermissionPreset(
+    threadId: string,
+    preset: ThreadPermissionPresetId
+  ): {
+    approvalPolicy: AppServerApprovalPolicy;
+    sandboxPolicy: AppServerSandboxPolicy;
+  } {
+    switch (preset) {
+      case "read-only":
+        return {
+          approvalPolicy: "on-request",
+          sandboxPolicy: {
+            type: "readOnly",
+            access: { type: "fullAccess" },
+            networkAccess: false
+          }
+        };
+      case "auto":
+        return {
+          approvalPolicy: "on-request",
+          sandboxPolicy: {
+            type: "workspaceWrite",
+            writableRoots: this.#threadCwdCache.get(threadId)
+              ? [this.#threadCwdCache.get(threadId) as string]
+              : [],
+            readOnlyAccess: { type: "fullAccess" },
+            networkAccess: false,
+            excludeTmpdirEnvVar: false,
+            excludeSlashTmp: false
+          }
+        };
+      case "full-access":
+        return {
+          approvalPolicy: "never",
+          sandboxPolicy: {
+            type: "dangerFullAccess"
+          }
+        };
+    }
+  }
+
+  #derivePermissionPreset(
+    approvalPolicy: AppServerApprovalPolicy,
+    sandboxPolicy: AppServerSandboxPolicy
+  ): ThreadPermissionPresetId | null {
+    if (approvalPolicy === "on-request" && sandboxPolicy.type === "readOnly") {
+      return "read-only";
+    }
+    if (approvalPolicy === "on-request" && sandboxPolicy.type === "workspaceWrite") {
+      return "auto";
+    }
+    if (approvalPolicy === "never" && sandboxPolicy.type === "dangerFullAccess") {
+      return "full-access";
+    }
+    return null;
+  }
+
+  #toReasoningEffort(value: AppServerReasoningEffort | null): ReasoningEffort | null {
+    return value;
+  }
+
+  #toAppServerReasoningEffort(value: ReasoningEffort | null): AppServerReasoningEffort | null {
+    return value;
+  }
+
+  #toAvailableModel(model: AppServerModel): AvailableModel {
+    return {
+      id: model.id,
+      model: model.model,
+      displayName: model.displayName,
+      description: model.description,
+      hidden: model.hidden,
+      defaultReasoningEffort: model.defaultReasoningEffort,
+      supportedReasoningEfforts: model.supportedReasoningEfforts.map((option) => ({
+        reasoningEffort: option.reasoningEffort,
+        description: option.description
+      })),
+      supportsPersonality: model.supportsPersonality,
+      isDefault: model.isDefault
+    };
+  }
+
+  #toThreadContextUsage(tokenUsage: AppServerThreadTokenUsage): ThreadContextUsage {
+    return {
+      total: {
+        totalTokens: tokenUsage.total.totalTokens,
+        inputTokens: tokenUsage.total.inputTokens,
+        cachedInputTokens: tokenUsage.total.cachedInputTokens,
+        outputTokens: tokenUsage.total.outputTokens,
+        reasoningOutputTokens: tokenUsage.total.reasoningOutputTokens
+      },
+      last: {
+        totalTokens: tokenUsage.last.totalTokens,
+        inputTokens: tokenUsage.last.inputTokens,
+        cachedInputTokens: tokenUsage.last.cachedInputTokens,
+        outputTokens: tokenUsage.last.outputTokens,
+        reasoningOutputTokens: tokenUsage.last.reasoningOutputTokens
+      },
+      modelContextWindow: tokenUsage.modelContextWindow
+    };
+  }
+
   #toBridgeEvent(method: string, params: unknown): BridgeEvent | null {
     const payload = this.#toObject(params);
     if (!payload) {
@@ -330,7 +551,12 @@ export class ThreadService {
 
     switch (method) {
       case "thread/started": {
-        const thread = this.#toThreadDetail(payload.thread as AppServerThread);
+        const rawThread = payload.thread as AppServerThread;
+        const thread = this.#attachThreadRuntime(
+          this.#toThreadDetail(rawThread),
+          rawThread.id,
+          this.#threadSettingsCache.get(rawThread.id) ?? null
+        );
         return { type: "threadStarted", threadId: thread.id, thread };
       }
       case "thread/status/changed": {
@@ -368,6 +594,21 @@ export class ThreadService {
         return threadId && turnId && itemId && delta !== null
           ? { type: "agentMessageDelta", threadId, turnId, itemId, delta }
           : null;
+      }
+      case "thread/tokenUsage/updated": {
+        const threadId = asString(payload.threadId);
+        const tokenUsage = this.#toObject(payload.tokenUsage) as AppServerThreadTokenUsage | null;
+        if (!threadId || !tokenUsage) {
+          return null;
+        }
+
+        const contextUsage = this.#toThreadContextUsage(tokenUsage);
+        this.#contextUsageCache.set(threadId, contextUsage);
+        return {
+          type: "threadContextUsageUpdated",
+          threadId,
+          contextUsage
+        };
       }
       case "serverRequest/resolved": {
         const threadId = asString(payload.threadId);

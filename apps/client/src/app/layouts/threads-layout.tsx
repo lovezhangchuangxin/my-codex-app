@@ -12,7 +12,7 @@ import { useI18n } from "@/lib/i18n/use-i18n";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
 import type { ThreadDetailState } from "@my-codex-app/sdk";
-import type { LocalConnectionState } from "@my-codex-app/protocol";
+import type { LocalConnectionState, ThreadTurnSettingsOverrides } from "@my-codex-app/protocol";
 
 export function ThreadsLayout() {
   const { t } = useI18n();
@@ -77,9 +77,13 @@ export function ThreadsLayout() {
     }
   }
 
-  async function handleSendMessage(activeId: string, text: string) {
+  async function handleSendMessage(
+    activeId: string,
+    text: string,
+    settings?: ThreadTurnSettingsOverrides
+  ) {
     try {
-      await runtime.sendMessage(activeId, text);
+      await runtime.sendMessage(activeId, text, settings);
       return true;
     } catch (error) {
       toast.error(toErrorMessage(error, t));

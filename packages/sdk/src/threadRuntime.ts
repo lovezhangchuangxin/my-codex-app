@@ -5,8 +5,10 @@ import type {
   LocalConnectionState,
   RequestRespondRequest,
   ThreadDetail,
+  ThreadSettings,
   ThreadStartRequest,
   ThreadSummary,
+  ThreadTurnSettingsOverrides,
   TurnDetail,
   UserInput
 } from "@my-codex-app/protocol";
@@ -190,7 +192,11 @@ export class BridgeThreadRuntime {
     }
   }
 
-  async sendMessage(threadId: string, text: string): Promise<void> {
+  async sendMessage(
+    threadId: string,
+    text: string,
+    settings?: ThreadTurnSettingsOverrides
+  ): Promise<void> {
     const nextText = text.trim();
     if (nextText.length === 0) {
       return;
@@ -200,7 +206,11 @@ export class BridgeThreadRuntime {
     this.#updateMutations({ sendMessagePending: true, lastError: null });
 
     try {
-      const response = await this.client.startTurn({ threadId, input });
+      const response = await this.client.startTurn({
+        threadId,
+        input,
+        ...(settings !== undefined ? { settings } : {})
+      });
 
       this.#update((current) => ({
         ...current,
@@ -214,6 +224,9 @@ export class BridgeThreadRuntime {
       }));
 
       this.#applyStartedTurn(threadId, response.turn);
+      if (response.settings) {
+        this.#applyThreadSettings(threadId, response.settings);
+      }
     } catch (error) {
       this.#setActionError(error);
       throw error;
@@ -545,6 +558,32 @@ export class BridgeThreadRuntime {
           turn
         })
       }
+    }));
+  }
+
+  #applyThreadSettings(threadId: string, settings: ThreadSettings): void {
+    if (this.#snapshot.selectedThreadId !== threadId) {
+      return;
+    }
+
+    const currentDetail = this.#snapshot.detail;
+    if (currentDetail.kind !== "ready" || currentDetail.thread.id !== threadId) {
+      return;
+    }
+
+    this.#update((current) => ({
+      ...(current.detail.kind === "ready" && current.detail.thread.id === threadId
+        ? {
+            ...current,
+            detail: {
+              kind: "ready" as const,
+              thread: {
+                ...current.detail.thread,
+                settings
+              }
+            }
+          }
+        : current)
     }));
   }
 

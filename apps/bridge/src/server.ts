@@ -6,6 +6,7 @@ import type {
   DeviceDeleteRequest,
   DeviceListResponse,
   DeviceRevokeRequest,
+  ModelListRequest,
   PairingCompleteRequest,
   PairingStatusResponse,
   RequestRespondRequest,
@@ -230,6 +231,20 @@ async function main(): Promise<void> {
           path
         };
         const result = await workspaceService.readFile(payload);
+        writeJson(response, 200, result);
+      } catch (error) {
+        writeError(response, error, classifyAppServerError(error, 502));
+      }
+      return;
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/models") {
+      try {
+        const includeHidden = url.searchParams.get("includeHidden");
+        const payload: ModelListRequest = {
+          ...(includeHidden !== null ? { includeHidden: includeHidden === "true" } : {})
+        };
+        const result = await threadService.listModels(payload);
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, classifyAppServerError(error, 502));

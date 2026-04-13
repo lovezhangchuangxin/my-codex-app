@@ -49,6 +49,54 @@ export const enMessages = {
     pluralize(Number(count ?? 0), "pending request", "pending requests"),
   "detail.command.output": "Output",
   "detail.composer.placeholder": "Send a message",
+  "detail.composer.settings.title": "Thread settings",
+  "detail.composer.settings.description":
+    "Choose the model, reasoning effort, and permission mode for the next turn.",
+  "detail.composer.settings.model": "Model",
+  "detail.composer.settings.modelDescription":
+    "The selected model becomes the default for subsequent turns in this thread.",
+  "detail.composer.settings.modelsLoading": "Loading available models...",
+  "detail.composer.settings.modelsLoadFailed": "Unable to load available models.",
+  "detail.composer.settings.retry": "Retry",
+  "detail.composer.settings.reasoning": "Reasoning effort",
+  "detail.composer.settings.reasoningDescription":
+    "Pick how deeply Codex should reason before responding.",
+  "detail.composer.settings.reasoningUnavailable":
+    "Reasoning options are unavailable for the current model.",
+  "detail.composer.settings.reasoning.none": "None",
+  "detail.composer.settings.reasoning.minimal": "Minimal",
+  "detail.composer.settings.reasoning.low": "Low",
+  "detail.composer.settings.reasoning.medium": "Medium",
+  "detail.composer.settings.reasoning.high": "High",
+  "detail.composer.settings.reasoning.xhigh": "Extra high",
+  "detail.composer.settings.permissions": "Permission mode",
+  "detail.composer.settings.permissionsDescription":
+    "Permission mode controls filesystem access, command execution, and approval prompts.",
+  "detail.composer.settings.permissions.readOnly": "Read Only",
+  "detail.composer.settings.permissions.readOnlyDescription":
+    "Codex can read the workspace. Approval is required before edits or network access.",
+  "detail.composer.settings.permissions.default": "Default",
+  "detail.composer.settings.permissions.defaultDescription":
+    "Codex can edit inside the workspace. Approval is still required for network access or wider changes.",
+  "detail.composer.settings.permissions.fullAccess": "Full Access",
+  "detail.composer.settings.permissions.fullAccessDescription":
+    "Codex can access the filesystem and network without asking for approval.",
+  "detail.composer.settings.permissions.custom": "Custom permissions",
+  "detail.composer.context.title": "Context window",
+  "detail.composer.context.description":
+    "This meter reflects the last observed context usage for the current thread.",
+  "detail.composer.context.percent": "Used",
+  "detail.composer.context.used": "Tokens used",
+  "detail.composer.context.window": "Window size",
+  "detail.composer.context.latestTurn": "Latest turn",
+  "detail.composer.context.breakdown": "Latest turn breakdown",
+  "detail.composer.context.input": "Input",
+  "detail.composer.context.cached": "Cached input",
+  "detail.composer.context.output": "Output",
+  "detail.composer.context.reasoning": "Reasoning output",
+  "detail.composer.context.unavailable": "Unavailable",
+  "detail.composer.context.unavailableDescription":
+    "Context usage becomes available after the bridge observes token usage for this thread.",
   "detail.empty.noMessages.message": "Send the first message to start the conversation.",
   "detail.empty.noMessages.title": "No messages yet",
   "detail.empty.noThread.message": "Select a thread to read the conversation.",

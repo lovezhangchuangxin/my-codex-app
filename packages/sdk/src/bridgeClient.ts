@@ -8,6 +8,7 @@ import type {
   DeviceRevokeRequest,
   DeviceRevokeResponse,
   DeviceTrustRecord,
+  ModelListResponse,
   PairingCompleteRequest,
   PairingCompleteResponse,
   PairingStatusResponse,
@@ -180,6 +181,14 @@ export class BridgeClient {
     return this.#requestJson<ThreadReadResponse>(
       `/api/threads/${encodeURIComponent(threadId)}`,
       { method: "GET" }
+    );
+  }
+
+  listModels(includeHidden = false): Promise<ModelListResponse> {
+    return this.#requestJson<ModelListResponse>(
+      "/api/models",
+      { method: "GET" },
+      includeHidden ? { includeHidden: "true" } : undefined
     );
   }
 

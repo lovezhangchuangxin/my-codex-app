@@ -37,12 +37,12 @@ interface InitializeParams {
   };
 }
 
-interface AppServerThreadStatus {
+export interface AppServerThreadStatus {
   type: "notLoaded" | "idle" | "systemError" | "active";
   activeFlags?: Array<"waitingOnApproval" | "waitingOnUserInput">;
 }
 
-interface AppServerThread {
+export interface AppServerThread {
   id: string;
   preview: string;
   createdAt: number;
@@ -51,7 +51,44 @@ interface AppServerThread {
   modelProvider: string;
   status: AppServerThreadStatus;
   name?: string;
+  turns?: AppServerTurn[];
 }
+
+export type AppServerReasoningEffort =
+  | "none"
+  | "minimal"
+  | "low"
+  | "medium"
+  | "high"
+  | "xhigh";
+
+export type AppServerApprovalPolicy =
+  | "untrusted"
+  | "on-failure"
+  | "on-request"
+  | "never"
+  | {
+      granular: {
+        sandbox_approval: boolean;
+        rules: boolean;
+        skill_approval: boolean;
+        request_permissions: boolean;
+        mcp_elicitations: boolean;
+      };
+    };
+
+export type AppServerSandboxPolicy =
+  | { type: "dangerFullAccess" }
+  | { type: "readOnly"; access: unknown; networkAccess: boolean }
+  | { type: "externalSandbox"; networkAccess: "restricted" | "enabled" }
+  | {
+      type: "workspaceWrite";
+      writableRoots: string[];
+      readOnlyAccess: unknown;
+      networkAccess: boolean;
+      excludeTmpdirEnvVar: boolean;
+      excludeSlashTmp: boolean;
+    };
 
 interface ThreadListParams {
   limit?: number;
@@ -68,7 +105,7 @@ interface AppServerTurnError {
   additionalDetails?: string;
 }
 
-interface AppServerUserInput {
+export interface AppServerUserInput {
   type: "text" | "image" | "localImage" | "skill" | "mention";
   text?: string;
   textElements?: unknown[];
@@ -77,13 +114,13 @@ interface AppServerUserInput {
   name?: string;
 }
 
-interface AppServerThreadItem {
+export interface AppServerThreadItem {
   type: string;
   id: string;
   [key: string]: unknown;
 }
 
-interface AppServerTurn {
+export interface AppServerTurn {
   id: string;
   status: "completed" | "interrupted" | "failed" | "inProgress";
   error?: AppServerTurnError;
@@ -108,20 +145,30 @@ interface ThreadStartParams {
   cwd?: string;
 }
 
-interface ThreadStartResult {
+export interface ThreadStartResult {
   thread: AppServerThread & {
     turns: AppServerTurn[];
   };
+  model: string;
+  modelProvider: string;
+  approvalPolicy: AppServerApprovalPolicy;
+  sandbox: AppServerSandboxPolicy;
+  reasoningEffort: AppServerReasoningEffort | null;
 }
 
 interface ThreadResumeParams {
   threadId: string;
 }
 
-interface ThreadResumeResult {
+export interface ThreadResumeResult {
   thread: AppServerThread & {
     turns: AppServerTurn[];
   };
+  model: string;
+  modelProvider: string;
+  approvalPolicy: AppServerApprovalPolicy;
+  sandbox: AppServerSandboxPolicy;
+  reasoningEffort: AppServerReasoningEffort | null;
 }
 
 interface ThreadUnsubscribeParams {
@@ -131,10 +178,54 @@ interface ThreadUnsubscribeParams {
 interface TurnStartParams {
   threadId: string;
   input: AppServerUserInput[];
+  model?: string | null;
+  effort?: AppServerReasoningEffort | null;
+  approvalPolicy?: AppServerApprovalPolicy | null;
+  sandboxPolicy?: AppServerSandboxPolicy | null;
 }
 
 interface TurnStartResult {
   turn: AppServerTurn;
+}
+
+interface ModelListParams {
+  includeHidden?: boolean;
+}
+
+export interface AppServerModelReasoningEffortOption {
+  reasoningEffort: AppServerReasoningEffort;
+  description: string;
+}
+
+export interface AppServerModel {
+  id: string;
+  model: string;
+  displayName: string;
+  description: string;
+  hidden: boolean;
+  defaultReasoningEffort: AppServerReasoningEffort;
+  supportedReasoningEfforts: AppServerModelReasoningEffortOption[];
+  supportsPersonality: boolean;
+  isDefault: boolean;
+}
+
+interface ModelListResult {
+  data: AppServerModel[];
+  nextCursor?: string | null;
+}
+
+export interface AppServerTokenUsageBreakdown {
+  totalTokens: number;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+}
+
+export interface AppServerThreadTokenUsage {
+  total: AppServerTokenUsageBreakdown;
+  last: AppServerTokenUsageBreakdown;
+  modelContextWindow: number | null;
 }
 
 interface TurnInterruptParams {
@@ -283,6 +374,14 @@ export class AppServerClient extends EventEmitter {
     }
 
     return this.#sendRequest<TurnStartParams, TurnStartResult>("turn/start", params);
+  }
+
+  async listModels(params: ModelListParams): Promise<ModelListResult> {
+    if (!this.#initialized) {
+      throw new Error("App-server client must be initialized before use");
+    }
+
+    return this.#sendRequest<ModelListParams, ModelListResult>("model/list", params);
   }
 
   async interruptTurn(params: TurnInterruptParams): Promise<void> {

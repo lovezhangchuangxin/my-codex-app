@@ -58,7 +58,9 @@ export function createInitialSnapshot(hasCredentials = false): ThreadRuntimeSnap
 export function toThreadDetail(thread: ThreadSummary): ThreadDetail {
   return {
     ...thread,
-    turns: []
+    turns: [],
+    settings: null,
+    contextUsage: null
   };
 }
 
@@ -176,6 +178,9 @@ export function updateThreadSummaryState(
           )
         )
       };
+    case "threadSettingsUpdated":
+    case "threadContextUsageUpdated":
+      return state;
   }
 }
 
@@ -240,6 +245,16 @@ export function applyThreadEvent(thread: ThreadDetail, event: BridgeEvent): Thre
       return {
         ...thread,
         pendingRequests: removePendingRequest(thread.pendingRequests, event.requestId)
+      };
+    case "threadSettingsUpdated":
+      return {
+        ...thread,
+        settings: event.settings
+      };
+    case "threadContextUsageUpdated":
+      return {
+        ...thread,
+        contextUsage: event.contextUsage
       };
   }
 }
