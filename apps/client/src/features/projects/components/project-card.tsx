@@ -1,3 +1,5 @@
+import { Folder } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { useI18n } from '@/lib/i18n/use-i18n';
@@ -19,7 +21,9 @@ export function ProjectCard({
     <Card
       className={cn(
         'rounded-lg border border-subtle/8 bg-card/78 transition-all duration-200 hover:border-subtle/12 hover:bg-card/92',
-        isSelected ? 'border-primary/22 bg-card' : '',
+        isSelected
+          ? 'border-primary/35 bg-card shadow-[0_0_0_1.5px_rgba(var(--primary),0.35),0_0_20px_rgba(var(--primary),0.14)]'
+          : '',
       )}
     >
       <button
@@ -31,31 +35,29 @@ export function ProjectCard({
       >
         <CardContent className="space-y-3 pt-1">
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <p className="truncate font-heading text-base tracking-[-0.04em] md:text-[1.05rem]">
-                {project.displayName}
-              </p>
-              {project.imported ? (
-                <Badge variant="outline">
-                  {t('project.list.badge.imported')}
-                </Badge>
-              ) : null}
-              {project.hasActiveSession ? (
-                <Badge
-                  className="bg-primary/14 text-primary"
-                  variant="secondary"
-                >
-                  {t('project.list.badge.active')}
-                </Badge>
-              ) : null}
-              {!project.available ? (
-                <Badge
-                  className="bg-destructive/10 text-destructive"
-                  variant="secondary"
-                >
-                  {t('project.list.badge.unavailable')}
-                </Badge>
-              ) : null}
+            <div className="flex items-center gap-2">
+              <Folder className="size-[1.15rem] shrink-0 text-primary/50" />
+              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                <p className="truncate font-heading text-base tracking-[-0.04em] md:text-[1.05rem]">
+                  {project.displayName}
+                </p>
+                {project.hasActiveSession ? (
+                  <Badge
+                    className="bg-primary/14 text-primary"
+                    variant="secondary"
+                  >
+                    {t('project.list.badge.active')}
+                  </Badge>
+                ) : null}
+                {!project.available ? (
+                  <Badge
+                    className="bg-destructive/10 text-destructive"
+                    variant="secondary"
+                  >
+                    {t('project.list.badge.unavailable')}
+                  </Badge>
+                ) : null}
+              </div>
             </div>
             <p className="truncate font-mono text-xs text-muted-foreground">
               {project.path}
