@@ -165,8 +165,6 @@ export const enMessages = {
   "detail.workspace.preview.unsupported": "File preview is not supported for this item.",
   "detail.workspace.previewDescription": "Select a file to inspect its contents.",
   "detail.workspace.previewTitle": "Preview",
-  "detail.workspace.sheetDescription":
-    "Browse the current thread workspace without leaving the conversation.",
   "detail.workspace.sheetTitle": "Project browser",
   "detail.workspace.treeDescription": "Directories load as you expand them.",
   "detail.workspace.treeTitle": "Files",
@@ -241,8 +239,6 @@ export const enMessages = {
   "project.list.badge.active": "Active",
   "project.list.badge.imported": "Imported",
   "project.list.badge.unavailable": "Unavailable",
-  "project.list.description":
-    "Choose a project before resuming an old session or starting a new one.",
   "project.list.empty.message":
     "Import a project by path, or keep using Codex so active projects show up here.",
   "project.list.empty.noMatches.message":

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle
 } from "@/components/ui/sheet";
@@ -87,7 +86,6 @@ export function WorkspaceBrowserSheet({
                     {getWorkspaceLabel(cwd, t)}
                   </Badge>
                 </div>
-                <SheetDescription>{t("detail.workspace.sheetDescription")}</SheetDescription>
               </div>
             </div>
             <Button

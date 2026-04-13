@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle
 } from "@/components/ui/card";
@@ -54,7 +53,6 @@ export function ProjectsPanel({
             <CardTitle className="text-xl tracking-[-0.04em]">
               {t("project.list.title")}
             </CardTitle>
-            <CardDescription>{t("project.list.description")}</CardDescription>
           </div>
           <Button onClick={onImportProject} size="sm">
             <FolderPlus className="size-4" />
