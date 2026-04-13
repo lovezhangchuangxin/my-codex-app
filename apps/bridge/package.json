@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@my-codex-app/protocol": "workspace:*"
+    "@my-codex-app/protocol": "workspace:*",
+    "ignore": "^7.0.5"
   },
   "devDependencies": {
     "@types/node": "^24.6.0",

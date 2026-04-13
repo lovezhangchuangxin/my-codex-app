@@ -1,5 +1,6 @@
 import type { Dirent } from "node:fs";
-import { readdir, realpath, stat } from "node:fs/promises";
+import { readFile, readdir, realpath, stat } from "node:fs/promises";
+import ignore, { type Ignore } from "ignore";
 import * as path from "node:path";
 
 import type {
@@ -126,7 +127,8 @@ export class WorkspaceService {
       };
     }
 
-    const matches = await searchWorkspaceEntries(rootPath, query, limit);
+    const ig = await loadGitignore(rootPath);
+    const matches = await searchWorkspaceEntries(rootPath, query, limit, ig);
     return {
       root: rootPath,
       query,
@@ -319,7 +321,8 @@ function toNumber(value: number | bigint): number {
 async function searchWorkspaceEntries(
   rootPath: string,
   query: string,
-  limit: number
+  limit: number,
+  ig: Ignore | null
 ): Promise<
   Array<{
     path: string;
@@ -373,6 +376,10 @@ async function searchWorkspaceEntries(
       const isFile = entry.isFile();
 
       if (isDirectory && shouldSkipWorkspaceSearchDirectory(entry.name)) {
+        continue;
+      }
+
+      if (ig && isIgnoredByGitignore(relativePath, isDirectory, ig)) {
         continue;
       }
 
@@ -482,4 +489,30 @@ function isSkippableWorkspaceSearchError(error: unknown): boolean {
 
 function shouldSkipWorkspaceSearchDirectory(name: string): boolean {
   return WORKSPACE_SEARCH_SKIPPED_DIRECTORIES.has(name);
+}
+
+async function loadGitignore(rootPath: string): Promise<Ignore | null> {
+  const gitignorePath = path.join(rootPath, ".gitignore");
+  let content: string;
+  try {
+    content = await readFile(gitignorePath, "utf8");
+  } catch (error) {
+    if (isErrnoException(error) && error.code !== "ENOENT") {
+      console.warn(`[workspaceService] Failed to read .gitignore: ${error.message}`);
+    }
+    return null;
+  }
+
+  const ig = ignore();
+  ig.add(content);
+  return ig;
+}
+
+function isIgnoredByGitignore(
+  relativePath: string,
+  isDirectory: boolean,
+  ig: Ignore
+): boolean {
+  const testPath = isDirectory ? `${relativePath}/` : relativePath;
+  return ig.ignores(testPath);
 }

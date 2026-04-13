@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   ChevronDown,
   Send,
@@ -103,6 +104,7 @@ export function ThreadComposer({
   const [composerText, setComposerText] = useState("");
   const [caretPosition, setCaretPosition] = useState(0);
   const [commandActionPending, setCommandActionPending] = useState(false);
+  const [popupLayoutKey, setPopupLayoutKey] = useState(0);
   const [dismissedSlashToken, setDismissedSlashToken] = useState<string | null>(null);
   const [dismissedMentionToken, setDismissedMentionToken] = useState<string | null>(null);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
@@ -134,7 +136,9 @@ export function ThreadComposer({
     message: null
   });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const formRef = useRef<HTMLFormElement | null>(null);
   const fileSearchRequestIdRef = useRef(0);
+  const focusRafRef = useRef(0);
   const settingsDraft =
     settingsDraftState.sourceKey === settingsKey ? settingsDraftState.value : committedSettings;
   const rawSlashToken = findSlashCommandToken(composerText, caretPosition);
@@ -173,7 +177,8 @@ export function ThreadComposer({
   }
 
   function focusComposer(nextCaret?: number) {
-    requestAnimationFrame(() => {
+    cancelAnimationFrame(focusRafRef.current);
+    focusRafRef.current = requestAnimationFrame(() => {
       const textarea = textareaRef.current;
       if (!textarea) {
         return;
@@ -330,6 +335,20 @@ export function ThreadComposer({
       setCommandActionPending(false);
     }
   }
+
+  useEffect(() => {
+    if (!commandPopupOpen && !filePopupOpen) {
+      return;
+    }
+
+    const refresh = () => setPopupLayoutKey((k) => k + 1);
+    window.addEventListener("scroll", refresh, true);
+    window.addEventListener("resize", refresh);
+    return () => {
+      window.removeEventListener("scroll", refresh, true);
+      window.removeEventListener("resize", refresh);
+    };
+  }, [commandPopupOpen, filePopupOpen]);
 
   useEffect(() => {
     let cancelled = false;
@@ -582,7 +601,8 @@ export function ThreadComposer({
 
   return (
     <form
-      className="space-y-3"
+      className="relative space-y-3"
+      ref={formRef}
       onSubmit={(event) => {
         event.preventDefault();
         if (thread.id.length === 0 || commandActionPending) {
@@ -611,6 +631,42 @@ export function ThreadComposer({
         })();
       }}
     >
+      {(commandPopupOpen || filePopupOpen) && formRef.current && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              key={popupLayoutKey}
+              className="fixed inset-x-0 z-50 mx-auto max-w-[var(--composer-popup-width)] px-4"
+              style={
+                {
+                  "--composer-popup-width": `${formRef.current.offsetWidth}px`,
+                  bottom: `calc(100vh - ${formRef.current.getBoundingClientRect().top}px + 6px)`
+                } as CSSProperties
+              }
+            >
+              {commandPopupOpen ? (
+                <ComposerCommandPopup
+                  commands={matchedCommands}
+                  onExecuteCommand={(command) => {
+                    void executeSupportedCommand(command, "");
+                  }}
+                  selectedCommand={selectedCommand}
+                  t={t}
+                />
+              ) : null}
+
+              {filePopupOpen ? (
+                <ComposerFilePopup
+                  fileSearchState={fileSearchState}
+                  onSelectMatch={insertWorkspaceMatch}
+                  selectedMatch={selectedFileMatch}
+                  t={t}
+                />
+              ) : null}
+            </div>,
+            document.body
+          )
+        : null}
+
       <div className="rounded-[1.35rem] border border-subtle/8 bg-card/84 px-3 py-2.5 shadow-sm">
         <Textarea
           autoFocus
@@ -634,26 +690,6 @@ export function ThreadComposer({
           rows={2}
           value={composerText}
         />
-
-        {commandPopupOpen ? (
-          <ComposerCommandPopup
-            commands={matchedCommands}
-            onExecuteCommand={(command) => {
-              void executeSupportedCommand(command, "");
-            }}
-            selectedCommand={selectedCommand}
-            t={t}
-          />
-        ) : null}
-
-        {filePopupOpen ? (
-          <ComposerFilePopup
-            fileSearchState={fileSearchState}
-            onSelectMatch={insertWorkspaceMatch}
-            selectedMatch={selectedFileMatch}
-            t={t}
-          />
-        ) : null}
 
         <div className="mt-2 flex items-center gap-1.5">
           <Sheet
@@ -1045,7 +1081,7 @@ function ComposerCommandPopup({
   t: (key: string) => string;
 }) {
   return (
-    <div className="mt-2 overflow-hidden rounded-2xl border border-subtle/8 bg-background/78">
+    <div className="overflow-hidden rounded-lg border border-subtle/8 bg-popover shadow-lg">
       <div className="border-b border-subtle/6 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         {t("detail.composer.popup.commands")}
       </div>
@@ -1128,9 +1164,6 @@ function ComposerFilePopup({
               }}
               type="button"
             >
-              <span className="rounded-md border border-subtle/8 bg-background/72 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-                {match.isDirectory ? "dir" : "file"}
-              </span>
               <span className="min-w-0 flex-1 truncate font-mono text-sm text-foreground">
                 {match.path}
               </span>
@@ -1142,7 +1175,7 @@ function ComposerFilePopup({
   }
 
   return (
-    <div className="mt-2 overflow-hidden rounded-2xl border border-subtle/8 bg-background/78">
+    <div className="overflow-hidden rounded-lg border border-subtle/8 bg-popover shadow-lg">
       <div className="border-b border-subtle/6 px-3 py-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         {t("detail.composer.popup.files")}
       </div>

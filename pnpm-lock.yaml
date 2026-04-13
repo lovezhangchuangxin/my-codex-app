@@ -17,6 +17,9 @@ importers:
       '@my-codex-app/protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
+      ignore:
+        specifier: ^7.0.5
+        version: 7.0.5
     devDependencies:
       '@types/node':
         specifier: ^24.6.0
