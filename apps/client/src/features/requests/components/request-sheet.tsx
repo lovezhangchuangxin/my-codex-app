@@ -1,21 +1,28 @@
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { toast } from "sonner";
+
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle
+} from "@/components/ui/sheet";
 import { PendingRequestList } from "@/features/requests/components/pending-request-list";
 import { buildPendingRequestEntries } from "@/features/requests/lib/request-utils";
 import { useRequestDrafts } from "@/features/requests/lib/use-request-drafts";
 import { useI18n } from "@/lib/i18n/use-i18n";
 import { useRuntime } from "@/lib/runtime/runtime-provider";
 import { useRuntimeSnapshot } from "@/lib/runtime/use-runtime-snapshot";
-import { toast } from "sonner";
 
 export function RequestSheet({
+  onOpenChange,
   onOpenThread,
-  open,
-  onOpenChange
+  open
 }: {
+  onOpenChange: (open: boolean) => void;
   onOpenThread: (threadId: string, requestKey?: string) => void;
   open: boolean;
-  onOpenChange: (open: boolean) => void;
 }) {
   const { t } = useI18n();
   const runtime = useRuntime();
@@ -27,9 +34,7 @@ export function RequestSheet({
       ? buildPendingRequestEntries(snapshot.threads.threads)
       : [];
 
-  const totalPending = entries.length;
-
-  async function handleRespond(request: Parameters<typeof runtime.respondToRequest>[0]): Promise<boolean> {
+  async function handleRespond(request: Parameters<typeof runtime.respondToRequest>[0]) {
     try {
       await runtime.respondToRequest(request);
       drafts.clearRequest(request.requestId);
@@ -41,13 +46,11 @@ export function RequestSheet({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet onOpenChange={onOpenChange} open={open}>
       <SheetContent className="w-full border-t border-subtle/6 bg-card/95 sm:max-w-lg" side="bottom">
         <SheetHeader>
-          <SheetTitle>{t("requestSheet.title", { count: totalPending })}</SheetTitle>
-          <SheetDescription>
-            {t("requestSheet.description")}
-          </SheetDescription>
+          <SheetTitle>{t("requestSheet.title", { count: entries.length })}</SheetTitle>
+          <SheetDescription>{t("requestSheet.description")}</SheetDescription>
         </SheetHeader>
         <ScrollArea className="h-[calc(100svh-8rem)] px-4">
           <div className="py-4">

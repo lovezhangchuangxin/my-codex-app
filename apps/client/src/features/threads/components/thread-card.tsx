@@ -4,10 +4,7 @@ import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,8 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import type { ThreadSummary } from "@my-codex-app/protocol";
-
 import {
   buildThreadTitle,
   formatStatusLabel,
@@ -26,7 +21,9 @@ import {
 } from "@/features/threads/lib/thread-utils";
 import { formatPendingRequestKind } from "@/features/requests/lib/request-utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
-import { cn } from "@/lib/utils";
+import type { ThreadSummary } from "@my-codex-app/protocol";
+
+import { StatusBadge } from "./status-badge";
 
 export function ThreadCard({
   isSelected,
@@ -41,11 +38,10 @@ export function ThreadCard({
 
   return (
     <Card
-      className={cn(
+      className={[
         "rounded-lg border border-subtle/8 bg-card/78 transition-all duration-200 hover:border-subtle/12 hover:bg-card/92",
-        isSelected &&
-          "border-primary/22 bg-card"
-      )}
+        isSelected ? "border-primary/22 bg-card" : ""
+      ].join(" ")}
     >
       <CardContent className="space-y-3 pt-3.5">
         <div className="flex items-start justify-between gap-2.5">
@@ -147,29 +143,4 @@ async function copyThreadId(threadId: string, t: (key: string) => string) {
   } catch {
     toast.error(t("thread.list.toast.copyError"));
   }
-}
-
-function StatusBadge({
-  label,
-  tone
-}: {
-  label: string;
-  tone: ReturnType<typeof getStatusTone>;
-}) {
-  const classes =
-    tone === "waitingApproval"
-      ? "bg-secondary/16 text-secondary pulse-secondary"
-      : tone === "waitingInput"
-        ? "bg-primary/12 text-primary"
-        : tone === "active"
-          ? "bg-primary/12 text-primary"
-          : tone === "error"
-            ? "bg-destructive/12 text-destructive"
-            : "bg-background/70 text-muted-foreground";
-
-  return (
-    <Badge className={cn("border-0 font-mono text-[0.7rem] uppercase", classes)} variant="secondary">
-      {label}
-    </Badge>
-  );
 }

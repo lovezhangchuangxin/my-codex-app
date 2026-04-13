@@ -34,7 +34,7 @@ export function PwaUpdatePrompt() {
         }
       }
     });
-  }, [needRefresh]);
+  }, [needRefresh, t, updateServiceWorker]);
 
   useEffect(() => {
     return () => {

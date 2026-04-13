@@ -1,7 +1,7 @@
+import { useI18n } from "@/lib/i18n/use-i18n";
 import type { ThreadSummary } from "@my-codex-app/protocol";
 
-import { ThreadCard } from "@/components/threads/thread-card";
-import { useI18n } from "@/lib/i18n/use-i18n";
+import { ThreadCard } from "./thread-card";
 
 export function WorkspaceGroup({
   isSelected,

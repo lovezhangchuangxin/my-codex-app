@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ConnectionIndicator } from "@/components/layout/connection-indicator";
 import { NotificationBell } from "@/components/layout/notification-bell";
-import { RequestSheet } from "@/components/requests/request-sheet";
+import { RequestSheet } from "@/features/requests/components/request-sheet";
 import { SettingsSheet } from "@/components/settings/settings-sheet";
 import { useI18n } from "@/lib/i18n/use-i18n";
 

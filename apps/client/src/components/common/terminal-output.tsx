@@ -6,7 +6,7 @@ import { useI18n } from "@/lib/i18n/use-i18n";
 import { useTheme } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-const ANSI_PATTERN = /\u001b\[[0-9;?]*[ -/]*[@-~]/;
+const ANSI_PATTERN = new RegExp(String.raw`\u001b\[[0-9;?]*[ -/]*[@-~]`);
 
 export function TerminalOutput({
   className,

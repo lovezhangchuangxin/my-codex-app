@@ -3,25 +3,26 @@ import type { ThreadStatusFilter } from "@/features/threads/lib/thread-utils";
 import { useI18n } from "@/lib/i18n/use-i18n";
 
 export function ThreadStatusTabs({
-  value,
-  onChange
+  onChange,
+  value
 }: {
-  value: ThreadStatusFilter;
   onChange: (value: ThreadStatusFilter) => void;
+  value: ThreadStatusFilter;
 }) {
   const { t } = useI18n();
   const statusFilters: Array<{ label: string; value: ThreadStatusFilter }> = [
     { label: t("thread.filter.all"), value: "all" },
     { label: t("thread.filter.active"), value: "active" },
     { label: t("thread.filter.waitingApproval"), value: "waitingApproval" },
+    { label: t("thread.filter.waitingInput"), value: "waitingInput" },
     { label: t("thread.filter.idle"), value: "idle" }
   ];
 
   return (
     <Tabs
       className="min-w-0"
-      onValueChange={(v) => {
-        onChange(v as ThreadStatusFilter);
+      onValueChange={(nextValue) => {
+        onChange(nextValue as ThreadStatusFilter);
       }}
       value={value}
     >
