@@ -51,6 +51,10 @@ import { formatTokenCount } from '@/features/threads/components/thread-detail-ut
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { useBridgeClient } from '@/lib/runtime/runtime-provider';
 import { cn } from '@/lib/utils';
+import {
+  readNativeKeyboardInsetHeight,
+  tauriKeyboardInsetChangeEvent,
+} from '@/platform/viewport';
 import type {
   AvailableModel,
   ReasoningEffort,
@@ -115,6 +119,7 @@ export function ThreadComposer({
   const [caretPosition, setCaretPosition] = useState(0);
   const [commandActionPending, setCommandActionPending] = useState(false);
   const [popupLayoutKey, setPopupLayoutKey] = useState(0);
+  const [composerLift, setComposerLift] = useState(0);
   const [dismissedSlashToken, setDismissedSlashToken] = useState<string | null>(
     null,
   );
@@ -443,13 +448,147 @@ export function ThreadComposer({
     }
 
     const refresh = () => setPopupLayoutKey((k) => k + 1);
+    window.addEventListener(
+      tauriKeyboardInsetChangeEvent,
+      refresh as EventListener,
+    );
     window.addEventListener('scroll', refresh, true);
     window.addEventListener('resize', refresh);
     return () => {
+      window.removeEventListener(
+        tauriKeyboardInsetChangeEvent,
+        refresh as EventListener,
+      );
       window.removeEventListener('scroll', refresh, true);
       window.removeEventListener('resize', refresh);
     };
-  }, [commandPopupOpen, filePopupOpen]);
+  }, [commandPopupOpen, filePopupOpen, composerLift]);
+
+  useEffect(() => {
+    if (isDesktop || typeof window === 'undefined') {
+      return;
+    }
+
+    const refreshTimeoutIds = new Set<number>();
+
+    const refreshComposerLift = () => {
+      const form = formRef.current;
+      if (!form) {
+        setComposerLift(0);
+        return;
+      }
+
+      const activeElement = document.activeElement;
+      const target =
+        activeElement instanceof HTMLElement && form.contains(activeElement)
+          ? activeElement
+          : textareaRef.current;
+
+      if (!target) {
+        setComposerLift(0);
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      const nativeKeyboardInset = readNativeKeyboardInsetHeight();
+      const viewportVisibleBottom = viewport
+        ? viewport.offsetTop + viewport.height - 12
+        : window.innerHeight - 12;
+      const nativeVisibleBottom = window.innerHeight - nativeKeyboardInset - 12;
+      const visibleBottom = Math.min(
+        viewportVisibleBottom,
+        nativeVisibleBottom,
+      );
+      const targetRect = target.getBoundingClientRect();
+      const nextLift = Math.max(
+        0,
+        Math.ceil(targetRect.bottom - visibleBottom),
+      );
+
+      setComposerLift((current) =>
+        Math.abs(current - nextLift) <= 1 ? current : nextLift,
+      );
+    };
+
+    const scheduleRefresh = (delay = 0) => {
+      const timeoutId = window.setTimeout(() => {
+        refreshTimeoutIds.delete(timeoutId);
+        refreshComposerLift();
+      }, delay);
+      refreshTimeoutIds.add(timeoutId);
+    };
+
+    const handleViewportChange = () => {
+      scheduleRefresh();
+    };
+
+    const handleNativeKeyboardInsetChange = () => {
+      scheduleRefresh();
+      scheduleRefresh(80);
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      const form = formRef.current;
+      if (!form || !(event.target instanceof HTMLElement)) {
+        return;
+      }
+      if (!form.contains(event.target)) {
+        return;
+      }
+
+      refreshComposerLift();
+      scheduleRefresh(80);
+      scheduleRefresh(180);
+    };
+
+    const handleFocusOut = (event: FocusEvent) => {
+      const form = formRef.current;
+      if (!form) {
+        return;
+      }
+
+      const nextFocused =
+        event.relatedTarget instanceof HTMLElement ? event.relatedTarget : null;
+      if (nextFocused && form.contains(nextFocused)) {
+        scheduleRefresh();
+        return;
+      }
+
+      scheduleRefresh(80);
+    };
+
+    window.visualViewport?.addEventListener('resize', handleViewportChange);
+    window.visualViewport?.addEventListener('scroll', handleViewportChange);
+    window.addEventListener('resize', handleViewportChange);
+    window.addEventListener(
+      tauriKeyboardInsetChangeEvent,
+      handleNativeKeyboardInsetChange,
+    );
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      refreshTimeoutIds.forEach((timeoutId) => {
+        window.clearTimeout(timeoutId);
+      });
+      refreshTimeoutIds.clear();
+      window.visualViewport?.removeEventListener(
+        'resize',
+        handleViewportChange,
+      );
+      window.visualViewport?.removeEventListener(
+        'scroll',
+        handleViewportChange,
+      );
+      window.removeEventListener('resize', handleViewportChange);
+      window.removeEventListener(
+        tauriKeyboardInsetChangeEvent,
+        handleNativeKeyboardInsetChange,
+      );
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+    };
+  }, [isDesktop]);
 
   useEffect(() => {
     let cancelled = false;
@@ -718,6 +857,13 @@ export function ThreadComposer({
     <form
       className="relative space-y-3"
       ref={formRef}
+      style={{
+        transform:
+          !isDesktop && composerLift > 0
+            ? `translateY(-${composerLift}px)`
+            : undefined,
+        transition: !isDesktop ? 'transform 180ms ease-out' : undefined,
+      }}
       onSubmit={(event) => {
         event.preventDefault();
         if (thread.id.length === 0 || commandActionPending) {
@@ -760,39 +906,42 @@ export function ThreadComposer({
       {(commandPopupOpen || filePopupOpen) &&
       formRef.current &&
       typeof document !== 'undefined'
-        ? createPortal(
-            <div
-              key={popupLayoutKey}
-              className="fixed inset-x-0 z-50 mx-auto max-w-[var(--composer-popup-width)] px-4"
-              style={
-                {
-                  '--composer-popup-width': `${formRef.current.offsetWidth}px`,
-                  bottom: `calc(100vh - ${formRef.current.getBoundingClientRect().top}px + 6px)`,
-                } as CSSProperties
-              }
-            >
-              {commandPopupOpen ? (
-                <ComposerCommandPopup
-                  commands={matchedCommands}
-                  onExecuteCommand={(command) => {
-                    void executeSupportedCommand(command, '');
-                  }}
-                  selectedCommand={selectedCommand}
-                  t={t}
-                />
-              ) : null}
+        ? (() => {
+            const formRect = formRef.current.getBoundingClientRect();
+            return createPortal(
+              <div
+                key={popupLayoutKey}
+                className="fixed inset-x-0 z-50 mx-auto max-w-[var(--composer-popup-width)] px-4"
+                style={
+                  {
+                    '--composer-popup-width': `${formRef.current.offsetWidth}px`,
+                    bottom: `${Math.max(0, window.innerHeight - formRect.top + 6)}px`,
+                  } as CSSProperties
+                }
+              >
+                {commandPopupOpen ? (
+                  <ComposerCommandPopup
+                    commands={matchedCommands}
+                    onExecuteCommand={(command) => {
+                      void executeSupportedCommand(command, '');
+                    }}
+                    selectedCommand={selectedCommand}
+                    t={t}
+                  />
+                ) : null}
 
-              {filePopupOpen ? (
-                <ComposerFilePopup
-                  fileSearchState={fileSearchState}
-                  onSelectMatch={insertWorkspaceMatch}
-                  selectedMatch={selectedFileMatch}
-                  t={t}
-                />
-              ) : null}
-            </div>,
-            document.body,
-          )
+                {filePopupOpen ? (
+                  <ComposerFilePopup
+                    fileSearchState={fileSearchState}
+                    onSelectMatch={insertWorkspaceMatch}
+                    selectedMatch={selectedFileMatch}
+                    t={t}
+                  />
+                ) : null}
+              </div>,
+              document.body,
+            );
+          })()
         : null}
 
       <div className="rounded-[1.35rem] border border-subtle/8 bg-card/84 px-3 py-2.5 shadow-sm">

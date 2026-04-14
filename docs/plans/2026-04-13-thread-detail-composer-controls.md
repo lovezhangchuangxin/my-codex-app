@@ -1,6 +1,7 @@
 # Thread Detail Composer Controls — Implementation Plan
 
 > **Status: Implemented** — All five tasks completed. Key files:
+>
 > - `apps/client/src/features/threads/components/thread-detail-composer.tsx`
 > - `apps/client/src/features/threads/lib/composer-command-utils.ts`
 > - `apps/client/src/features/threads/lib/composer-input-utils.ts`
@@ -151,6 +152,8 @@ not backed by real thread state.
 - Keep existing submit semantics:
   - desktop `Enter` submits
   - `Shift+Enter` inserts newline
+- On mobile, keep the focused composer visible above the soft keyboard without
+  reflowing the whole thread detail page unnecessarily.
 
 **UI state**
 
@@ -179,6 +182,8 @@ not backed by real thread state.
   - permission preset changes are reflected after send
   - context meter shows unknown state before usage and updates after a completed
     turn
+  - focusing the composer on a Tauri mobile build keeps the textarea and send /
+    stop controls visible above the keyboard
 
 ## File-Level Summary
 

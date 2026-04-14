@@ -5,7 +5,13 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { LocaleProvider } from '@/lib/i18n/provider';
 import { RuntimeProvider } from '@/lib/runtime/runtime-provider';
 import { ThemeProvider, useTheme } from '@/lib/theme';
-import { supportsPwa } from '@/platform/host';
+import { isTauriHost, supportsPwa } from '@/platform/host';
+import {
+  isTextEntryElement,
+  readNativeKeyboardInsetHeight,
+  tauriKeyboardInsetChangeEvent,
+  writeNativeKeyboardInsetHeight,
+} from '@/platform/viewport';
 import { Toaster } from 'sonner';
 
 const DEV_SERVICE_WORKER_RESET_KEY =
@@ -71,12 +77,180 @@ function DevServiceWorkerCleanup() {
   return null;
 }
 
+function TauriViewportSync() {
+  useEffect(() => {
+    if (!isTauriHost || typeof window === 'undefined') {
+      return;
+    }
+
+    const root = document.documentElement;
+    let animationFrameId = 0;
+    let focusTimeoutId = 0;
+    let blurTimeoutId = 0;
+
+    const applyViewportMetrics = () => {
+      const viewport = window.visualViewport;
+      const nativeKeyboardInset = readNativeKeyboardInsetHeight();
+      const viewportHeight = Math.round(viewport?.height ?? window.innerHeight);
+      const offsetTop = Math.max(0, Math.round(viewport?.offsetTop ?? 0));
+      const derivedKeyboardInset = Math.max(
+        0,
+        Math.round(window.innerHeight - viewportHeight - offsetTop),
+      );
+      const keyboardInset = Math.max(nativeKeyboardInset, derivedKeyboardInset);
+      const height = Math.max(
+        0,
+        Math.round(window.innerHeight - keyboardInset - offsetTop),
+      );
+
+      root.style.setProperty('--app-viewport-height', `${height}px`);
+      root.style.setProperty('--app-viewport-offset-top', `${offsetTop}px`);
+      root.style.setProperty(
+        '--app-keyboard-inset-height',
+        `${keyboardInset}px`,
+      );
+    };
+
+    const revealActiveEntry = () => {
+      const activeElement = document.activeElement;
+      if (!isTextEntryElement(activeElement)) {
+        return;
+      }
+
+      const viewport = window.visualViewport;
+      const nativeKeyboardInset = readNativeKeyboardInsetHeight();
+      const rect = activeElement.getBoundingClientRect();
+      const visibleTop = (viewport?.offsetTop ?? 0) + 12;
+      const viewportVisibleBottom = viewport
+        ? viewport.offsetTop + viewport.height - 20
+        : window.innerHeight - 20;
+      const nativeVisibleBottom = window.innerHeight - nativeKeyboardInset - 20;
+      const visibleBottom = Math.min(
+        viewportVisibleBottom,
+        nativeVisibleBottom,
+      );
+
+      if (rect.top < visibleTop || rect.bottom > visibleBottom) {
+        activeElement.scrollIntoView({
+          block: 'nearest',
+          inline: 'nearest',
+        });
+      }
+    };
+
+    const scheduleViewportSync = (revealActiveElement = false) => {
+      window.cancelAnimationFrame(animationFrameId);
+      animationFrameId = window.requestAnimationFrame(() => {
+        applyViewportMetrics();
+        if (revealActiveElement) {
+          revealActiveEntry();
+        }
+      });
+    };
+
+    const handleViewportChange = () => {
+      scheduleViewportSync(true);
+    };
+
+    const handleFocusIn = (event: FocusEvent) => {
+      if (!isTextEntryElement(event.target)) {
+        return;
+      }
+
+      scheduleViewportSync(true);
+      window.clearTimeout(focusTimeoutId);
+      focusTimeoutId = window.setTimeout(() => {
+        applyViewportMetrics();
+        revealActiveEntry();
+      }, 80);
+    };
+
+    const handleFocusOut = () => {
+      window.clearTimeout(blurTimeoutId);
+      blurTimeoutId = window.setTimeout(() => {
+        scheduleViewportSync();
+      }, 80);
+    };
+
+    const handleNativeKeyboardInsetChange = (event: Event) => {
+      const nextInsetRaw =
+        event instanceof CustomEvent && typeof event.detail?.height === 'number'
+          ? event.detail.height
+          : 0;
+
+      writeNativeKeyboardInsetHeight(nextInsetRaw);
+      scheduleViewportSync(true);
+    };
+
+    scheduleViewportSync();
+
+    const handleVisualViewportResize = () => {
+      handleViewportChange();
+    };
+    const handleVisualViewportScroll = () => {
+      handleViewportChange();
+    };
+    const handleWindowResize = () => {
+      handleViewportChange();
+    };
+    const handleOrientationChange = () => {
+      handleViewportChange();
+    };
+
+    window.visualViewport?.addEventListener(
+      'resize',
+      handleVisualViewportResize,
+    );
+    window.visualViewport?.addEventListener(
+      'scroll',
+      handleVisualViewportScroll,
+    );
+    window.addEventListener('resize', handleWindowResize);
+    window.addEventListener('orientationchange', handleOrientationChange);
+    window.addEventListener(
+      tauriKeyboardInsetChangeEvent,
+      handleNativeKeyboardInsetChange,
+    );
+    document.addEventListener('focusin', handleFocusIn);
+    document.addEventListener('focusout', handleFocusOut);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrameId);
+      window.clearTimeout(focusTimeoutId);
+      window.clearTimeout(blurTimeoutId);
+      window.visualViewport?.removeEventListener(
+        'resize',
+        handleVisualViewportResize,
+      );
+      window.visualViewport?.removeEventListener(
+        'scroll',
+        handleVisualViewportScroll,
+      );
+      window.removeEventListener('resize', handleWindowResize);
+      window.removeEventListener('orientationchange', handleOrientationChange);
+      window.removeEventListener(
+        tauriKeyboardInsetChangeEvent,
+        handleNativeKeyboardInsetChange,
+      );
+      document.removeEventListener('focusin', handleFocusIn);
+      document.removeEventListener('focusout', handleFocusOut);
+      writeNativeKeyboardInsetHeight(0);
+      root.style.removeProperty('--app-viewport-height');
+      root.style.removeProperty('--app-viewport-offset-top');
+      root.style.removeProperty('--app-keyboard-inset-height');
+    };
+  }, []);
+
+  return null;
+}
+
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <ThemeProvider>
       <LocaleProvider>
         <TooltipProvider>
           <RuntimeProvider>
+            <TauriViewportSync />
             <DevServiceWorkerCleanup />
             {children}
             {!supportsPwa || import.meta.env.DEV ? null : <PwaUpdatePrompt />}

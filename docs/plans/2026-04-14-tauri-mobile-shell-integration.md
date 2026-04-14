@@ -82,12 +82,15 @@ Update later if implementation completes cleanly:
 Add a small host abstraction area:
 
 - `src/platform/host.ts`
+- `src/platform/viewport.ts`
 
 Responsibilities:
 
 - expose host runtime kind such as `web` or `tauri`
 - expose booleans like `supportsPwa`
 - provide host-aware helpers for device labeling or other lightweight decisions
+- provide a small keyboard/viewport adapter so Tauri mobile can supplement CSS
+  viewport sizing with native soft-keyboard inset data when needed
 
 ### New bridge target storage/resolution
 
@@ -158,6 +161,10 @@ Changes:
 - disable PWA-only logic inside the Tauri host:
   - update prompt
   - dev service-worker cleanup
+- synchronize root viewport CSS variables from:
+  - `visualViewport` when available
+  - native keyboard inset events when the host WebView does not resize
+- keep focused inputs scrollable into view using the effective visible area
 
 ### Environment helpers
 
@@ -190,6 +197,9 @@ Add a dedicated Tauri host package:
 - define the Tauri app identity and native entry point
 - keep Android local-direct HTTP compatibility aligned with the current bridge
   transport until HTTPS or an equivalent alternative exists
+- on Android, apply host-level keyboard behavior that keeps the shared client
+  informed about IME occlusion when WebView viewport resize signals are
+  insufficient
 
 ### Planned config shape
 
@@ -210,6 +220,8 @@ Implementation note:
   so release builds keep `usesCleartextTraffic=true` for the repository's
   present local-direct HTTP bridge model
 - this is currently handled by `apps/mobile/scripts/ensure-android-local-direct.mjs`
+- the same patch path is also responsible for preserving Android keyboard
+  behavior requirements such as `adjustResize` and WebView IME inset forwarding
 
 ## Root Workspace Scripts
 
@@ -256,6 +268,10 @@ Focused manual checks:
 5. Tauri-hosted builds disable PWA-only UI/cleanup logic.
 6. Android pairing/settings surfaces document emulator, LAN, and `adb reverse`
    bridge-target usage clearly.
+7. On Android Tauri builds, focusing the thread composer keeps the textarea and
+   controls visible above the keyboard.
+8. On Android Tauri builds, slash-command and file-search popups remain aligned
+   with the lifted composer while the keyboard is open.
 
 Optional native verification if the local toolchain is available:
 

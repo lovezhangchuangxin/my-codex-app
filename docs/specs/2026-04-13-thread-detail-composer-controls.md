@@ -50,6 +50,9 @@ typed across `client`, `sdk`, `protocol`, and `bridge`.
 - The bottom row of the composer should contain functional controls.
 - The send / stop action should move from the right edge of the textarea to the
   bottom-right corner of the composer.
+- On mobile layouts, focusing the composer must keep the textarea and footer
+  controls visible above the soft keyboard instead of allowing the composer to
+  be obscured.
 
 ### Session settings
 
@@ -84,6 +87,10 @@ The thread detail composer becomes a two-level control surface:
 
 The footer remains part of the same form and preserves current Enter-to-send
 behavior on desktop.
+
+On mobile-hosted layouts, the composer may shift relative to its resting layout
+when the soft keyboard opens, but that movement must remain local to the
+composer surface and preserve the surrounding thread detail structure.
 
 ## Thread settings model
 
@@ -209,4 +216,6 @@ historical guarantees than upstream provides.
   and latest turn usage details.
 - The feature works on desktop and mobile layouts without breaking existing
   thread send / interrupt behavior.
+- Mobile keyboard opening does not leave the focused composer textarea or
+  footer actions hidden behind the keyboard.
 - Protocol, bridge, sdk, and client types remain consistent.

@@ -14,6 +14,7 @@ import {
   writeStoredBridgeBaseUrl,
 } from '@/lib/runtime/bridge-target-store';
 import { isTauriHost } from '@/platform/host';
+import { appViewportDynamicHeight } from '@/platform/viewport';
 import { BridgeClient } from '@my-codex-app/sdk';
 
 import { detectDeviceInfo } from './device-info';
@@ -33,7 +34,9 @@ type BridgeAvailability =
 export function PairingScreen() {
   const { t } = useI18n();
 
-  const [bridgeTarget, setBridgeTarget] = useState(resolveBridgeTargetInputValue);
+  const [bridgeTarget, setBridgeTarget] = useState(
+    resolveBridgeTargetInputValue,
+  );
   const [pairingCode, setPairingCode] = useState('');
   const [pairingState, setPairingState] = useState<PairingState>({
     status: 'idle',
@@ -60,9 +63,12 @@ export function PairingScreen() {
       }
 
       try {
-        const response = await fetch(toBridgeHealthUrl(normalizedBridgeTarget), {
-          signal: AbortSignal.timeout(5000),
-        });
+        const response = await fetch(
+          toBridgeHealthUrl(normalizedBridgeTarget),
+          {
+            signal: AbortSignal.timeout(5000),
+          },
+        );
         if (!response.ok) throw new Error('not ok');
         if (!cancelled) setBridgeAvailability({ status: 'reachable' });
       } catch {
@@ -116,7 +122,12 @@ export function PairingScreen() {
   const isSubmitting = pairingState.status === 'submitting';
 
   return (
-    <div className="flex min-h-[calc(100dvh-8rem)] items-center justify-center px-8 lg:min-h-[calc(100dvh-60px)]">
+    <div
+      className="flex items-center justify-center px-8 [--pairing-shell-offset:8rem] lg:[--pairing-shell-offset:60px]"
+      style={{
+        minHeight: `calc(${appViewportDynamicHeight} - var(--pairing-shell-offset))`,
+      }}
+    >
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center space-y-1.5 text-center">
           <div className="flex size-10 items-center justify-center rounded-full border bg-muted">

@@ -14,6 +14,7 @@ import { useRequestDrafts } from '@/features/requests/lib/use-request-drafts';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { useRuntime } from '@/lib/runtime/runtime-provider';
 import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
+import { appViewportHeight } from '@/platform/viewport';
 
 export function RequestSheet({
   onOpenChange,
@@ -63,7 +64,10 @@ export function RequestSheet({
           </SheetTitle>
           <SheetDescription>{t('requestSheet.description')}</SheetDescription>
         </SheetHeader>
-        <ScrollArea className="h-[calc(100svh-8rem)] px-4">
+        <ScrollArea
+          className="px-4"
+          style={{ height: `calc(${appViewportHeight} - 8rem)` }}
+        >
           <div className="py-4">
             {entries.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">

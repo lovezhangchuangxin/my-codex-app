@@ -6,6 +6,8 @@
 
 :root {
   color-scheme: dark;
+  --app-viewport-offset-top: 0px;
+  --app-keyboard-inset-height: 0px;
   --subtle: oklch(1 0 0);
   --code-bg: oklch(0.16 0.018 265);
   --background: oklch(0.17 0.008 285);
@@ -189,6 +191,7 @@
   }
   html {
     @apply font-sans;
+    scroll-padding-bottom: calc(var(--app-keyboard-inset-height, 0px) + 1rem);
   }
   h1,
   h2,
@@ -200,6 +203,11 @@
   input,
   textarea {
     font: inherit;
+  }
+  input,
+  textarea,
+  select {
+    scroll-margin-bottom: calc(var(--app-keyboard-inset-height, 0px) + 1rem);
   }
   ::selection {
     background: color-mix(in srgb, var(--primary) 38%, transparent);

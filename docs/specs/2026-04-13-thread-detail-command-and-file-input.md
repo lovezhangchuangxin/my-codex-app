@@ -140,6 +140,9 @@ The Web client should support the following slash commands in this slice.
 - `Esc` should dismiss the popup without mutating unrelated text.
 - When a supported command is selected, the client should dispatch the command
   action instead of sending literal slash text.
+- If the composer shifts upward to avoid a mobile keyboard, the slash popup
+  must recompute its anchor from the composer’s current visual position instead
+  of the pre-keyboard layout position.
 
 ### File Search Popup
 
@@ -151,6 +154,9 @@ The Web client should support the following slash commands in this slice.
 - If the inserted path contains whitespace, the client should quote it so the
   visible text remains a single usable path token.
 - The file popup and slash popup should not compete for focus at the same time.
+- If the mobile keyboard lifts the composer, the file popup must stay attached
+  to the lifted composer rather than remaining behind at the original screen
+  position.
 
 ### Composer Preservation
 
@@ -283,6 +289,8 @@ it must support practical path discovery from partial input.
 - Selecting `/mention` inserts `@` into the composer.
 - Typing `@` opens a file popup backed by bridge workspace search.
 - Selecting a file inserts a workspace-relative path into the composer text.
+- Slash and file popups remain visually aligned with the composer while the
+  mobile keyboard is open.
 - Unsupported slash input still falls back to normal plain-text sending.
 - The feature works without breaking existing send, interrupt, settings, or
   workspace-browser behavior.

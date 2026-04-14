@@ -184,6 +184,10 @@ upstream passthrough.
   - Enter/Tab to accept selection
   - Esc to dismiss
 - Add pointer selection for popup items.
+- Recompute popup anchoring when:
+  - viewport geometry changes
+  - mobile keyboard inset changes
+  - the composer shifts to stay visible above the keyboard
 - Add command dispatch logic:
   - `/compact` -> runtime action
   - bare `/review` -> open picker
@@ -241,6 +245,8 @@ falling back to raw JSON in the unknown-item renderer.
 - selecting `/mention` inserts `@`
 - typing `@src` surfaces file matches
 - selecting a file inserts a relative path
+- on mobile keyboard open, slash and file popups stay aligned with the lifted
+  composer
 - `/compact` triggers compaction without sending literal slash text
 - bare `/review` opens the review target picker
 - `/review some instructions` starts a custom review turn

@@ -194,6 +194,9 @@ Inside the Tauri host:
 - PWA-specific update prompts and development service-worker cleanup should not
   run
 - device labels should read as an app-hosted client, not a browser tab
+- focused inputs must remain visible when the mobile soft keyboard opens
+- host/platform adapters may not assume `visualViewport` alone is sufficient to
+  detect keyboard occlusion on every embedded mobile WebView
 
 ## Architecture Decisions
 
@@ -221,6 +224,8 @@ Expected host-aware concerns for this slice:
 - whether PWA behavior is enabled
 - bridge target defaulting
 - host-flavored device labeling
+- viewport and soft-keyboard inset synchronization where the embedded WebView
+  does not emit reliable keyboard-driven viewport resize signals
 
 ## Decision 3: Keep bridge target configuration client-side for MVP
 
@@ -241,6 +246,10 @@ Reason:
 - The shared runtime must remain usable without any Tauri command invocation.
 - The resulting structure must leave room for a later Tauri-native secure
   storage adapter without changing the higher-level session model again.
+- Mobile keyboard handling must degrade safely:
+  - browser-hosted usage should continue using normal viewport behavior
+  - Tauri mobile may supplement viewport data with native keyboard inset data
+    when the embedded WebView does not resize correctly
 
 ## Acceptance Criteria
 
@@ -256,6 +265,8 @@ Reason:
   likely to land unnoticed.
 - Current Android local-direct builds remain compatible with HTTP LAN bridge
   targets used by the bridge today.
+- Tauri mobile keeps focused form surfaces, including the thread composer,
+  visible above the soft keyboard on supported Android builds.
 - Browser builds continue to typecheck and build successfully.
 - Tauri-specific behavior remains limited to host concerns.
 
