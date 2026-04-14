@@ -129,18 +129,18 @@ Authenticating requests:
 
 ## Scripts
 
-| Command           | Description             |
-| ----------------- | ----------------------- |
-| `pnpm dev:bridge` | Start bridge dev server |
-| `pnpm dev:client` | Start client dev server |
-| `pnpm mobile:dev` | Start Tauri shell in local dev mode |
-| `pnpm mobile:android:init` | Initialize Android project files |
-| `pnpm mobile:android:dev` | Run the Tauri app on Android |
-| `pnpm mobile:ios:init` | Initialize iOS project files |
-| `pnpm mobile:ios:dev` | Run the Tauri app on iOS |
-| `pnpm mobile:check` | Verify the Tauri mobile host with `cargo check` |
-| `pnpm build`      | Build core packages and verify the mobile host |
-| `pnpm typecheck`  | Type-check core packages and the mobile host |
+| Command                    | Description                                     |
+| -------------------------- | ----------------------------------------------- |
+| `pnpm dev:bridge`          | Start bridge dev server                         |
+| `pnpm dev:client`          | Start client dev server                         |
+| `pnpm mobile:dev`          | Start Tauri shell in local dev mode             |
+| `pnpm mobile:android:init` | Initialize Android project files                |
+| `pnpm mobile:android:dev`  | Run the Tauri app on Android                    |
+| `pnpm mobile:ios:init`     | Initialize iOS project files                    |
+| `pnpm mobile:ios:dev`      | Run the Tauri app on iOS                        |
+| `pnpm mobile:check`        | Verify the Tauri mobile host with `cargo check` |
+| `pnpm build`               | Build core packages and verify the mobile host  |
+| `pnpm typecheck`           | Type-check core packages and the mobile host    |
 
 ## Roadmap
 

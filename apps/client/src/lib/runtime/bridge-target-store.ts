@@ -81,7 +81,9 @@ export function resolveBridgeTargetInputValue(): string {
   return (
     readStoredBridgeBaseUrl() ??
     resolveEnvBridgeBaseUrl() ??
-    (isTauriHost ? '' : resolveBrowserHostBridgeBaseUrl() ?? DEFAULT_LOCALHOST_BRIDGE_URL)
+    (isTauriHost
+      ? ''
+      : (resolveBrowserHostBridgeBaseUrl() ?? DEFAULT_LOCALHOST_BRIDGE_URL))
   );
 }
 
