@@ -131,8 +131,7 @@ export const enMessages = {
     'Codex can access the filesystem and network without asking for approval.',
   'detail.composer.settings.permissions.custom': 'Custom permissions',
   'detail.composer.context.title': 'Context window',
-  'detail.composer.context.description':
-    'This meter reflects the last observed context usage for the current thread.',
+  'detail.composer.context.description': '',
   'detail.composer.context.percent': 'Used',
   'detail.composer.context.used': 'Tokens used',
   'detail.composer.context.window': 'Window size',

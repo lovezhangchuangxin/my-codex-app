@@ -117,8 +117,7 @@ export const zhCnMessages: typeof enMessages = {
     'Codex 可以直接访问文件系统和网络，无需额外审批。',
   'detail.composer.settings.permissions.custom': '自定义权限',
   'detail.composer.context.title': '上下文窗口',
-  'detail.composer.context.description':
-    '该指示器反映当前线程最近一次观测到的上下文使用情况。',
+  'detail.composer.context.description': '',
   'detail.composer.context.percent': '已使用',
   'detail.composer.context.used': '已用 tokens',
   'detail.composer.context.window': '窗口大小',
