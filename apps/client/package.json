@@ -18,6 +18,7 @@
     "@fontsource/ibm-plex-sans": "^5.2.8",
     "@my-codex-app/protocol": "workspace:*",
     "@my-codex-app/sdk": "workspace:*",
+    "@tanstack/react-virtual": "^3.13.23",
     "ansi-to-html": "^0.7.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

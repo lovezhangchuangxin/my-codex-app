@@ -1,6 +1,8 @@
 import {
   lazy,
+  memo,
   Suspense,
+  useEffect,
   useState,
   type ReactNode,
   type RefObject,
@@ -14,6 +16,8 @@ import {
   Search,
   SquareTerminal,
 } from 'lucide-react';
+
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -47,6 +51,34 @@ const LazyTerminalOutput = lazy(async () => {
   return { default: module.TerminalOutput };
 });
 
+// Preload lazy chunks at module load time (before any component renders)
+// so the first render uses actual components instead of Suspense fallbacks.
+void import('@/components/common/markdown-content');
+void import('@/components/common/code-block');
+void import('@/components/common/terminal-output');
+
+function estimateItemSize(item: FlatThreadItem): number {
+  switch (item.type) {
+    case 'agentMessage': {
+      const lines = item.text.split('\n').length;
+      return Math.max(80, Math.min(lines * 22 + 32, 600));
+    }
+    case 'userMessage': {
+      const textParts = item.content.filter((c) => c.type === 'text');
+      const totalLen = textParts.reduce((s, c) => s + (c.text?.length ?? 0), 0);
+      return Math.max(60, Math.min(Math.ceil(totalLen / 60) * 24 + 40, 300));
+    }
+    case 'reasoning':
+      return 40;
+    case 'commandExecution':
+      return 56;
+    case 'fileChange':
+      return 80;
+    default:
+      return 40;
+  }
+}
+
 export function ThreadMessageStream({
   flatItems,
   onFilePathClick,
@@ -63,28 +95,76 @@ export function ThreadMessageStream({
   resolveWorkspacePath: (candidatePath: string) => string | null;
   scrollRef: RefObject<HTMLDivElement | null>;
 }) {
+  // Preload lazy chunks at module level instead — see top of file.
+
+  // Progressive overscan: render fewer items on first paint to reduce
+  // synchronous markdown parsing overhead, then expand after first frame.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  const virtualizer = useVirtualizer({
+    count: flatItems.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (index) => estimateItemSize(flatItems[index]!),
+    overscan: mounted ? 8 : 2,
+    getItemKey: (index) => {
+      const item = flatItems[index];
+      return item ? `${item.turnId}-${item.id}` : index;
+    },
+  });
+
+  const items = virtualizer.getVirtualItems();
+
   return (
     <div
       className="min-h-0 flex-1 overflow-y-auto scroll-smooth px-4 py-4 md:px-5"
       ref={scrollRef}
     >
-      <div className="mx-auto max-w-3xl space-y-4 pb-4">
-        {flatItems.map((item, index) => (
-          <FlatItemRenderer
-            item={item}
-            key={`${item.turnId}-${item.id}`}
-            nextItem={flatItems[index + 1] ?? null}
-            onFilePathClick={onFilePathClick}
-            onOpenWorkspacePath={onOpenWorkspacePath}
-            resolveWorkspacePath={resolveWorkspacePath}
-          />
-        ))}
+      <div
+        className="mx-auto max-w-3xl pb-4"
+        style={{
+          height: virtualizer.getTotalSize(),
+          position: 'relative',
+          width: '100%',
+        }}
+      >
+        {items.map((virtualRow) => {
+          const item = flatItems[virtualRow.index]!;
+          return (
+            <div
+              key={`${item.turnId}-${item.id}`}
+              data-index={virtualRow.index}
+              ref={virtualizer.measureElement}
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                transform: `translateY(${virtualRow.start}px)`,
+                contain: 'layout style paint',
+              }}
+            >
+              <div className="pb-4">
+                <FlatItemRenderer
+                  item={item}
+                  nextItem={flatItems[virtualRow.index + 1] ?? null}
+                  onFilePathClick={onFilePathClick}
+                  onOpenWorkspacePath={onOpenWorkspacePath}
+                  resolveWorkspacePath={resolveWorkspacePath}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 }
 
-function FlatItemRenderer({
+const FlatItemRenderer = memo(function FlatItemRenderer({
   item,
   nextItem,
   onFilePathClick,
@@ -204,7 +284,7 @@ function FlatItemRenderer({
         </div>
       );
   }
-}
+});
 
 function UserMessageBubble({ children }: { children: ReactNode }) {
   return (

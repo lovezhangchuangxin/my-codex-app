@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { memo, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -10,7 +10,7 @@ type MarkdownCodeProps = ComponentPropsWithoutRef<'code'> & {
   node?: unknown;
 };
 
-export function MarkdownContent({
+export const MarkdownContent = memo(function MarkdownContent({
   className,
   content,
   onFilePathClick,
@@ -84,7 +84,7 @@ export function MarkdownContent({
       </ReactMarkdown>
     </div>
   );
-}
+});
 
 function toCodeContent(children: ReactNode) {
   if (typeof children === 'string') {

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -217,7 +217,7 @@ function ReadyThreadDetail({
       thread,
     }),
   );
-  const flatItems = flattenTurnItems(thread.turns);
+  const flatItems = useMemo(() => flattenTurnItems(thread.turns), [thread.turns]);
   const scrollRef = useAutoScroll<HTMLDivElement>([
     flatItems.length,
     thread.updatedAt,
