@@ -5,6 +5,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { LocaleProvider } from '@/lib/i18n/provider';
 import { RuntimeProvider } from '@/lib/runtime/runtime-provider';
 import { ThemeProvider, useTheme } from '@/lib/theme';
+import { supportsPwa } from '@/platform/host';
 import { Toaster } from 'sonner';
 
 const DEV_SERVICE_WORKER_RESET_KEY =
@@ -26,7 +27,7 @@ function ThemedToaster() {
 
 function DevServiceWorkerCleanup() {
   useEffect(() => {
-    if (!import.meta.env.DEV || typeof window === 'undefined') {
+    if (!supportsPwa || !import.meta.env.DEV || typeof window === 'undefined') {
       return;
     }
 
@@ -78,7 +79,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
           <RuntimeProvider>
             <DevServiceWorkerCleanup />
             {children}
-            {import.meta.env.DEV ? null : <PwaUpdatePrompt />}
+            {!supportsPwa || import.meta.env.DEV ? null : <PwaUpdatePrompt />}
             <ThemedToaster />
           </RuntimeProvider>
         </TooltipProvider>

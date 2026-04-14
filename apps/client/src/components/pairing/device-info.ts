@@ -3,6 +3,8 @@
  * Replaces the manual device label / platform / device ID fields.
  */
 
+import { isTauriHost } from '@/platform/host';
+
 function randomUUIDFallback(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -32,34 +34,54 @@ export function detectDeviceInfo(): {
   let browser: string;
   let label: string;
 
-  if (isIOS) {
-    platform = 'ios';
-    browser = ua.includes('CriOS') ? 'chrome' : 'safari';
-    label = `${isIPhone ? 'iPhone' : isIPad ? 'iPad' : 'iOS'} ${toBrowserLabel(browser)}`;
-  } else if (isAndroid) {
-    platform = 'android';
-    browser = ua.includes('Chrome') ? 'chrome' : 'browser';
-    label = `Android ${toBrowserLabel(browser)}`;
-  } else if (isMac) {
-    platform = 'macos';
-    browser = ua.includes('Chrome')
-      ? 'chrome'
-      : ua.includes('Firefox')
-        ? 'firefox'
-        : 'safari';
-    label = `macOS ${toBrowserLabel(browser)}`;
-  } else if (isWindows) {
-    platform = 'windows';
-    browser = ua.includes('Chrome')
-      ? 'chrome'
-      : ua.includes('Firefox')
-        ? 'firefox'
-        : 'edge';
-    label = `Windows ${toBrowserLabel(browser)}`;
+  if (isTauriHost) {
+    browser = 'app';
+    if (isIOS) {
+      platform = 'ios';
+      label = isIPhone ? 'iPhone App' : isIPad ? 'iPad App' : 'iOS App';
+    } else if (isAndroid) {
+      platform = 'android';
+      label = 'Android App';
+    } else if (isMac) {
+      platform = 'macos';
+      label = 'macOS App';
+    } else if (isWindows) {
+      platform = 'windows';
+      label = 'Windows App';
+    } else {
+      platform = 'linux';
+      label = 'Linux App';
+    }
   } else {
-    platform = 'linux';
-    browser = 'browser';
-    label = `Linux ${toBrowserLabel(browser)}`;
+    if (isIOS) {
+      platform = 'ios';
+      browser = ua.includes('CriOS') ? 'chrome' : 'safari';
+      label = `${isIPhone ? 'iPhone' : isIPad ? 'iPad' : 'iOS'} ${toBrowserLabel(browser)}`;
+    } else if (isAndroid) {
+      platform = 'android';
+      browser = ua.includes('Chrome') ? 'chrome' : 'browser';
+      label = `Android ${toBrowserLabel(browser)}`;
+    } else if (isMac) {
+      platform = 'macos';
+      browser = ua.includes('Chrome')
+        ? 'chrome'
+        : ua.includes('Firefox')
+          ? 'firefox'
+          : 'safari';
+      label = `macOS ${toBrowserLabel(browser)}`;
+    } else if (isWindows) {
+      platform = 'windows';
+      browser = ua.includes('Chrome')
+        ? 'chrome'
+        : ua.includes('Firefox')
+          ? 'firefox'
+          : 'edge';
+      label = `Windows ${toBrowserLabel(browser)}`;
+    } else {
+      platform = 'linux';
+      browser = 'browser';
+      label = `Linux ${toBrowserLabel(browser)}`;
+    }
   }
 
   const deviceId = crypto.randomUUID?.() ?? randomUUIDFallback();

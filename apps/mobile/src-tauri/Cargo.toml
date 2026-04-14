@@ -1,0 +1,15 @@
+[package]
+name = "my-codex-app-mobile"
+version = "0.1.0"
+description = "Tauri 2 mobile host for my-codex-app"
+edition = "2021"
+
+[lib]
+name = "my_codex_app_mobile_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }

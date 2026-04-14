@@ -1,0 +1,19 @@
+{
+  "name": "@my-codex-app/mobile",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "android:dev": "node ./scripts/ensure-android-local-direct.mjs && tauri android dev",
+    "android:init": "tauri android init && node ./scripts/ensure-android-local-direct.mjs",
+    "check": "cargo check --manifest-path src-tauri/Cargo.toml",
+    "build": "node ./scripts/ensure-android-local-direct.mjs && tauri build",
+    "dev": "tauri dev",
+    "ios:dev": "tauri ios dev",
+    "ios:init": "tauri ios init",
+    "tauri": "tauri",
+    "typecheck": "cargo check --manifest-path src-tauri/Cargo.toml"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

@@ -1,6 +1,15 @@
 /// <reference types="vite/client" />
 /// <reference types="vite-plugin-pwa/vanillajs" />
 
+interface ImportMetaEnv {
+  readonly VITE_BRIDGE_BASE_URL?: string;
+  readonly VITE_HOST_RUNTIME?: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 declare module 'virtual:pwa-register/react' {
   export interface RegisterSWOptions {
     immediate?: boolean;

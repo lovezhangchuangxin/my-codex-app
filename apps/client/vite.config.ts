@@ -5,7 +5,12 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const tauriDevHost = process.env.TAURI_DEV_HOST;
+const isTauriBuild = Boolean(process.env.TAURI_ENV_PLATFORM);
+
 export default defineConfig({
+  clearScreen: false,
+  envPrefix: ['VITE_', 'TAURI_ENV_*'],
   optimizeDeps: {
     exclude: ['@my-codex-app/protocol', '@my-codex-app/sdk'],
   },
@@ -85,6 +90,27 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    host: true,
+    strictPort: true,
+    host: tauriDevHost || true,
+    hmr: tauriDevHost
+      ? {
+          protocol: 'ws',
+          host: tauriDevHost,
+          port: 1421,
+        }
+      : undefined,
+    watch: {
+      ignored: ['**/src-tauri/**'],
+    },
   },
+  build: isTauriBuild
+    ? {
+        target:
+          process.env.TAURI_ENV_PLATFORM === 'windows'
+            ? 'chrome105'
+            : 'safari13',
+        minify: process.env.TAURI_ENV_DEBUG ? false : 'esbuild',
+        sourcemap: Boolean(process.env.TAURI_ENV_DEBUG),
+      }
+    : undefined,
 });

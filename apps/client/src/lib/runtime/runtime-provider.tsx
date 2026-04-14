@@ -23,7 +23,7 @@ interface RuntimeContainer {
 function createRuntimeContainer(): RuntimeContainer {
   const bridgeClient = new BridgeClient({
     baseUrl: bridgeBaseUrl,
-    credentialStore: new BrowserBridgeCredentialStore(),
+    credentialStore: new BrowserBridgeCredentialStore(bridgeBaseUrl),
   });
 
   return {

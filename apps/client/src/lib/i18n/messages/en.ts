@@ -14,6 +14,14 @@ export const enMessages = {
   'common.notAvailable': 'n/a',
   'common.unknownClientError': 'Unknown client error',
   'connection.action.reconnect': 'Reconnect',
+  'connection.target.apply': 'Apply bridge target',
+  'connection.target.hint.tauri':
+    'Android emulator: use http://10.0.2.2:8787. Real device: use your computer LAN IP. With adb reverse you can use http://127.0.0.1:8787.',
+  'connection.target.hint.web': ({ target }) =>
+    `Default target: ${target ?? 'current page host'}.`,
+  'connection.target.invalid': 'Enter a valid bridge URL.',
+  'connection.target.label': 'Bridge target',
+  'connection.target.placeholder': 'http://192.168.1.20:8787',
   'connection.status.authenticated': 'Connected',
   'connection.status.disconnected': 'Disconnected',
   'connection.status.expired': 'Session expired',
@@ -211,6 +219,8 @@ export const enMessages = {
     'Bridge not detected. Make sure pnpm dev:bridge is running on your computer.',
   'pairing.bridgeUnavailablePrefix': 'Bridge not detected. Make sure ',
   'pairing.bridgeUnavailableSuffix': ' is running on your computer.',
+  'pairing.bridgeUnavailableWithTarget': ({ target }) =>
+    `Bridge not detected at ${target ?? 'the configured target'}.`,
   'pairing.codePlaceholder': 'e.g. ABCD1234',
   'pairing.connect': 'Connect',
   'pairing.connecting': 'Connecting...',

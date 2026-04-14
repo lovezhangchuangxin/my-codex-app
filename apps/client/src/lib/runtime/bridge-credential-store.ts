@@ -3,15 +3,21 @@ import type {
   BridgeSessionCredentials,
 } from '@my-codex-app/sdk';
 
-const STORAGE_KEY = 'my-codex-app.bridge-session';
+import { bridgeCredentialStorageKey } from '@/lib/runtime/bridge-target-store';
 
 export class BrowserBridgeCredentialStore implements BridgeCredentialStore {
+  readonly #storageKey: string;
+
+  constructor(baseUrl: string) {
+    this.#storageKey = bridgeCredentialStorageKey(baseUrl);
+  }
+
   clear(): void {
-    window.localStorage.removeItem(STORAGE_KEY);
+    window.localStorage.removeItem(this.#storageKey);
   }
 
   load(): BridgeSessionCredentials | null {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(this.#storageKey);
     if (!raw) {
       return null;
     }
@@ -25,7 +31,7 @@ export class BrowserBridgeCredentialStore implements BridgeCredentialStore {
   }
 
   save(credentials: BridgeSessionCredentials): void {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
+    window.localStorage.setItem(this.#storageKey, JSON.stringify(credentials));
   }
 }
 

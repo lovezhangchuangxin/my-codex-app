@@ -50,7 +50,8 @@ Known constraints of the current baseline:
 
 - [ ] reconnect/resync is hardened for short local-direct disconnects, but bridge-restart recovery is still limited
 - [ ] browser credential storage is functional, but not yet polished for Tauri-native secure storage
-- [ ] Tauri mobile shell and relay are not implemented
+- [ ] Tauri mobile host is implemented, but release hardening and broader native-device validation are still pending
+- [ ] relay is not implemented
 
 ## Next Major Goals
 
@@ -168,7 +169,7 @@ Expected outcome:
 Spec: `docs/specs/2026-04-13-thread-detail-composer-controls.md`
 Plan: `docs/plans/2026-04-13-thread-detail-composer-controls.md`
 
-### [ ] 7. Add Tauri Mobile Shell Integration
+### [x] 7. Add Tauri Mobile Shell Integration
 
 Goal:
 
@@ -183,8 +184,28 @@ Scope:
 Expected outcome:
 
 - one shared front-end codebase continues to serve browser and Tauri mobile
+- root verification exercises the mobile host scaffold
+- current Android local-direct builds remain compatible with HTTP LAN bridge targets
 
-### [ ] 8. Start Relay Phase
+### [ ] 8. Harden Tauri Mobile Release Behavior
+
+Goal:
+
+- tighten the mobile host from a working development shell into a more production-ready mobile target
+
+Scope:
+
+- native Android/iOS device validation coverage
+- stronger packaged-host security review
+- release build verification beyond `cargo check`
+- eventual migration away from browser local storage to Tauri-native secure storage
+
+Expected outcome:
+
+- Tauri mobile host is documented and validated beyond the current dev-path baseline
+- release packaging risks are reduced and tracked explicitly
+
+### [ ] 9. Start Relay Phase
 
 Goal:
 

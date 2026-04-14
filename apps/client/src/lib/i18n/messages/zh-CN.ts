@@ -10,6 +10,14 @@ export const zhCnMessages: typeof enMessages = {
   'common.notAvailable': '无',
   'common.unknownClientError': '未知客户端错误',
   'connection.action.reconnect': '重新连接',
+  'connection.target.apply': '应用 Bridge 地址',
+  'connection.target.hint.tauri':
+    'Android 模拟器请使用 http://10.0.2.2:8787。真机请使用你电脑的局域网 IP。若使用 adb reverse，也可以填写 http://127.0.0.1:8787。',
+  'connection.target.hint.web': ({ target }) =>
+    `默认地址：${target ?? '当前页面所在主机'}。`,
+  'connection.target.invalid': '请输入有效的 Bridge URL。',
+  'connection.target.label': 'Bridge 地址',
+  'connection.target.placeholder': 'http://192.168.1.20:8787',
   'connection.status.authenticated': '已连接',
   'connection.status.disconnected': '已断开连接',
   'connection.status.expired': '会话已过期',
@@ -195,6 +203,8 @@ export const zhCnMessages: typeof enMessages = {
   'pairing.bridgeUnavailablePrefix':
     '未检测到 Bridge。请确认你的电脑上正在运行 ',
   'pairing.bridgeUnavailableSuffix': '。',
+  'pairing.bridgeUnavailableWithTarget': ({ target }) =>
+    `未在 ${target ?? '当前配置地址'} 检测到 Bridge。`,
   'pairing.codePlaceholder': '例如 ABCD1234',
   'pairing.connect': '连接',
   'pairing.connecting': '连接中...',

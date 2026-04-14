@@ -1,13 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { KeyRound } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { bridgeHealthUrl } from '@/lib/env';
+import { bridgeBaseUrl } from '@/lib/env';
 import { useI18n } from '@/lib/i18n/use-i18n';
-import { useBridgeClient, useRuntime } from '@/lib/runtime/runtime-provider';
+import { BrowserBridgeCredentialStore } from '@/lib/runtime/bridge-credential-store';
+import {
+  normalizeBridgeBaseUrl,
+  resolveBridgeTargetInputValue,
+  toBridgeHealthUrl,
+  writeStoredBridgeBaseUrl,
+} from '@/lib/runtime/bridge-target-store';
+import { isTauriHost } from '@/platform/host';
+import { BridgeClient } from '@my-codex-app/sdk';
 
 import { detectDeviceInfo } from './device-info';
 
@@ -19,15 +26,14 @@ type PairingState =
 
 type BridgeAvailability =
   | { status: 'unknown' }
+  | { status: 'missingTarget' }
   | { status: 'reachable' }
   | { status: 'unreachable' };
 
 export function PairingScreen() {
   const { t } = useI18n();
-  const bridgeClient = useBridgeClient();
-  const runtime = useRuntime();
-  const navigate = useNavigate();
 
+  const [bridgeTarget, setBridgeTarget] = useState(resolveBridgeTargetInputValue);
   const [pairingCode, setPairingCode] = useState('');
   const [pairingState, setPairingState] = useState<PairingState>({
     status: 'idle',
@@ -37,12 +43,24 @@ export function PairingScreen() {
       status: 'unknown',
     });
 
+  const normalizedBridgeTarget = useMemo(
+    () => normalizeBridgeBaseUrl(bridgeTarget),
+    [bridgeTarget],
+  );
+
   useEffect(() => {
     let cancelled = false;
 
     async function checkBridge() {
+      if (!normalizedBridgeTarget) {
+        if (!cancelled) {
+          setBridgeAvailability({ status: 'missingTarget' });
+        }
+        return;
+      }
+
       try {
-        const response = await fetch(bridgeHealthUrl, {
+        const response = await fetch(toBridgeHealthUrl(normalizedBridgeTarget), {
           signal: AbortSignal.timeout(5000),
         });
         if (!response.ok) throw new Error('not ok');
@@ -56,7 +74,7 @@ export function PairingScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [normalizedBridgeTarget]);
 
   const handleSubmit = useCallback(
     async (event: { preventDefault: () => void }) => {
@@ -64,22 +82,35 @@ export function PairingScreen() {
 
       const code = pairingCode.trim();
       if (code.length === 0) return;
+      if (!normalizedBridgeTarget) {
+        setPairingState({
+          status: 'error',
+          message: t('connection.target.invalid'),
+        });
+        return;
+      }
 
       setPairingState({ status: 'submitting' });
 
       try {
         const device = detectDeviceInfo();
-        await bridgeClient.completePairing({ code, device });
+        const pairingClient = new BridgeClient({
+          baseUrl: normalizedBridgeTarget,
+          credentialStore: new BrowserBridgeCredentialStore(
+            normalizedBridgeTarget,
+          ),
+        });
+        await pairingClient.completePairing({ code, device });
+        writeStoredBridgeBaseUrl(normalizedBridgeTarget);
         setPairingState({ status: 'success' });
-        await runtime.bootstrap();
-        navigate('/threads', { replace: true });
+        window.location.replace('/threads');
       } catch (error) {
         const message =
           error instanceof Error ? error.message : t('pairing.error.generic');
         setPairingState({ status: 'error', message });
       }
     },
-    [bridgeClient, runtime, navigate, pairingCode, t],
+    [normalizedBridgeTarget, pairingCode, t],
   );
 
   const isSubmitting = pairingState.status === 'submitting';
@@ -100,8 +131,37 @@ export function PairingScreen() {
         </div>
 
         <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
+          <div className="space-y-1.5">
+            <label
+              className="text-xs font-mono tracking-[0.14em] uppercase text-muted-foreground"
+              htmlFor="bridge-target"
+            >
+              {t('connection.target.label')}
+            </label>
+            <Input
+              autoCapitalize="none"
+              autoCorrect="off"
+              disabled={isSubmitting}
+              id="bridge-target"
+              onChange={(event) => {
+                setBridgeTarget(event.target.value);
+              }}
+              placeholder={t('connection.target.placeholder')}
+              spellCheck={false}
+              type="url"
+              value={bridgeTarget}
+            />
+            <p className="text-xs leading-5 text-muted-foreground">
+              {isTauriHost
+                ? t('connection.target.hint.tauri')
+                : t('connection.target.hint.web', {
+                    target: bridgeBaseUrl,
+                  })}
+            </p>
+          </div>
+
           <Input
-            autoFocus
+            autoFocus={false}
             disabled={isSubmitting}
             id="pairing-code"
             onChange={(event) => {
@@ -129,9 +189,9 @@ export function PairingScreen() {
           pairingState.status === 'idle' ? (
             <Alert>
               <AlertDescription>
-                {t('pairing.bridgeUnavailablePrefix')}
-                <code className="font-mono text-xs">pnpm dev:bridge</code>
-                {t('pairing.bridgeUnavailableSuffix')}
+                {t('pairing.bridgeUnavailableWithTarget', {
+                  target: normalizedBridgeTarget ?? undefined,
+                })}
               </AlertDescription>
             </Alert>
           ) : null}
