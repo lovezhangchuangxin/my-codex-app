@@ -1385,7 +1385,7 @@ function ContextUsageButton({
 }) {
   const { t } = useI18n();
   const percentUsed = getContextUsagePercent(usage);
-  const usedTokens = usage?.total.totalTokens ?? null;
+  const usedTokens = usage?.last.inputTokens ?? null;
   const totalWindow = usage?.modelContextWindow ?? null;
 
   return (
@@ -1400,7 +1400,7 @@ function ContextUsageButton({
         </button>
       </PopoverTrigger>
 
-      <PopoverContent align="start" className="w-80">
+      <PopoverContent align="start" collisionPadding={12} className="w-80">
         <PopoverHeader>
           <PopoverTitle>{t('detail.composer.context.title')}</PopoverTitle>
         </PopoverHeader>
@@ -1437,6 +1437,13 @@ function ContextUsageButton({
                 label={t('detail.composer.context.latestTurn')}
                 value={formatTokenCount(usage.last.totalTokens)}
               />
+            </div>
+
+            <div className="flex items-center justify-between rounded-sm border border-subtle/8 bg-background/60 p-3 text-sm text-muted-foreground">
+              <span>{t('detail.composer.context.totalUsed')}</span>
+              <span className="font-medium tabular-nums text-foreground">
+                {formatTokenCount(usage.total.totalTokens)}
+              </span>
             </div>
 
             <div className="rounded-lg border border-subtle/8 bg-background/60 p-3">
@@ -1857,5 +1864,5 @@ function getContextUsagePercent(
     return null;
   }
 
-  return (usage.total.totalTokens / usage.modelContextWindow) * 100;
+  return (usage.last.inputTokens / usage.modelContextWindow) * 100;
 }

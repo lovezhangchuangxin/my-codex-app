@@ -123,6 +123,7 @@ export const zhCnMessages: typeof enMessages = {
   'detail.composer.context.window': '窗口大小',
   'detail.composer.context.latestTurn': '最近一轮',
   'detail.composer.context.breakdown': '最近一轮明细',
+  'detail.composer.context.totalUsed': '累计消耗 tokens',
   'detail.composer.context.input': '输入',
   'detail.composer.context.cached': '缓存输入',
   'detail.composer.context.output': '输出',

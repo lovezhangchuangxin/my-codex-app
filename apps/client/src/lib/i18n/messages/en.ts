@@ -137,6 +137,7 @@ export const enMessages = {
   'detail.composer.context.window': 'Window size',
   'detail.composer.context.latestTurn': 'Latest turn',
   'detail.composer.context.breakdown': 'Latest turn breakdown',
+  'detail.composer.context.totalUsed': 'Total tokens used',
   'detail.composer.context.input': 'Input',
   'detail.composer.context.cached': 'Cached input',
   'detail.composer.context.output': 'Output',
