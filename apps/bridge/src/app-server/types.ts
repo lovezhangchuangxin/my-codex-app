@@ -42,6 +42,7 @@ export interface AppServerThread {
   preview: string;
   createdAt: number;
   updatedAt: number;
+  path?: string | null;
   cwd: string;
   modelProvider: string;
   status: AppServerThreadStatus;

@@ -143,6 +143,7 @@ export class ThreadEventTranslator {
         const threadId = asString(payload.threadId);
         if (threadId) {
           this.cache.clearThreadPendingRequests(threadId);
+          this.cache.clearContextUsage(threadId);
         }
         return null;
       }

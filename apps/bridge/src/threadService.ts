@@ -40,6 +40,7 @@ import {
   toTurnDetail,
 } from './threads/threadMappers';
 import { ThreadRuntimeCache } from './threads/threadRuntimeCache';
+import { extractTokenUsageFromRollout } from './threads/rolloutTokenUsage';
 
 export class ThreadService {
   readonly #cache = new ThreadRuntimeCache();
@@ -47,7 +48,10 @@ export class ThreadService {
   readonly #listeners = new Set<(event: BridgeEvent) => void>();
   static readonly ALL_THREADS_PAGE_SIZE = 100;
 
-  constructor(private readonly appServerClient: AppServerClient) {}
+  constructor(
+    private readonly appServerClient: AppServerClient,
+    private readonly codexHome: string,
+  ) {}
 
   async listThreads(request: ThreadListRequest): Promise<ThreadListResponse> {
     if (request.cwd !== undefined) {
@@ -210,10 +214,30 @@ export class ThreadService {
       threadId,
       settings,
     });
+
+    // Live token usage notifications always win over rollout-derived seed data.
+    if (this.#cache.getContextUsage(threadId)) {
+      return;
+    }
+
+    const contextUsage = await extractTokenUsageFromRollout({
+      rolloutPath: result.thread.path,
+      threadId,
+      codexHome: this.codexHome,
+    });
+    if (contextUsage && !this.#cache.getContextUsage(threadId)) {
+      this.#cache.setContextUsage(threadId, contextUsage);
+      this.#emitBridgeEvent({
+        type: 'threadContextUsageUpdated',
+        threadId,
+        contextUsage,
+      });
+    }
   }
 
   async unsubscribeThread(threadId: string): Promise<void> {
     await this.appServerClient.unsubscribeThread(threadId);
+    this.#cache.clearContextUsage(threadId);
   }
 
   async startTurn(request: TurnStartRequest): Promise<TurnStartResponse> {

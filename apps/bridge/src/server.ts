@@ -13,12 +13,15 @@ import { WorkspaceService } from './workspaceService';
 async function main(): Promise<void> {
   const config = loadBridgeServerConfig();
   const appServerClient = new AppServerClient();
-  await appServerClient.initialize();
+  const initializeResult = await appServerClient.initialize();
 
   const authService = new BridgeAuthService(
     new DeviceTrustStore(config.bridgeStatePath),
   );
-  const threadService = new ThreadService(appServerClient);
+  const threadService = new ThreadService(
+    appServerClient,
+    initializeResult.codexHome,
+  );
   const projectService = new ProjectService(
     new ProjectRegistryStore(config.bridgeProjectStatePath),
     threadService,

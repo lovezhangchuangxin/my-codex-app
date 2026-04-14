@@ -75,6 +75,10 @@ export class ThreadRuntimeCache {
     return this.#contextUsageCache.get(threadId) ?? null;
   }
 
+  clearContextUsage(threadId: string): void {
+    this.#contextUsageCache.delete(threadId);
+  }
+
   cacheCommandEvent(event: BridgeEvent): void {
     if (event.type !== 'itemStarted' && event.type !== 'itemCompleted') {
       return;
