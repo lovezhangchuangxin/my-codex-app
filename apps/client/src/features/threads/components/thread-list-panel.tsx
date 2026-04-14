@@ -222,6 +222,8 @@ function idleThreadListTitle(
       return t('thread.idle.resyncing.title');
     case 'disconnected':
       return t('thread.idle.disconnected.title');
+    case 'unreachable':
+      return t('thread.idle.unreachable.title');
     default:
       return t('thread.idle.generic.title');
   }
@@ -246,6 +248,8 @@ function idleThreadListMessage(
       return t('thread.idle.resyncing.message');
     case 'disconnected':
       return connectionState.message ?? t('thread.idle.disconnected.message');
+    case 'unreachable':
+      return connectionState.message ?? t('thread.idle.unreachable.message');
     default:
       return t('thread.idle.generic.message');
   }

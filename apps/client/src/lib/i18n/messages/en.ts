@@ -30,6 +30,7 @@ export const enMessages = {
   'connection.status.resyncing': 'Resyncing...',
   'connection.status.revoked': 'Device revoked',
   'connection.status.unpaired': 'Not paired',
+  'connection.status.unreachable': 'Bridge unreachable',
   'detail.action.backToThreads': 'Back to threads',
   'detail.action.send': 'Send',
   'detail.action.stop': 'Stop',
@@ -55,6 +56,9 @@ export const enMessages = {
   'detail.banner.unpaired.message':
     'Pair this browser from the pairing screen before interacting with threads.',
   'detail.banner.unpaired.title': 'Pairing required',
+  'detail.banner.unreachable.message':
+    'Unable to reach bridge. The address may have changed.',
+  'detail.banner.unreachable.title': 'Bridge unreachable',
   'detail.badge.pendingRequests': ({ count }) =>
     pluralize(Number(count ?? 0), 'pending request', 'pending requests'),
   'detail.command.output': 'Output',
@@ -232,6 +236,9 @@ export const enMessages = {
   'pairing.title': 'Pair your device',
   'project.idle.disconnected.message': 'Bridge is currently unavailable.',
   'project.idle.disconnected.title': 'Bridge disconnected',
+  'project.idle.unreachable.message':
+    'Unable to reach bridge. The address may have changed.',
+  'project.idle.unreachable.title': 'Bridge unreachable',
   'project.idle.expired.message':
     'Re-pair this browser to restore local bridge access.',
   'project.idle.expired.title': 'Session expired',
@@ -380,6 +387,9 @@ export const enMessages = {
   'thread.filter.waitingInput': 'Waiting input',
   'thread.idle.disconnected.message': 'Bridge is currently unavailable.',
   'thread.idle.disconnected.title': 'Bridge disconnected',
+  'thread.idle.unreachable.message':
+    'Unable to reach bridge. The address may have changed.',
+  'thread.idle.unreachable.title': 'Bridge unreachable',
   'thread.idle.expired.message':
     'Re-pair this browser to restore local bridge access.',
   'thread.idle.expired.title': 'Session expired',

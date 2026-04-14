@@ -81,5 +81,12 @@ function connectionBanner(
         message: t('detail.banner.unpaired.message'),
         tone: 'error',
       };
+    case 'unreachable':
+      return {
+        title: t('detail.banner.unreachable.title'),
+        message:
+          connectionState.message ?? t('detail.banner.unreachable.message'),
+        tone: 'error',
+      };
   }
 }

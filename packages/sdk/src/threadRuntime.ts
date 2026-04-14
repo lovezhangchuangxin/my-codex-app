@@ -38,6 +38,8 @@ type BridgeFailureClassification =
       message: string;
     };
 
+const MAX_RECONNECT_ATTEMPTS = 5;
+
 export class BridgeThreadRuntime {
   readonly #listeners = new Set<Listener>();
   readonly #pendingEvents = new Map<string, BridgeEvent[]>();
@@ -897,6 +899,15 @@ export class BridgeThreadRuntime {
       return;
     }
 
+    if (this.#reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+      this.#applySessionLoss({
+        kind: 'unreachable',
+        message: 'Unable to reach bridge. The address may have changed.',
+      });
+      this.client.clearCredentials();
+      return;
+    }
+
     const delay =
       Math.min(1000 * 2 ** this.#reconnectAttempt, 30_000) +
       Math.floor(Math.random() * 1000);
@@ -1126,7 +1137,7 @@ function classifyTerminalSessionState(
 function isTerminalConnectionState(
   kind: LocalConnectionState['kind'],
 ): boolean {
-  return kind === 'revoked' || kind === 'expired';
+  return kind === 'revoked' || kind === 'expired' || kind === 'unreachable';
 }
 
 function withLastSyncedAt(

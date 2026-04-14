@@ -21,6 +21,8 @@ export function formatConnectionKind(
       return t('connection.status.expired');
     case 'revoked':
       return t('connection.status.revoked');
+    case 'unreachable':
+      return t('connection.status.unreachable');
     default:
       return kind;
   }

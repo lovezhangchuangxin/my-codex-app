@@ -469,6 +469,13 @@ function unresolvedRouteDetailState(
         message:
           connectionState.message ?? t('detail.banner.disconnected.message'),
       };
+    case 'unreachable':
+      return {
+        kind: 'error',
+        threadId,
+        message:
+          connectionState.message ?? t('detail.banner.unreachable.message'),
+      };
     default:
       return { kind: 'loading', threadId };
   }

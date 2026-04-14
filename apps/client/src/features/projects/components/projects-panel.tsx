@@ -191,6 +191,8 @@ function projectIdleTitle(
       return t('project.idle.resyncing.title');
     case 'disconnected':
       return t('project.idle.disconnected.title');
+    case 'unreachable':
+      return t('project.idle.unreachable.title');
     default:
       return t('project.idle.generic.title');
   }
@@ -215,6 +217,8 @@ function projectIdleMessage(
       return t('project.idle.resyncing.message');
     case 'disconnected':
       return connectionState.message ?? t('project.idle.disconnected.message');
+    case 'unreachable':
+      return connectionState.message ?? t('project.idle.unreachable.message');
     default:
       return t('project.idle.generic.message');
   }

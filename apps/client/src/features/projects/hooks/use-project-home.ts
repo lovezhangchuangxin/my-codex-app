@@ -197,6 +197,7 @@ function canQueryBridge(connectionKind: LocalConnectionState['kind']): boolean {
     case 'unpaired':
     case 'revoked':
     case 'expired':
+    case 'unreachable':
       return false;
     default:
       return true;

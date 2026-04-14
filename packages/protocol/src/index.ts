@@ -20,7 +20,8 @@ export type LocalConnectionStateKind =
   | 'resyncing'
   | 'revoked'
   | 'expired'
-  | 'disconnected';
+  | 'disconnected'
+  | 'unreachable';
 
 export interface LocalConnectionState {
   kind: LocalConnectionStateKind;
