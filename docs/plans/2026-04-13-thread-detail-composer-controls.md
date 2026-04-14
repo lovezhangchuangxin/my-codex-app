@@ -1,5 +1,10 @@
 # Thread Detail Composer Controls — Implementation Plan
 
+> **Status: Implemented** — All five tasks completed. Key files:
+> - `apps/client/src/features/threads/components/thread-detail-composer.tsx`
+> - `apps/client/src/features/threads/lib/composer-command-utils.ts`
+> - `apps/client/src/features/threads/lib/composer-input-utils.ts`
+
 ## Relationship To Spec
 
 This plan implements:
@@ -27,7 +32,7 @@ not backed by real thread state.
 
 ## Task Breakdown
 
-### Task 1: Extend protocol contracts
+### Task 1: Extend protocol contracts ✅
 
 **Files**
 
@@ -57,7 +62,7 @@ not backed by real thread state.
   - `reasoningEffort`
   - `permissionsPreset`
 
-### Task 2: Add bridge caches and APIs
+### Task 2: Add bridge caches and APIs ✅
 
 **Files**
 
@@ -98,7 +103,7 @@ not backed by real thread state.
   temporary `thread/resume` to obtain authoritative settings, then unsubscribe
   when that temporary load is not needed for an active subscriber path.
 
-### Task 3: Thread new state through the SDK runtime
+### Task 3: Thread new state through the SDK runtime ✅
 
 **Files**
 
@@ -122,7 +127,7 @@ not backed by real thread state.
   - preserve text draft on failure
   - update selected thread settings from bridge response / event after success
 
-### Task 4: Redesign the composer UI
+### Task 4: Redesign the composer UI ✅
 
 **Files**
 
@@ -154,7 +159,7 @@ not backed by real thread state.
 - If the selected model changes, the reasoning effort draft is normalized to a
   supported value for that model.
 
-### Task 5: Validation and review
+### Task 5: Validation and review ✅
 
 **Checks**
 

@@ -1,5 +1,8 @@
 # Thread Detail Composer Controls
 
+> **Status: Implemented** — All acceptance criteria met. Primary implementation
+> lives in `apps/client/src/features/threads/components/thread-detail-composer.tsx`.
+
 ## Background
 
 The current thread detail composer in `apps/client` is intentionally minimal. It

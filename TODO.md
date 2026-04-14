@@ -141,7 +141,34 @@ Expected outcome:
 - [x] reconnect is an explicit state machine instead of ad hoc reloads
 - [x] stale local assumptions are overwritten by bridge authority
 
-### [ ] 6. Add Tauri Mobile Shell Integration
+### [x] 6. Implement Composer Enhanced Controls
+
+Goal:
+
+- upgrade the thread detail composer from a minimal send bar into a richer control surface
+
+Scope:
+
+- model selection
+- reasoning effort selection
+- permission preset selection
+- context window usage display
+- slash command system
+- @ file mention with workspace search
+
+Expected outcome:
+
+- [x] composer shows current model name and opens a settings sheet
+- [x] user can change model, reasoning effort, and permission preset
+- [x] circular context usage indicator with detailed breakdown popup
+- [x] slash commands (/model, /permissions, /compact, /review, /rename, etc.)
+- [x] @ mention triggers workspace file search and insertion
+- [x] feature works on desktop and mobile layouts
+
+Spec: `docs/specs/2026-04-13-thread-detail-composer-controls.md`
+Plan: `docs/plans/2026-04-13-thread-detail-composer-controls.md`
+
+### [ ] 7. Add Tauri Mobile Shell Integration
 
 Goal:
 
@@ -157,7 +184,7 @@ Expected outcome:
 
 - one shared front-end codebase continues to serve browser and Tauri mobile
 
-### [ ] 7. Start Relay Phase
+### [ ] 8. Start Relay Phase
 
 Goal:
 
