@@ -51,7 +51,7 @@ export const zhCnMessages: typeof enMessages = {
   'detail.banner.unreachable.title': 'Bridge 不可达',
   'detail.badge.pendingRequests': ({ count }) => `${count ?? 0} 个待处理请求`,
   'detail.command.output': '输出',
-  'detail.composer.placeholder': '发送消息',
+  'detail.composer.placeholder': '输入消息，支持 @file、/command',
   'detail.composer.command.clear': '在当前项目中开始新会话',
   'detail.composer.command.compact': '压缩历史以释放上下文',
   'detail.composer.command.mention': '插入工作区文件引用',

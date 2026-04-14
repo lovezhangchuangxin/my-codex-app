@@ -62,7 +62,7 @@ export const enMessages = {
   'detail.badge.pendingRequests': ({ count }) =>
     pluralize(Number(count ?? 0), 'pending request', 'pending requests'),
   'detail.command.output': 'Output',
-  'detail.composer.placeholder': 'Send a message',
+  'detail.composer.placeholder': 'Message… use @file, /command',
   'detail.composer.command.clear': 'start a new session in this project',
   'detail.composer.command.compact': 'summarize history to free context',
   'detail.composer.command.mention': 'insert a workspace file reference',
