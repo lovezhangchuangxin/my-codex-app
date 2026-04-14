@@ -215,6 +215,9 @@ export function ThreadComposer({
       if (!textarea) {
         return;
       }
+      if (!isDesktop) {
+        return;
+      }
       textarea.focus();
       if (nextCaret !== undefined) {
         textarea.setSelectionRange(nextCaret, nextCaret);
@@ -794,7 +797,7 @@ export function ThreadComposer({
 
       <div className="rounded-[1.35rem] border border-subtle/8 bg-card/84 px-3 py-2.5 shadow-sm">
         <Textarea
-          autoFocus
+          autoFocus={isDesktop}
           className="min-h-[52px] max-h-[32vh] resize-none border-0 bg-transparent px-1 py-0.5 font-mono text-sm leading-6 shadow-none transition-shadow duration-200 placeholder:text-muted-foreground/45 focus-visible:ring-0"
           id="thread-composer"
           onClick={(event) => {
@@ -1070,8 +1073,10 @@ export function ThreadComposer({
           )}
           onOpenAutoFocus={(event) => {
             event.preventDefault();
-            renameInputRef.current?.focus();
-            renameInputRef.current?.select();
+            if (isDesktop) {
+              renameInputRef.current?.focus();
+              renameInputRef.current?.select();
+            }
           }}
           side={isDesktop ? 'right' : 'bottom'}
         >
