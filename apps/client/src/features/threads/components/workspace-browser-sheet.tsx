@@ -123,7 +123,10 @@ export function WorkspaceBrowserSheet({
           </div>
         ) : (
           <div className="min-h-0 flex flex-1 flex-col">
-            <div className="flex items-center gap-2 border-b border-subtle/6 px-4 py-3" role="tablist">
+            <div
+              className="flex items-center gap-2 border-b border-subtle/6 px-4 py-3"
+              role="tablist"
+            >
               <Button
                 id="workspace-files-tab"
                 aria-controls="workspace-files-panel"
@@ -157,7 +160,10 @@ export function WorkspaceBrowserSheet({
 
             <div
               aria-labelledby="workspace-files-tab"
-              className={cn('min-h-0 flex-1 flex-col', mobileMode === 'files' && 'flex')}
+              className={cn(
+                'min-h-0 flex-1 flex-col',
+                mobileMode === 'files' && 'flex',
+              )}
               hidden={mobileMode !== 'files'}
               id="workspace-files-panel"
               role="tabpanel"
@@ -178,7 +184,10 @@ export function WorkspaceBrowserSheet({
             </div>
             <div
               aria-labelledby="workspace-preview-tab"
-              className={cn('min-h-0 flex-1 flex-col', mobileMode === 'preview' && 'flex')}
+              className={cn(
+                'min-h-0 flex-1 flex-col',
+                mobileMode === 'preview' && 'flex',
+              )}
               hidden={mobileMode !== 'preview'}
               id="workspace-preview-panel"
               role="tabpanel"

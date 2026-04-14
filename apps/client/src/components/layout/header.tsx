@@ -7,6 +7,7 @@ import { ConnectionIndicator } from '@/components/layout/connection-indicator';
 import { NotificationBell } from '@/components/layout/notification-bell';
 import { RequestSheet } from '@/features/requests/components/request-sheet';
 import { SettingsSheet } from '@/components/settings/settings-sheet';
+import { threadUrl } from '@/lib/routing/thread-urls';
 import { useI18n } from '@/lib/i18n/use-i18n';
 
 export function Header() {
@@ -17,12 +18,7 @@ export function Header() {
 
   function handleOpenThread(threadId: string, requestKey?: string) {
     setRequestSheetOpen(false);
-    navigate({
-      pathname: `/threads/${encodeURIComponent(threadId)}`,
-      ...(requestKey
-        ? { search: `?request=${encodeURIComponent(requestKey)}` }
-        : {}),
-    });
+    navigate(threadUrl(threadId, { requestKey: requestKey ?? null }));
   }
 
   return (

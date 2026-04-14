@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useBridgeClient } from '@/lib/runtime/runtime-provider';
 import { upsertProjectSummary } from '@/features/projects/lib/project-utils';
@@ -24,36 +24,17 @@ export function useProjectHome(
 ) {
   const bridgeClient = useBridgeClient();
   const connectionKind = connectionState.kind;
-  const lastPreferredProjectPathRef = useRef<string | null>(null);
   const [projectsState, setProjectsState] = useState<ProjectListState>({
     kind: 'idle',
   });
-  const [selectedProjectPath, setSelectedProjectPath] = useState<string | null>(
-    null,
-  );
+  // selectedProjectPath is now driven by URL — preferredProjectPath is the
+  // source of truth and passed through directly.
+  const selectedProjectPath = preferredProjectPath;
   const [sessionsState, setSessionsState] = useState<ThreadListState>({
     kind: 'idle',
   });
   const [projectsReloadToken, setProjectsReloadToken] = useState(0);
   const [sessionsReloadToken, setSessionsReloadToken] = useState(0);
-
-  useEffect(() => {
-    if (
-      preferredProjectPath &&
-      preferredProjectPath !== lastPreferredProjectPathRef.current
-    ) {
-      lastPreferredProjectPathRef.current = preferredProjectPath;
-      setSelectedProjectPath(preferredProjectPath);
-      return;
-    }
-
-    if (
-      preferredProjectPath === null &&
-      lastPreferredProjectPathRef.current !== null
-    ) {
-      lastPreferredProjectPathRef.current = null;
-    }
-  }, [preferredProjectPath]);
 
   useEffect(() => {
     if (!canQueryBridge(connectionKind)) {
@@ -169,10 +150,6 @@ export function useProjectHome(
     };
   }, [connectionKind, runtimeThreadsState, selectedProjectPath]);
 
-  function selectProject(projectPath: string | null) {
-    setSelectedProjectPath(projectPath);
-  }
-
   function refreshProjects() {
     setProjectsReloadToken((current) => current + 1);
   }
@@ -191,7 +168,6 @@ export function useProjectHome(
     request: ProjectImportRequest,
   ): Promise<ProjectSummary> {
     const response = await bridgeClient.importProject(request);
-    setSelectedProjectPath(response.project.path);
     setProjectsState((current) =>
       current.kind === 'ready'
         ? {
@@ -212,7 +188,6 @@ export function useProjectHome(
     refreshSessions,
     searchProjects,
     selectedProjectPath,
-    selectProject,
     sessionsState,
   };
 }

@@ -4,11 +4,7 @@ import { toast } from 'sonner';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import {
   Popover,
@@ -120,9 +116,7 @@ export function ProjectSessionsPanel({
               </PopoverTrigger>
               <PopoverContent align="start" sideOffset={4}>
                 <div className="space-y-2">
-                  <p className="font-mono text-xs break-all">
-                    {project.path}
-                  </p>
+                  <p className="font-mono text-xs break-all">{project.path}</p>
                   <CopyPathButton path={project.path} />
                 </div>
               </PopoverContent>
@@ -299,11 +293,7 @@ function CopyPathButton({ path }: { path: string }) {
       size="sm"
       variant="outline"
     >
-      {copied ? (
-        <Check className="size-3.5" />
-      ) : (
-        <Copy className="size-3.5" />
-      )}
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
       {t('project.sessions.action.copyPath')}
     </Button>
   );
