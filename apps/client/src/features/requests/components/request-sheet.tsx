@@ -12,7 +12,7 @@ import { PendingRequestList } from '@/features/requests/components/pending-reque
 import { buildPendingRequestEntries } from '@/features/requests/lib/request-utils';
 import { useRequestDrafts } from '@/features/requests/lib/use-request-drafts';
 import { useI18n } from '@/lib/i18n/use-i18n';
-import { useRuntime } from '@/lib/runtime/runtime-provider';
+import { useRuntime } from '@/lib/runtime/runtime-context';
 import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
 import { appViewportHeight } from '@/platform/viewport';
 

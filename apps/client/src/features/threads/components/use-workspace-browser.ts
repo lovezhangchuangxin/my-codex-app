@@ -8,7 +8,7 @@ import {
   normalizeWorkspacePath,
 } from '@/features/threads/lib/workspace-utils';
 import { useI18n } from '@/lib/i18n/use-i18n';
-import { useBridgeClient } from '@/lib/runtime/runtime-provider';
+import { useBridgeClient } from '@/lib/runtime/runtime-context';
 import type { WorkspaceEntry } from '@my-codex-app/protocol';
 
 export type WorkspaceBrowserRequestedTargetKind = 'file' | 'directory' | 'auto';

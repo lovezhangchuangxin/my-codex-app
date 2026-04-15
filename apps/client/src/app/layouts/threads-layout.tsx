@@ -17,7 +17,7 @@ import {
   threadsUrl,
 } from '@/lib/routing/thread-urls';
 import { useI18n } from '@/lib/i18n/use-i18n';
-import { useRuntime } from '@/lib/runtime/runtime-provider';
+import { useRuntime } from '@/lib/runtime/runtime-context';
 import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
 import type { ThreadDetailState, ThreadListState } from '@my-codex-app/sdk';
 import type {

@@ -48,7 +48,7 @@ import {
 } from '@/features/threads/lib/composer-input-utils';
 import { formatTokenCount } from '@/features/threads/components/thread-detail-utils';
 import { useI18n } from '@/lib/i18n/use-i18n';
-import { useBridgeClient } from '@/lib/runtime/runtime-provider';
+import { useBridgeClient } from '@/lib/runtime/runtime-context';
 import { cn } from '@/lib/utils';
 import {
   readNativeKeyboardInsetHeight,
@@ -1415,7 +1415,10 @@ function ContextUsageButton({
                     ? `${Math.round(percentUsed)}%`
                     : t('detail.composer.context.unavailable')
                 }
-                valueClassName={CONTEXT_USAGE_STYLES[getContextUsageLevel(percentUsed)].textClass}
+                valueClassName={
+                  CONTEXT_USAGE_STYLES[getContextUsageLevel(percentUsed)]
+                    .textClass
+                }
               />
               <ContextUsageStat
                 label={t('detail.composer.context.used')}
@@ -1630,13 +1633,28 @@ function ComposerSettingsSection({
   );
 }
 
-function ContextUsageStat({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
+function ContextUsageStat({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
     <div className="rounded-lg border border-subtle/8 bg-background/60 px-2.5 py-2">
       <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         {label}
       </div>
-      <div className={cn('mt-0.5 text-base font-medium', valueClassName ?? 'text-foreground')}>{value}</div>
+      <div
+        className={cn(
+          'mt-0.5 text-base font-medium',
+          valueClassName ?? 'text-foreground',
+        )}
+      >
+        {value}
+      </div>
     </div>
   );
 }
@@ -1649,7 +1667,8 @@ function ContextUsageRing({ percentUsed }: { percentUsed: number | null }) {
   const progress = clampedPercent === null ? 0 : clampedPercent / 100;
   const dashOffset = circumference * (1 - progress);
   const trackColor = 'var(--color-border)';
-  const arcColor = CONTEXT_USAGE_STYLES[getContextUsageLevel(clampedPercent)].cssVar;
+  const arcColor =
+    CONTEXT_USAGE_STYLES[getContextUsageLevel(clampedPercent)].cssVar;
 
   return (
     <svg aria-hidden="true" className="size-8" viewBox="0 0 36 36">
@@ -1843,8 +1862,14 @@ function getPermissionPresetOptions(t: (key: string) => string): Array<{
 
 type ContextUsageLevel = 'idle' | 'low' | 'medium' | 'high';
 
-const CONTEXT_USAGE_STYLES: Record<ContextUsageLevel, { cssVar: string; textClass: string }> = {
-  idle: { cssVar: 'var(--color-muted-foreground)', textClass: 'text-muted-foreground' },
+const CONTEXT_USAGE_STYLES: Record<
+  ContextUsageLevel,
+  { cssVar: string; textClass: string }
+> = {
+  idle: {
+    cssVar: 'var(--color-muted-foreground)',
+    textClass: 'text-muted-foreground',
+  },
   low: { cssVar: 'var(--color-primary)', textClass: 'text-primary' },
   medium: { cssVar: 'var(--color-chart-2)', textClass: 'text-chart-2' },
   high: { cssVar: 'var(--color-destructive)', textClass: 'text-destructive' },

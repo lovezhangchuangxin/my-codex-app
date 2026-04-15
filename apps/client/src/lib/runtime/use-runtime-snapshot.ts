@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-import { useRuntime } from '@/lib/runtime/runtime-provider';
+import { useRuntime } from '@/lib/runtime/runtime-context';
 
 export function useRuntimeSnapshot() {
   const runtime = useRuntime();

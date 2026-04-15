@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { useBridgeClient } from '@/lib/runtime/runtime-provider';
+import { useBridgeClient } from '@/lib/runtime/runtime-context';
 import { upsertProjectSummary } from '@/features/projects/lib/project-utils';
 import type { ThreadListState } from '@my-codex-app/sdk';
 import type {

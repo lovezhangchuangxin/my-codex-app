@@ -11,7 +11,7 @@ import {
 } from '@/lib/runtime/bridge-target-store';
 import { isTauriHost } from '@/platform/host';
 import { formatConnectionKind } from '@/lib/runtime/connection-utils';
-import { useRuntime } from '@/lib/runtime/runtime-provider';
+import { useRuntime } from '@/lib/runtime/runtime-context';
 import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
 import { cn } from '@/lib/utils';
 

@@ -1,6 +1,4 @@
 import {
-  createContext,
-  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -10,10 +8,11 @@ import {
 
 import { bridgeBaseUrl } from '@/lib/env';
 import { BrowserBridgeCredentialStore } from '@/lib/runtime/bridge-credential-store';
+import {
+  BridgeClientContext,
+  RuntimeContext,
+} from '@/lib/runtime/runtime-context';
 import { BridgeClient, BridgeThreadRuntime } from '@my-codex-app/sdk';
-
-const RuntimeContext = createContext<BridgeThreadRuntime | null>(null);
-const BridgeClientContext = createContext<BridgeClient | null>(null);
 
 interface RuntimeContainer {
   bridgeClient: BridgeClient;
@@ -125,24 +124,4 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
       </RuntimeContext.Provider>
     </BridgeClientContext.Provider>
   );
-}
-
-export function useRuntime() {
-  const runtime = useContext(RuntimeContext);
-
-  if (!runtime) {
-    throw new Error('useRuntime must be used within RuntimeProvider');
-  }
-
-  return runtime;
-}
-
-export function useBridgeClient() {
-  const bridgeClient = useContext(BridgeClientContext);
-
-  if (!bridgeClient) {
-    throw new Error('useBridgeClient must be used within RuntimeProvider');
-  }
-
-  return bridgeClient;
 }

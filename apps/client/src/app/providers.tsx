@@ -3,7 +3,7 @@ import { useEffect, type ReactNode } from 'react';
 import { PwaUpdatePrompt } from '@/components/common/pwa-update-prompt';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { LocaleProvider } from '@/lib/i18n/provider';
-import { RuntimeProvider } from '@/lib/runtime/runtime-provider';
+import { LazyRuntimeProvider } from '@/lib/runtime/lazy-runtime-provider';
 import { ThemeProvider, useTheme } from '@/lib/theme';
 import { isTauriHost, supportsPwa } from '@/platform/host';
 import {
@@ -249,13 +249,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <ThemeProvider>
       <LocaleProvider>
         <TooltipProvider>
-          <RuntimeProvider>
-            <TauriViewportSync />
-            <DevServiceWorkerCleanup />
+          <TauriViewportSync />
+          <DevServiceWorkerCleanup />
+          <LazyRuntimeProvider>
             {children}
             {!supportsPwa || import.meta.env.DEV ? null : <PwaUpdatePrompt />}
             <ThemedToaster />
-          </RuntimeProvider>
+          </LazyRuntimeProvider>
         </TooltipProvider>
       </LocaleProvider>
     </ThemeProvider>
