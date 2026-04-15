@@ -554,6 +554,13 @@ export type BridgeEvent =
       turn: TurnDetail;
     }
   | {
+      type: 'turnError';
+      threadId: string;
+      turnId: string;
+      error: TurnError;
+      willRetry: boolean;
+    }
+  | {
       type: 'itemStarted';
       threadId: string;
       turnId: string;

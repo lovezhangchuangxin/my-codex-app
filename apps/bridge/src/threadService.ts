@@ -205,7 +205,22 @@ export class ThreadService {
   }
 
   async resumeThread(threadId: string): Promise<void> {
-    const result = await this.appServerClient.resumeThread(threadId);
+    let result: Awaited<ReturnType<AppServerClient['resumeThread']>>;
+    try {
+      result = await this.appServerClient.resumeThread(threadId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (
+        message.includes('no rollout found') ||
+        message.includes('not materialized')
+      ) {
+        // Newly created threads have no rollout file yet.
+        // thread/start already subscribed the MCP connection to events,
+        // so returning silently is safe.
+        return;
+      }
+      throw error;
+    }
     this.#cache.setThreadCwd(threadId, result.thread.cwd);
     const settings = toThreadSettings(result);
     this.#cache.setThreadSettings(threadId, settings);

@@ -87,6 +87,26 @@ export class ThreadEventTranslator {
         const turn = toTurnDetail(payload.turn as AppServerTurn);
         return threadId ? { type: 'turnCompleted', threadId, turn } : null;
       }
+      case 'error': {
+        const threadId = asString(payload.threadId);
+        const turnId = asString(payload.turnId);
+        const errorPayload = toObject(payload.error);
+        if (!threadId || !turnId || !errorPayload) {
+          return null;
+        }
+        const message = asString(errorPayload.message) ?? 'Unknown error';
+        const additionalDetails = asString(errorPayload.additionalDetails);
+        return {
+          type: 'turnError',
+          threadId,
+          turnId,
+          error: {
+            message,
+            ...(additionalDetails ? { additionalDetails } : {}),
+          },
+          willRetry: !!payload.willRetry,
+        };
+      }
       case 'item/started': {
         const threadId = asString(payload.threadId);
         const turnId = asString(payload.turnId);

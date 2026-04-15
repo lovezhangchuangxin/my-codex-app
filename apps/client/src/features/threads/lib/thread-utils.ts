@@ -4,6 +4,7 @@ import type {
   ThreadRuntimeStatus,
   ThreadSummary,
   TurnDetail,
+  TurnError,
   UserInput,
 } from '@my-codex-app/protocol';
 import type { AppLocale } from '@/lib/i18n/types';
@@ -17,6 +18,7 @@ export type FlatThreadItem = ThreadItem & {
   turnId: string;
   turnIndex: number;
   isFirstInTurn: boolean;
+  turnError?: TurnError;
 };
 
 export type ThreadStatusFilter =
@@ -218,6 +220,23 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
         turnId: turn.id,
         turnIndex,
         isFirstInTurn: itemIndex === 0,
+        ...(itemIndex === turn.items.length - 1 && turn.error
+          ? { turnError: turn.error }
+          : {}),
+      });
+    }
+
+    // Turns with errors but no items still need to display the error.
+    if (turn.items.length === 0 && turn.error) {
+      items.push({
+        type: 'unknown',
+        id: `${turn.id}-error`,
+        title: '',
+        raw: null,
+        turnId: turn.id,
+        turnIndex,
+        isFirstInTurn: true,
+        turnError: turn.error,
       });
     }
   }

@@ -15,6 +15,7 @@ import {
   GalleryHorizontal,
   Search,
   SquareTerminal,
+  TriangleAlert,
 } from 'lucide-react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
@@ -34,7 +35,7 @@ import {
 import type { FlatThreadItem } from '@/features/threads/lib/thread-utils';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { cn } from '@/lib/utils';
-import type { ThreadItem } from '@my-codex-app/protocol';
+import type { ThreadItem, TurnError } from '@my-codex-app/protocol';
 
 const LazyMarkdownContent = lazy(async () => {
   const module = await import('@/components/common/markdown-content');
@@ -155,6 +156,9 @@ export function ThreadMessageStream({
                   onOpenWorkspacePath={onOpenWorkspacePath}
                   resolveWorkspacePath={resolveWorkspacePath}
                 />
+                {item.turnError ? (
+                  <TurnErrorBanner error={item.turnError} />
+                ) : null}
               </div>
             </div>
           );
@@ -266,6 +270,9 @@ const FlatItemRenderer = memo(function FlatItemRenderer({
         />
       );
     case 'unknown':
+      if (!item.title && item.raw === null) {
+        return null;
+      }
       return (
         <div className="lg:ml-9">
           <Collapsible>
@@ -728,6 +735,32 @@ function CommandMetaBadge({ label }: { label: string }) {
     <span className="rounded-md border border-subtle/8 bg-background/45 px-2 py-0.5 font-mono text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
       {label}
     </span>
+  );
+}
+
+function TurnErrorBanner({ error }: { error: TurnError }) {
+  const { t } = useI18n();
+
+  return (
+    <div
+      role="alert"
+      className="mt-2 flex items-start gap-2 rounded-xl border border-red-200/60 bg-red-50/60 px-3 py-2.5 dark:border-red-500/20 dark:bg-red-950/30 lg:ml-9"
+    >
+      <TriangleAlert className="mt-0.5 size-4 shrink-0 text-red-600 dark:text-red-400" />
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-red-800 dark:text-red-300">
+          {t('detail.turn.error.label')}
+        </p>
+        <p className="mt-0.5 text-sm leading-6 text-red-700 dark:text-red-400">
+          {error.message}
+        </p>
+        {error.additionalDetails ? (
+          <p className="mt-1 text-xs leading-5 text-red-600/80 dark:text-red-400/60">
+            {error.additionalDetails}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 

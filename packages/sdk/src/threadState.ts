@@ -175,6 +175,7 @@ export function updateThreadSummaryState(
           ),
         ),
       };
+    case 'turnError':
     case 'turnCompleted':
     case 'agentMessageDelta':
       return state;
@@ -244,6 +245,19 @@ export function applyThreadEvent(
         ...thread,
         updatedAt: event.turn.completedAt ?? thread.updatedAt,
         turns: upsertTurn(thread.turns, event.turn),
+      };
+    case 'turnError':
+      return {
+        ...thread,
+        turns: thread.turns.map((turn) =>
+          turn.id === event.turnId
+            ? {
+                ...turn,
+                error: event.error,
+                status: event.willRetry ? 'inProgress' : 'failed',
+              }
+            : turn,
+        ),
       };
     case 'itemStarted':
       return {
@@ -404,6 +418,9 @@ function upsertTurn(
           ...turn,
           ...nextTurn,
           items: nextTurn.items.length > 0 ? nextTurn.items : turn.items,
+          ...((nextTurn.error ?? turn.error)
+            ? { error: (nextTurn.error ?? turn.error)! }
+            : {}),
         }
       : turn,
   );

@@ -106,7 +106,20 @@ export class AppServerClient extends EventEmitter {
   }
 
   async readThread(threadId: string): Promise<ThreadReadResult> {
-    return this.#readThread(threadId, true);
+    try {
+      return await this.#readThread(threadId, true);
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.message.includes('not materialized yet') ||
+          error.message.includes(
+            'includeTurns is unavailable before first user message',
+          ))
+      ) {
+        return await this.#readThread(threadId, false);
+      }
+      throw error;
+    }
   }
 
   async readThreadSummary(threadId: string): Promise<ThreadReadResult> {

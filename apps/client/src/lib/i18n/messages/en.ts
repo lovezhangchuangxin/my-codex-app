@@ -154,6 +154,7 @@ export const enMessages = {
   'detail.fileChange.showDiff': 'Show diff',
   'detail.compaction.label': 'Context compaction',
   'detail.compaction.description': 'Codex compacted the conversation history.',
+  'detail.turn.error.label': 'Turn error',
   'detail.review.completed': 'Review result',
   'detail.review.inProgress': 'Reviewing',
   'detail.review.show': 'Show review',

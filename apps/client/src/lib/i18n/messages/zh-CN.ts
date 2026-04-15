@@ -139,6 +139,7 @@ export const zhCnMessages: typeof enMessages = {
   'detail.fileChange.showDiff': '显示 diff',
   'detail.compaction.label': '上下文压缩',
   'detail.compaction.description': 'Codex 已压缩当前对话历史。',
+  'detail.turn.error.label': '回合错误',
   'detail.review.completed': '审查结果',
   'detail.review.inProgress': '审查中',
   'detail.review.show': '查看审查',
