@@ -24,13 +24,19 @@ test('ThreadService refreshes context usage after unsubscribe instead of reusing
   });
 
   await service.resumeThread(threadId);
-  assert.equal(lastContextUsageEvent(events)?.contextUsage.total.totalTokens, 10);
+  assert.equal(
+    lastContextUsageEvent(events)?.contextUsage.total.totalTokens,
+    10,
+  );
 
   await service.unsubscribeThread(threadId);
   await writeRollout(rolloutPath, 20);
   await service.resumeThread(threadId);
 
-  assert.equal(lastContextUsageEvent(events)?.contextUsage.total.totalTokens, 20);
+  assert.equal(
+    lastContextUsageEvent(events)?.contextUsage.total.totalTokens,
+    20,
+  );
   assert.equal(client.unsubscribeCalls, 1);
 
   unsubscribeEvents();
@@ -43,7 +49,10 @@ test('ThreadService does not overwrite live context usage that arrives before ro
 
   await writeRollout(rolloutPath, 10);
 
-  const client = new FakeAppServerClient(rolloutPath, buildAppServerTokenUsage(90));
+  const client = new FakeAppServerClient(
+    rolloutPath,
+    buildAppServerTokenUsage(90),
+  );
   const service = new ThreadService(client as never, tempRoot);
   const events: BridgeEvent[] = [];
   const unsubscribeEvents = service.onBridgeEvent((event) => {
@@ -53,7 +62,9 @@ test('ThreadService does not overwrite live context usage that arrives before ro
   await service.resumeThread(threadId);
 
   const contextEvents = events.filter(
-    (event): event is Extract<BridgeEvent, { type: 'threadContextUsageUpdated' }> =>
+    (
+      event,
+    ): event is Extract<BridgeEvent, { type: 'threadContextUsageUpdated' }> =>
       event.type === 'threadContextUsageUpdated',
   );
   assert.equal(contextEvents.length, 1);

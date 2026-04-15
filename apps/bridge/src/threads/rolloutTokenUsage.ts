@@ -94,7 +94,10 @@ async function findRolloutPathInTree(
     const entryPath = path.join(root, entry.name);
 
     if (entry.isFile()) {
-      if (entry.name.startsWith('rollout-') && entry.name.endsWith(fileSuffix)) {
+      if (
+        entry.name.startsWith('rollout-') &&
+        entry.name.endsWith(fileSuffix)
+      ) {
         return entryPath;
       }
       continue;
@@ -130,7 +133,12 @@ async function findLastTokenInfo(
       position -= chunkSize;
 
       const chunk = Buffer.allocUnsafe(chunkSize);
-      const { bytesRead } = await fileHandle.read(chunk, 0, chunkSize, position);
+      const { bytesRead } = await fileHandle.read(
+        chunk,
+        0,
+        chunkSize,
+        position,
+      );
       let combined = chunk.subarray(0, bytesRead);
       if (trailingBytes.length > 0) {
         combined = Buffer.concat([combined, trailingBytes]);

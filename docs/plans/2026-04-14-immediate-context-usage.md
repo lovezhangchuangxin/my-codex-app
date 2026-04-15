@@ -7,13 +7,11 @@
 Core rollout file reader. Exports a single function:
 
 ```typescript
-export async function extractTokenUsageFromRollout(
-  source: {
-    rolloutPath?: string | null;
-    threadId?: string;
-    codexHome?: string;
-  },
-): Promise<ThreadContextUsage | null>
+export async function extractTokenUsageFromRollout(source: {
+  rolloutPath?: string | null;
+  threadId?: string;
+  codexHome?: string;
+}): Promise<ThreadContextUsage | null>;
 ```
 
 **Internal steps:**
@@ -22,7 +20,7 @@ export async function extractTokenUsageFromRollout(
    - **Primary**: use `thread.path` from `thread/resume`
    - **Fallback**: search `initialize.codexHome/{sessions,archived_sessions}/**/rollout-*-${threadId}.jsonl`
    - If not found, return `null`
-3. Read file and extract token data:
+2. Read file and extract token data:
    - Read JSONL from the tail backwards in chunks
    - Return the first line from the end where `payload.type === 'token_count'` and `payload.info !== null`
    - Map rollout field names to protocol types:

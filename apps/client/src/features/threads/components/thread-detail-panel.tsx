@@ -217,7 +217,10 @@ function ReadyThreadDetail({
       thread,
     }),
   );
-  const flatItems = useMemo(() => flattenTurnItems(thread.turns), [thread.turns]);
+  const flatItems = useMemo(
+    () => flattenTurnItems(thread.turns),
+    [thread.turns],
+  );
   const scrollRef = useAutoScroll<HTMLDivElement>([
     flatItems.length,
     thread.updatedAt,
