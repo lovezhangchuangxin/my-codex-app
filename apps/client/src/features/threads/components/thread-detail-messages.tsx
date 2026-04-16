@@ -108,8 +108,22 @@ export function ThreadMessageStream({
     return () => cancelAnimationFrame(id);
   }, []);
   const hasActiveReasoning = flatItems.some(
-    (item) => item.type === 'reasoning' && item.turnStatus === 'inProgress',
+    (item) => item.type === 'reasoning' && item.isReasoningLive,
   );
+  useEffect(() => {
+    const activeReasoningKeys = new Set(
+      flatItems
+        .filter((item) => item.type === 'reasoning' && item.isReasoningLive)
+        .map((item) => `${item.turnId}:${item.id}`),
+    );
+
+    for (const key of reasoningLiveStartMsByItemKey.keys()) {
+      if (!activeReasoningKeys.has(key)) {
+        reasoningLiveStartMsByItemKey.delete(key);
+      }
+    }
+  }, [flatItems]);
+
   const [liveNowMs, setLiveNowMs] = useState(() => Date.now());
   useEffect(() => {
     if (!hasActiveReasoning) {
@@ -339,7 +353,7 @@ function ThinkingBlock({
   item: Extract<FlatThreadItem, { type: 'reasoning' }>;
 }) {
   const { formatDateTime, t } = useI18n();
-  const isInProgress = item.turnStatus === 'inProgress';
+  const isInProgress = item.isReasoningLive;
   const [open, setOpen] = useState(isInProgress);
   const liveKey = `${item.turnId}:${item.id}`;
 

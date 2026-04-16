@@ -21,6 +21,7 @@ export type FlatThreadItem = ThreadItem & {
   turnStartedAt?: number;
   turnCompletedAt?: number;
   turnDurationMs?: number;
+  isReasoningLive: boolean;
   isFirstInTurn: boolean;
   turnError?: TurnError;
 };
@@ -217,8 +218,27 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
 
   for (let turnIndex = 0; turnIndex < turns.length; turnIndex++) {
     const turn = turns[turnIndex]!;
-    for (let itemIndex = 0; itemIndex < turn.items.length; itemIndex++) {
-      const base = turn.items[itemIndex]!;
+    const liveReasoningItemId = getLiveReasoningItemId(turn);
+    const visibleTurnItems: Array<{
+      base: ThreadItem;
+      isReasoningLive: boolean;
+    }> = [];
+
+    for (const base of turn.items) {
+      const isReasoningLive =
+        base.type === 'reasoning' && base.id === liveReasoningItemId;
+      if (shouldHideEmptyReasoning(base, isReasoningLive)) {
+        continue;
+      }
+      visibleTurnItems.push({ base, isReasoningLive });
+    }
+
+    for (
+      let visibleItemIndex = 0;
+      visibleItemIndex < visibleTurnItems.length;
+      visibleItemIndex++
+    ) {
+      const { base, isReasoningLive } = visibleTurnItems[visibleItemIndex]!;
       items.push({
         ...base,
         turnId: turn.id,
@@ -233,15 +253,16 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
         ...(turn.durationMs !== undefined
           ? { turnDurationMs: turn.durationMs }
           : {}),
-        isFirstInTurn: itemIndex === 0,
-        ...(itemIndex === turn.items.length - 1 && turn.error
+        isReasoningLive,
+        isFirstInTurn: visibleItemIndex === 0,
+        ...(visibleItemIndex === visibleTurnItems.length - 1 && turn.error
           ? { turnError: turn.error }
           : {}),
       });
     }
 
     // Turns with errors but no items still need to display the error.
-    if (turn.items.length === 0 && turn.error) {
+    if (visibleTurnItems.length === 0 && turn.error) {
       items.push({
         type: 'unknown',
         id: `${turn.id}-error`,
@@ -259,6 +280,7 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
         ...(turn.durationMs !== undefined
           ? { turnDurationMs: turn.durationMs }
           : {}),
+        isReasoningLive: false,
         isFirstInTurn: true,
         turnError: turn.error,
       });
@@ -266,4 +288,26 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
   }
 
   return items;
+}
+
+function getLiveReasoningItemId(turn: TurnDetail): string | null {
+  if (turn.status !== 'inProgress') {
+    return null;
+  }
+
+  const lastItem = turn.items.at(-1);
+  if (!lastItem || lastItem.type !== 'reasoning') {
+    return null;
+  }
+
+  return lastItem.id;
+}
+
+function shouldHideEmptyReasoning(item: ThreadItem, isReasoningLive: boolean) {
+  return (
+    item.type === 'reasoning' &&
+    item.summary.length === 0 &&
+    item.content.length === 0 &&
+    !isReasoningLive
+  );
 }
