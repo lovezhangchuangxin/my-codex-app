@@ -425,7 +425,7 @@ function ThinkingBlock({
           </span>
         ) : null}
       </div>
-      {open ? (
+      {open && (item.summary.length > 0 || item.content.length > 0) ? (
         <div className="mt-2 space-y-2 rounded-xl border border-subtle/8 bg-secondary/6 p-3">
           {item.summary.length > 0 ? (
             <ul className="space-y-1.5 text-sm leading-6 text-foreground">
