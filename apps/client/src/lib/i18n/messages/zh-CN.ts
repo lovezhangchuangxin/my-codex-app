@@ -144,6 +144,16 @@ export const zhCnMessages: typeof enMessages = {
   'detail.review.inProgress': '审查中',
   'detail.review.show': '查看审查',
   'detail.reasoning.thinking': '思考中...',
+  'detail.reasoning.completed': '思考过程',
+  'detail.reasoning.awaiting': '等待推理增量...',
+  'detail.reasoning.turnStarted': ({ value }) =>
+    `回合开始：${value ?? ''}`.trim(),
+  'detail.reasoning.turnCompleted': ({ value }) =>
+    `回合结束：${value ?? ''}`.trim(),
+  'detail.reasoning.turnDuration': ({ seconds }) =>
+    `回合耗时：${seconds ?? '0'} 秒`.trim(),
+  'detail.reasoning.liveElapsedHint': ({ seconds }) =>
+    `实时（本地）：${seconds ?? '0'} 秒`.trim(),
   'detail.switcher.description':
     '直接切换到当前项目中的其他会话，而不会丢失当前路由。',
   'detail.switcher.empty': '这个项目里还没有可切换的会话。',
@@ -297,8 +307,34 @@ export const zhCnMessages: typeof enMessages = {
   'pwa.update': '更新',
   'request.action.command.allowOnce': '允许一次',
   'request.action.command.allowSession': '本次会话允许',
+  'request.action.command.allowWithPolicy': '允许并记住策略',
   'request.action.command.deny': '拒绝',
+  'request.action.command.cancel': '取消本轮',
+  'request.action.command.networkAllow': ({ host }) =>
+    `总是允许 ${host ?? '该主机'}`.trim(),
+  'request.action.command.networkDeny': ({ host }) =>
+    `总是拒绝 ${host ?? '该主机'}`.trim(),
+  'request.action.command.noChoices': '当前请求没有可用操作。',
   'request.command.cwd': '工作目录',
+  'request.command.actions': '识别出的动作',
+  'request.command.additionalPermissions': '请求的额外权限',
+  'request.command.networkContext': ({ protocol, host }) =>
+    `网络请求：${protocol ?? ''}://${host ?? ''}`.trim(),
+  'request.command.execPolicyHint': ({ command }) =>
+    `建议执行策略：${command ?? ''}`.trim(),
+  'request.command.networkPolicyHints': '建议的网络策略变更',
+  'request.command.networkPolicyHintItem': ({ host, action }) =>
+    `${action ?? ''}：${host ?? ''}`.trim(),
+  'request.command.networkPolicyAction.allow': '允许',
+  'request.command.networkPolicyAction.deny': '拒绝',
+  'request.commandAction.read': ({ name, path }) =>
+    `读取 ${name ?? '文件'}（${path ?? ''}）`.trim(),
+  'request.commandAction.listFiles': ({ path }) =>
+    `列出目录 ${path ?? '.'} 的文件`.trim(),
+  'request.commandAction.search': ({ query, path }) =>
+    `在 ${path ?? '.'} 中搜索“${query ?? ''}”`.trim(),
+  'request.commandAction.unknown': ({ command }) =>
+    `执行命令：${command ?? ''}`.trim(),
   'request.action.file.allowSession': '本次会话允许',
   'request.action.file.applyOnce': '应用一次',
   'request.action.file.deny': '拒绝',

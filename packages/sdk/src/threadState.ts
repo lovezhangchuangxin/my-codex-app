@@ -178,6 +178,9 @@ export function updateThreadSummaryState(
     case 'turnError':
     case 'turnCompleted':
     case 'agentMessageDelta':
+    case 'reasoningSummaryPartAdded':
+    case 'reasoningSummaryTextDelta':
+    case 'reasoningTextDelta':
       return state;
     case 'pendingRequestAdded':
       return {
@@ -293,6 +296,56 @@ export function applyThreadEvent(
             : turn,
         ),
       };
+    case 'reasoningSummaryPartAdded':
+      return {
+        ...thread,
+        turns: thread.turns.map((turn) =>
+          turn.id === event.turnId
+            ? {
+                ...turn,
+                items: applyReasoningSummaryPartAdded(
+                  turn.items,
+                  event.itemId,
+                  event.summaryIndex,
+                ),
+              }
+            : turn,
+        ),
+      };
+    case 'reasoningSummaryTextDelta':
+      return {
+        ...thread,
+        turns: thread.turns.map((turn) =>
+          turn.id === event.turnId
+            ? {
+                ...turn,
+                items: appendReasoningSummaryDelta(
+                  turn.items,
+                  event.itemId,
+                  event.summaryIndex,
+                  event.delta,
+                ),
+              }
+            : turn,
+        ),
+      };
+    case 'reasoningTextDelta':
+      return {
+        ...thread,
+        turns: thread.turns.map((turn) =>
+          turn.id === event.turnId
+            ? {
+                ...turn,
+                items: appendReasoningContentDelta(
+                  turn.items,
+                  event.itemId,
+                  event.contentIndex,
+                  event.delta,
+                ),
+              }
+            : turn,
+        ),
+      };
     case 'pendingRequestAdded':
       return {
         ...thread,
@@ -379,6 +432,121 @@ function appendAgentMessageDelta(
   );
 }
 
+function applyReasoningSummaryPartAdded(
+  items: ThreadItem[],
+  itemId: string,
+  summaryIndex: number,
+): ThreadItem[] {
+  return upsertReasoningItem(items, itemId, (item) => ({
+    ...item,
+    summary: ensureReasoningSlot(item.summary, summaryIndex),
+  }));
+}
+
+function appendReasoningSummaryDelta(
+  items: ThreadItem[],
+  itemId: string,
+  summaryIndex: number,
+  delta: string,
+): ThreadItem[] {
+  return upsertReasoningItem(items, itemId, (item) => ({
+    ...item,
+    summary: appendReasoningDelta(item.summary, summaryIndex, delta),
+  }));
+}
+
+function appendReasoningContentDelta(
+  items: ThreadItem[],
+  itemId: string,
+  contentIndex: number,
+  delta: string,
+): ThreadItem[] {
+  return upsertReasoningItem(items, itemId, (item) => ({
+    ...item,
+    content: appendReasoningDelta(item.content, contentIndex, delta),
+  }));
+}
+
+function upsertReasoningItem(
+  items: ThreadItem[],
+  itemId: string,
+  updater: (
+    item: Extract<ThreadItem, { type: 'reasoning' }>,
+  ) => Extract<ThreadItem, { type: 'reasoning' }>,
+): ThreadItem[] {
+  const existingIndex = items.findIndex(
+    (item) => item.type === 'reasoning' && item.id === itemId,
+  );
+
+  if (existingIndex === -1) {
+    return [...items, updater(createReasoningItem(itemId))];
+  }
+
+  const existing = items[existingIndex];
+  if (!existing || existing.type !== 'reasoning') {
+    return items;
+  }
+
+  const nextItems = [...items];
+  nextItems[existingIndex] = updater(existing);
+  return nextItems;
+}
+
+function createReasoningItem(
+  itemId: string,
+): Extract<ThreadItem, { type: 'reasoning' }> {
+  return {
+    type: 'reasoning',
+    id: itemId,
+    summary: [],
+    content: [],
+  };
+}
+
+function ensureReasoningSlot(chunks: string[], index: number): string[] {
+  const normalizedIndex = normalizeReasoningIndex(index);
+  if (normalizedIndex === null) {
+    return chunks;
+  }
+
+  const next = [...chunks];
+  while (next.length <= normalizedIndex) {
+    next.push('');
+  }
+  return next;
+}
+
+function appendReasoningDelta(
+  chunks: string[],
+  index: number,
+  delta: string,
+): string[] {
+  if (delta.length === 0) {
+    return chunks;
+  }
+
+  const normalizedIndex = normalizeReasoningIndex(index);
+  if (normalizedIndex === null) {
+    return chunks;
+  }
+
+  const next = ensureReasoningSlot(chunks, normalizedIndex);
+  const currentChunk = next[normalizedIndex] ?? '';
+  if (currentChunk.endsWith(delta)) {
+    return next;
+  }
+  next[normalizedIndex] = `${currentChunk}${delta}`;
+  return next;
+}
+
+function normalizeReasoningIndex(index: number): number | null {
+  if (!Number.isSafeInteger(index) || index < 0) {
+    return null;
+  }
+
+  return index;
+}
+
 function applyThreadName<T extends { name?: string }>(
   thread: T,
   threadName: string | null,
@@ -427,12 +595,41 @@ function upsertTurn(
 }
 
 function upsertItem(items: ThreadItem[], nextItem: ThreadItem): ThreadItem[] {
-  const found = items.some((item) => item.id === nextItem.id);
-  if (!found) {
+  const existingIndex = items.findIndex((item) => item.id === nextItem.id);
+  if (existingIndex === -1) {
     return [...items, nextItem];
   }
 
-  return items.map((item) => (item.id === nextItem.id ? nextItem : item));
+  const existingItem = items[existingIndex];
+  const mergedItem = mergeThreadItem(existingItem, nextItem);
+  if (!mergedItem) {
+    return items;
+  }
+
+  const nextItems = [...items];
+  nextItems[existingIndex] = mergedItem;
+  return nextItems;
+}
+
+function mergeThreadItem(
+  existingItem: ThreadItem | undefined,
+  nextItem: ThreadItem,
+): ThreadItem | null {
+  if (!existingItem) {
+    return nextItem;
+  }
+
+  if (existingItem.type !== 'reasoning' || nextItem.type !== 'reasoning') {
+    return nextItem;
+  }
+
+  return {
+    ...nextItem,
+    summary:
+      nextItem.summary.length > 0 ? nextItem.summary : existingItem.summary,
+    content:
+      nextItem.content.length > 0 ? nextItem.content : existingItem.content,
+  };
 }
 
 function toActiveStatus(current: ThreadRuntimeStatus): ThreadRuntimeStatus {

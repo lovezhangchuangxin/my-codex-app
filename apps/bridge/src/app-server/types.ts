@@ -292,3 +292,111 @@ export interface RequestEnvelope {
   method: string;
   params?: unknown;
 }
+
+export interface AppServerAdditionalFileSystemPermissions {
+  read?: string[] | null;
+  write?: string[] | null;
+}
+
+export interface AppServerAdditionalNetworkPermissions {
+  enabled?: boolean | null;
+}
+
+export interface AppServerAdditionalPermissionProfile {
+  network?: AppServerAdditionalNetworkPermissions | null;
+  fileSystem?: AppServerAdditionalFileSystemPermissions | null;
+}
+
+export interface AppServerNetworkApprovalContext {
+  host: string;
+  protocol: 'http' | 'https' | 'socks5Tcp' | 'socks5Udp';
+}
+
+export interface AppServerExecPolicyAmendment {
+  command: string[];
+}
+
+export type AppServerNetworkPolicyRuleAction = 'allow' | 'deny';
+
+export interface AppServerNetworkPolicyAmendment {
+  host: string;
+  action: AppServerNetworkPolicyRuleAction;
+}
+
+export type AppServerCommandAction =
+  | {
+      type: 'read';
+      command: string;
+      name: string;
+      path: string;
+    }
+  | {
+      type: 'listFiles';
+      command: string;
+      path?: string | null;
+    }
+  | {
+      type: 'search';
+      command: string;
+      query?: string | null;
+      path?: string | null;
+    }
+  | {
+      type: 'unknown';
+      command: string;
+    };
+
+export type AppServerCommandApprovalDecision =
+  | 'accept'
+  | 'acceptForSession'
+  | {
+      acceptWithExecpolicyAmendment: {
+        execpolicy_amendment: AppServerExecPolicyAmendment;
+      };
+    }
+  | {
+      applyNetworkPolicyAmendment: {
+        network_policy_amendment: AppServerNetworkPolicyAmendment;
+      };
+    }
+  | 'decline'
+  | 'cancel';
+
+export interface AppServerCommandExecutionRequestApprovalParams {
+  threadId: string;
+  turnId: string;
+  itemId: string;
+  approvalId?: string | null;
+  reason?: string | null;
+  networkApprovalContext?: AppServerNetworkApprovalContext | null;
+  command?: string | null;
+  cwd?: string | null;
+  commandActions?: AppServerCommandAction[] | null;
+  additionalPermissions?: AppServerAdditionalPermissionProfile | null;
+  proposedExecpolicyAmendment?: AppServerExecPolicyAmendment | null;
+  proposedNetworkPolicyAmendments?: AppServerNetworkPolicyAmendment[] | null;
+  availableDecisions?: AppServerCommandApprovalDecision[] | null;
+}
+
+export interface AppServerReasoningSummaryPartAddedNotification {
+  threadId: string;
+  turnId: string;
+  itemId: string;
+  summaryIndex: number;
+}
+
+export interface AppServerReasoningSummaryTextDeltaNotification {
+  threadId: string;
+  turnId: string;
+  itemId: string;
+  summaryIndex: number;
+  delta: string;
+}
+
+export interface AppServerReasoningTextDeltaNotification {
+  threadId: string;
+  turnId: string;
+  itemId: string;
+  contentIndex: number;
+  delta: string;
+}

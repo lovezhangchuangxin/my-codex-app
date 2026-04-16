@@ -58,6 +58,8 @@ void import('@/components/common/markdown-content');
 void import('@/components/common/code-block');
 void import('@/components/common/terminal-output');
 
+const reasoningLiveStartMsByItemKey = new Map<string, number>();
+
 function estimateItemSize(item: FlatThreadItem): number {
   switch (item.type) {
     case 'agentMessage': {
@@ -105,6 +107,21 @@ export function ThreadMessageStream({
     const id = requestAnimationFrame(() => setMounted(true));
     return () => cancelAnimationFrame(id);
   }, []);
+  const hasActiveReasoning = flatItems.some(
+    (item) => item.type === 'reasoning' && item.turnStatus === 'inProgress',
+  );
+  const [liveNowMs, setLiveNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    if (!hasActiveReasoning) {
+      return;
+    }
+
+    setLiveNowMs(Date.now());
+    const timer = setInterval(() => {
+      setLiveNowMs(Date.now());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [hasActiveReasoning]);
 
   const virtualizer = useVirtualizer({
     count: flatItems.length,
@@ -150,6 +167,7 @@ export function ThreadMessageStream({
             >
               <div className="pb-4">
                 <FlatItemRenderer
+                  liveNowMs={liveNowMs}
                   item={item}
                   nextItem={flatItems[virtualRow.index + 1] ?? null}
                   onFilePathClick={onFilePathClick}
@@ -169,12 +187,14 @@ export function ThreadMessageStream({
 }
 
 const FlatItemRenderer = memo(function FlatItemRenderer({
+  liveNowMs,
   item,
   nextItem,
   onFilePathClick,
   onOpenWorkspacePath,
   resolveWorkspacePath,
 }: {
+  liveNowMs: number;
   item: FlatThreadItem;
   nextItem: FlatThreadItem | null;
   onFilePathClick?: ((href: string) => void) | undefined;
@@ -215,10 +235,7 @@ const FlatItemRenderer = memo(function FlatItemRenderer({
         </AgentMessageBlock>
       );
     case 'reasoning':
-      if (item.summary.length === 0 && item.content.length === 0) {
-        return null;
-      }
-      return <ThinkingBlock item={item} />;
+      return <ThinkingBlock item={item} liveNowMs={liveNowMs} />;
     case 'commandExecution':
       return <CommandCard item={item} />;
     case 'fileChange':
@@ -315,12 +332,40 @@ function AgentMessageBlock({ children }: { children: ReactNode }) {
 }
 
 function ThinkingBlock({
+  liveNowMs,
   item,
 }: {
-  item: Extract<ThreadItem, { type: 'reasoning' }>;
+  liveNowMs: number;
+  item: Extract<FlatThreadItem, { type: 'reasoning' }>;
 }) {
-  const { t } = useI18n();
-  const [open, setOpen] = useState(false);
+  const { formatDateTime, t } = useI18n();
+  const isInProgress = item.turnStatus === 'inProgress';
+  const [open, setOpen] = useState(isInProgress);
+  const liveKey = `${item.turnId}:${item.id}`;
+
+  useEffect(() => {
+    if (isInProgress) {
+      if (!reasoningLiveStartMsByItemKey.has(liveKey)) {
+        reasoningLiveStartMsByItemKey.set(liveKey, Date.now());
+      }
+      return;
+    }
+
+    reasoningLiveStartMsByItemKey.delete(liveKey);
+  }, [isInProgress, liveKey]);
+
+  const derivedLiveElapsedSeconds = (() => {
+    if (!isInProgress) {
+      return 0;
+    }
+
+    const startedAtMs = reasoningLiveStartMsByItemKey.get(liveKey);
+    if (startedAtMs === undefined) {
+      return 0;
+    }
+
+    return Math.max(0, Math.floor((liveNowMs - startedAtMs) / 1000));
+  })();
 
   return (
     <div className="lg:ml-9">
@@ -331,7 +376,11 @@ function ThinkingBlock({
         type="button"
       >
         <Brain className="size-3.5" />
-        <span>{t('detail.reasoning.thinking')}</span>
+        <span>
+          {isInProgress
+            ? t('detail.reasoning.thinking')
+            : t('detail.reasoning.completed')}
+        </span>
         <ChevronDown
           className={cn(
             'size-3 transition-transform duration-200',
@@ -339,6 +388,36 @@ function ThinkingBlock({
           )}
         />
       </button>
+      <div className="mt-1 flex flex-wrap gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
+        {item.turnStartedAt !== undefined ? (
+          <span>
+            {t('detail.reasoning.turnStarted', {
+              value: formatDateTime(item.turnStartedAt),
+            })}
+          </span>
+        ) : null}
+        {item.turnCompletedAt !== undefined ? (
+          <span>
+            {t('detail.reasoning.turnCompleted', {
+              value: formatDateTime(item.turnCompletedAt),
+            })}
+          </span>
+        ) : null}
+        {item.turnDurationMs !== undefined ? (
+          <span>
+            {t('detail.reasoning.turnDuration', {
+              seconds: String(Math.round(item.turnDurationMs / 1000)),
+            })}
+          </span>
+        ) : null}
+        {isInProgress ? (
+          <span>
+            {t('detail.reasoning.liveElapsedHint', {
+              seconds: String(derivedLiveElapsedSeconds),
+            })}
+          </span>
+        ) : null}
+      </div>
       {open ? (
         <div className="mt-2 space-y-2 rounded-xl border border-subtle/8 bg-secondary/6 p-3">
           {item.summary.length > 0 ? (
@@ -366,6 +445,13 @@ function ThinkingBlock({
                 </div>
               ))}
             </div>
+          ) : null}
+          {isInProgress &&
+          item.summary.length === 0 &&
+          item.content.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t('detail.reasoning.awaiting')}
+            </p>
           ) : null}
         </div>
       ) : null}

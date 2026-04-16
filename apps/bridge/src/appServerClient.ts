@@ -33,12 +33,22 @@ import type {
 } from './app-server/types';
 
 export type {
+  AppServerAdditionalPermissionProfile,
   AppServerApprovalPolicy,
+  AppServerCommandAction,
+  AppServerCommandApprovalDecision,
+  AppServerCommandExecutionRequestApprovalParams,
+  AppServerExecPolicyAmendment,
   AppServerModel,
   AppServerModelReasoningEffortOption,
+  AppServerNetworkApprovalContext,
+  AppServerNetworkPolicyAmendment,
   AppServerReviewDelivery,
   AppServerReviewTarget,
   AppServerReasoningEffort,
+  AppServerReasoningSummaryPartAddedNotification,
+  AppServerReasoningSummaryTextDeltaNotification,
+  AppServerReasoningTextDeltaNotification,
   AppServerSandboxPolicy,
   AppServerThread,
   AppServerThreadItem,

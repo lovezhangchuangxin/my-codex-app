@@ -1,7 +1,14 @@
 import type {
   AvailableModel,
+  CommandAction,
+  CommandApprovalDecision,
+  CommandApprovalDecisionApplyNetworkPolicyAmendment,
+  CommandApprovalDecisionAcceptWithExecpolicyAmendment,
+  ExecPolicyAmendment,
   GrantedPermissionProfile,
   JsonRpcRequestId,
+  NetworkApprovalContext,
+  NetworkPolicyAmendment,
   PendingRequest,
   PendingUserInputQuestion,
   ReasoningEffort,
@@ -17,6 +24,7 @@ import type {
 } from '@my-codex-app/protocol';
 
 import type {
+  AppServerCommandAction,
   AppServerModel,
   AppServerReasoningEffort,
   AppServerThread,
@@ -439,6 +447,139 @@ export function toPendingUserInputQuestion(
   };
 }
 
+export function toCommandActionList(value: unknown): CommandAction[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((action) => {
+    const nextAction = toCommandAction(action);
+    return nextAction ? [nextAction] : [];
+  });
+}
+
+export function toCommandApprovalDecision(
+  value: unknown,
+): CommandApprovalDecision | null {
+  if (value === 'accept' || value === 'acceptForSession') {
+    return value;
+  }
+
+  if (value === 'decline' || value === 'cancel') {
+    return value;
+  }
+
+  const payload = toObject(value);
+  if (!payload) {
+    return null;
+  }
+
+  const acceptPayload = toObject(payload.acceptWithExecpolicyAmendment);
+  if (acceptPayload) {
+    const amendment = toExecPolicyAmendment(acceptPayload.execpolicy_amendment);
+    if (!amendment) {
+      return null;
+    }
+
+    const decision: CommandApprovalDecisionAcceptWithExecpolicyAmendment = {
+      acceptWithExecpolicyAmendment: {
+        execpolicy_amendment: amendment,
+      },
+    };
+    return decision;
+  }
+
+  const applyPayload = toObject(payload.applyNetworkPolicyAmendment);
+  if (applyPayload) {
+    const amendment = toNetworkPolicyAmendment(
+      applyPayload.network_policy_amendment,
+    );
+    if (!amendment) {
+      return null;
+    }
+
+    const decision: CommandApprovalDecisionApplyNetworkPolicyAmendment = {
+      applyNetworkPolicyAmendment: {
+        network_policy_amendment: amendment,
+      },
+    };
+    return decision;
+  }
+
+  return null;
+}
+
+export function toCommandApprovalDecisions(
+  value: unknown,
+): CommandApprovalDecision[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.flatMap((decision) => {
+    const nextDecision = toCommandApprovalDecision(decision);
+    return nextDecision ? [nextDecision] : [];
+  });
+}
+
+export function toNetworkApprovalContext(
+  value: unknown,
+): NetworkApprovalContext | null {
+  const payload = toObject(value);
+  const host = payload ? asString(payload.host) : null;
+  const protocol = payload ? asString(payload.protocol) : null;
+  if (
+    !payload ||
+    !host ||
+    !protocol ||
+    (protocol !== 'http' &&
+      protocol !== 'https' &&
+      protocol !== 'socks5Tcp' &&
+      protocol !== 'socks5Udp')
+  ) {
+    return null;
+  }
+
+  return {
+    host,
+    protocol,
+  };
+}
+
+export function toExecPolicyAmendment(
+  value: unknown,
+): ExecPolicyAmendment | null {
+  const payload = toObject(value);
+  if (!payload || !Array.isArray(payload.command)) {
+    return null;
+  }
+
+  return {
+    command: payload.command.filter(isString),
+  };
+}
+
+export function toNetworkPolicyAmendment(
+  value: unknown,
+): NetworkPolicyAmendment | null {
+  const payload = toObject(value);
+  const host = payload ? asString(payload.host) : null;
+  const action = payload ? asString(payload.action) : null;
+  if (
+    !payload ||
+    !host ||
+    !action ||
+    (action !== 'allow' && action !== 'deny')
+  ) {
+    return null;
+  }
+
+  return {
+    host,
+    action,
+  };
+}
+
 export function isString(value: unknown): value is string {
   return typeof value === 'string';
 }
@@ -449,6 +590,10 @@ export function asString(value: unknown): string | null {
 
 export function asRequestId(value: unknown): JsonRpcRequestId | null {
   return typeof value === 'string' || typeof value === 'number' ? value : null;
+}
+
+export function asNumber(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
 }
 
 export function toObject(value: unknown): JsonRpcParams | null {
@@ -471,4 +616,61 @@ function toPendingUserInputQuestionOption(
     label,
     description,
   };
+}
+
+function toCommandAction(value: unknown): CommandAction | null {
+  const payload = toObject(value) as AppServerCommandAction | null;
+  if (!payload || !asString(payload.type)) {
+    return null;
+  }
+
+  switch (payload.type) {
+    case 'read': {
+      const command = asString(payload.command);
+      const name = asString(payload.name);
+      const path = asString(payload.path);
+      if (!command || !name || !path) {
+        return null;
+      }
+      return { type: 'read', command, name, path };
+    }
+    case 'listFiles': {
+      const command = asString(payload.command);
+      if (!command) {
+        return null;
+      }
+      const path = asString(payload.path);
+      return {
+        type: 'listFiles',
+        command,
+        ...(path ? { path } : {}),
+      };
+    }
+    case 'search': {
+      const command = asString(payload.command);
+      if (!command) {
+        return null;
+      }
+      const query = asString(payload.query);
+      const path = asString(payload.path);
+      return {
+        type: 'search',
+        command,
+        ...(query ? { query } : {}),
+        ...(path ? { path } : {}),
+      };
+    }
+    case 'unknown': {
+      const command = asString(payload.command);
+      if (!command) {
+        return null;
+      }
+      return {
+        type: 'unknown',
+        command,
+      };
+    }
+    default:
+      return null;
+  }
 }

@@ -14,9 +14,14 @@
   "scripts": {
     "pretypecheck": "pnpm --filter @my-codex-app/protocol build",
     "build": "tsc -p tsconfig.json",
+    "test": "node --import tsx --test test/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@my-codex-app/protocol": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.6.0",
+    "tsx": "^4.20.6"
   }
 }

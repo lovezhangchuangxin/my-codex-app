@@ -9,13 +9,23 @@ import type {
   AppServerThread,
   AppServerThreadItem,
   AppServerThreadTokenUsage,
+  AppServerReasoningSummaryPartAddedNotification,
+  AppServerReasoningSummaryTextDeltaNotification,
+  AppServerReasoningTextDeltaNotification,
   AppServerTurn,
+  AppServerCommandExecutionRequestApprovalParams,
   RequestEnvelope,
 } from '../appServerClient';
 import {
   asRequestId,
+  asNumber,
   asString,
   attachThreadRuntime,
+  toCommandActionList,
+  toCommandApprovalDecisions,
+  toExecPolicyAmendment,
+  toNetworkApprovalContext,
+  toNetworkPolicyAmendment,
   isString,
   toObject,
   toPendingUserInputQuestion,
@@ -132,6 +142,72 @@ export class ThreadEventTranslator {
           ? { type: 'agentMessageDelta', threadId, turnId, itemId, delta }
           : null;
       }
+      case 'item/reasoning/summaryPartAdded': {
+        const notification =
+          payload as unknown as AppServerReasoningSummaryPartAddedNotification;
+        const threadId = asString(notification.threadId);
+        const turnId = asString(notification.turnId);
+        const itemId = asString(notification.itemId);
+        const summaryIndex = asNumber(notification.summaryIndex);
+        return threadId &&
+          turnId &&
+          itemId &&
+          isValidReasoningIndex(summaryIndex)
+          ? {
+              type: 'reasoningSummaryPartAdded',
+              threadId,
+              turnId,
+              itemId,
+              summaryIndex,
+            }
+          : null;
+      }
+      case 'item/reasoning/summaryTextDelta': {
+        const notification =
+          payload as unknown as AppServerReasoningSummaryTextDeltaNotification;
+        const threadId = asString(notification.threadId);
+        const turnId = asString(notification.turnId);
+        const itemId = asString(notification.itemId);
+        const summaryIndex = asNumber(notification.summaryIndex);
+        const delta = asString(notification.delta);
+        return threadId &&
+          turnId &&
+          itemId &&
+          isValidReasoningIndex(summaryIndex) &&
+          delta !== null
+          ? {
+              type: 'reasoningSummaryTextDelta',
+              threadId,
+              turnId,
+              itemId,
+              summaryIndex,
+              delta,
+            }
+          : null;
+      }
+      case 'item/reasoning/textDelta': {
+        const notification =
+          payload as unknown as AppServerReasoningTextDeltaNotification;
+        const threadId = asString(notification.threadId);
+        const turnId = asString(notification.turnId);
+        const itemId = asString(notification.itemId);
+        const contentIndex = asNumber(notification.contentIndex);
+        const delta = asString(notification.delta);
+        return threadId &&
+          turnId &&
+          itemId &&
+          isValidReasoningIndex(contentIndex) &&
+          delta !== null
+          ? {
+              type: 'reasoningTextDelta',
+              threadId,
+              turnId,
+              itemId,
+              contentIndex,
+              delta,
+            }
+          : null;
+      }
       case 'thread/tokenUsage/updated': {
         const threadId = asString(payload.threadId);
         const tokenUsage = toObject(
@@ -189,9 +265,36 @@ export class ThreadEventTranslator {
   toAppServerCommandDecision(
     requestId: number | string,
     decision: CommandApprovalDecision,
-  ): string {
+  ): unknown {
     const requestMethod = this.cache.getRequestMethod(requestId);
     if (requestMethod === 'execCommandApproval') {
+      if (
+        typeof decision === 'object' &&
+        decision !== null &&
+        'acceptWithExecpolicyAmendment' in decision
+      ) {
+        return {
+          approved_execpolicy_amendment: {
+            proposed_execpolicy_amendment:
+              decision.acceptWithExecpolicyAmendment.execpolicy_amendment
+                .command,
+          },
+        };
+      }
+
+      if (
+        typeof decision === 'object' &&
+        decision !== null &&
+        'applyNetworkPolicyAmendment' in decision
+      ) {
+        return {
+          network_policy_amendment: {
+            network_policy_amendment:
+              decision.applyNetworkPolicyAmendment.network_policy_amendment,
+          },
+        };
+      }
+
       switch (decision) {
         case 'accept':
           return 'approved';
@@ -237,17 +340,45 @@ export class ThreadEventTranslator {
     const requestedAt = nowInSeconds();
     switch (request.method) {
       case 'item/commandExecution/requestApproval': {
-        const threadId = asString(params.threadId);
-        const turnId = asString(params.turnId);
-        const itemId = asString(params.itemId);
+        const payload =
+          params as unknown as AppServerCommandExecutionRequestApprovalParams;
+        const threadId = asString(payload.threadId);
+        const turnId = asString(payload.turnId);
+        const itemId = asString(payload.itemId);
         if (!threadId || !turnId || !itemId) {
           return null;
         }
 
-        const approvalId = asString(params.approvalId);
-        const reason = asString(params.reason);
-        const command = asString(params.command);
-        const cwd = asString(params.cwd);
+        const approvalId = asString(payload.approvalId);
+        const reason = asString(payload.reason);
+        const command = asString(payload.command);
+        const cwd = asString(payload.cwd);
+        const commandActions = toCommandActionList(payload.commandActions);
+        const availableDecisions = toCommandApprovalDecisions(
+          payload.availableDecisions,
+        );
+        const shouldIncludeAvailableDecisions =
+          Array.isArray(payload.availableDecisions) &&
+          (payload.availableDecisions.length === 0 ||
+            availableDecisions.length > 0);
+        const additionalPermissions = toRequestPermissionProfile(
+          payload.additionalPermissions,
+        );
+        const networkApprovalContext = toNetworkApprovalContext(
+          payload.networkApprovalContext,
+        );
+        const proposedExecpolicyAmendment = toExecPolicyAmendment(
+          payload.proposedExecpolicyAmendment,
+        );
+        const proposedNetworkPolicyAmendments = Array.isArray(
+          payload.proposedNetworkPolicyAmendments,
+        )
+          ? payload.proposedNetworkPolicyAmendments.flatMap((amendment) => {
+              const nextAmendment = toNetworkPolicyAmendment(amendment);
+              return nextAmendment ? [nextAmendment] : [];
+            })
+          : [];
+
         return {
           kind: 'command',
           requestId: request.id,
@@ -259,6 +390,18 @@ export class ThreadEventTranslator {
           ...(reason ? { reason } : {}),
           ...(command ? { command } : {}),
           ...(cwd ? { cwd } : {}),
+          ...(Array.isArray(payload.commandActions) ? { commandActions } : {}),
+          ...(shouldIncludeAvailableDecisions ? { availableDecisions } : {}),
+          ...(hasPermissionProfile(additionalPermissions)
+            ? { additionalPermissions }
+            : {}),
+          ...(networkApprovalContext ? { networkApprovalContext } : {}),
+          ...(proposedExecpolicyAmendment
+            ? { proposedExecpolicyAmendment }
+            : {}),
+          ...(Array.isArray(payload.proposedNetworkPolicyAmendments)
+            ? { proposedNetworkPolicyAmendments }
+            : {}),
         };
       }
       case 'execCommandApproval': {
@@ -380,4 +523,15 @@ export class ThreadEventTranslator {
 
 function nowInSeconds(): number {
   return Math.floor(Date.now() / 1000);
+}
+
+function hasPermissionProfile(value: {
+  network?: { enabled?: boolean };
+  fileSystem?: { read?: string[]; write?: string[] };
+}): boolean {
+  return value.network !== undefined || value.fileSystem !== undefined;
+}
+
+function isValidReasoningIndex(value: number | null): value is number {
+  return value !== null && Number.isSafeInteger(value) && value >= 0;
 }

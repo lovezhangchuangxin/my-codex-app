@@ -17,6 +17,10 @@ import { translateEnglish } from '@/lib/i18n/catalog';
 export type FlatThreadItem = ThreadItem & {
   turnId: string;
   turnIndex: number;
+  turnStatus: TurnDetail['status'];
+  turnStartedAt?: number;
+  turnCompletedAt?: number;
+  turnDurationMs?: number;
   isFirstInTurn: boolean;
   turnError?: TurnError;
 };
@@ -219,6 +223,16 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
         ...base,
         turnId: turn.id,
         turnIndex,
+        turnStatus: turn.status,
+        ...(turn.startedAt !== undefined
+          ? { turnStartedAt: turn.startedAt }
+          : {}),
+        ...(turn.completedAt !== undefined
+          ? { turnCompletedAt: turn.completedAt }
+          : {}),
+        ...(turn.durationMs !== undefined
+          ? { turnDurationMs: turn.durationMs }
+          : {}),
         isFirstInTurn: itemIndex === 0,
         ...(itemIndex === turn.items.length - 1 && turn.error
           ? { turnError: turn.error }
@@ -235,6 +249,16 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
         raw: null,
         turnId: turn.id,
         turnIndex,
+        turnStatus: turn.status,
+        ...(turn.startedAt !== undefined
+          ? { turnStartedAt: turn.startedAt }
+          : {}),
+        ...(turn.completedAt !== undefined
+          ? { turnCompletedAt: turn.completedAt }
+          : {}),
+        ...(turn.durationMs !== undefined
+          ? { turnDurationMs: turn.durationMs }
+          : {}),
         isFirstInTurn: true,
         turnError: turn.error,
       });

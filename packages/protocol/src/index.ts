@@ -222,9 +222,76 @@ export type PendingRequestKind =
   | 'permissions'
   | 'userInput';
 
+export type NetworkApprovalProtocol =
+  | 'http'
+  | 'https'
+  | 'socks5Tcp'
+  | 'socks5Udp';
+
+export interface NetworkApprovalContext {
+  host: string;
+  protocol: NetworkApprovalProtocol;
+}
+
+export interface ExecPolicyAmendment {
+  command: string[];
+}
+
+export type NetworkPolicyRuleAction = 'allow' | 'deny';
+
+export interface NetworkPolicyAmendment {
+  host: string;
+  action: NetworkPolicyRuleAction;
+}
+
+export type CommandAction =
+  | {
+      type: 'read';
+      command: string;
+      name: string;
+      path: string;
+    }
+  | {
+      type: 'listFiles';
+      command: string;
+      path?: string;
+    }
+  | {
+      type: 'search';
+      command: string;
+      query?: string;
+      path?: string;
+    }
+  | {
+      type: 'unknown';
+      command: string;
+    };
+
+export interface CommandApprovalDecisionAcceptWithExecpolicyAmendment {
+  acceptWithExecpolicyAmendment: {
+    execpolicy_amendment: ExecPolicyAmendment;
+  };
+}
+
+export interface CommandApprovalDecisionApplyNetworkPolicyAmendment {
+  applyNetworkPolicyAmendment: {
+    network_policy_amendment: NetworkPolicyAmendment;
+  };
+}
+
 export type CommandApprovalDecision =
   | 'accept'
   | 'acceptForSession'
+  | CommandApprovalDecisionAcceptWithExecpolicyAmendment
+  | CommandApprovalDecisionApplyNetworkPolicyAmendment
+  | 'decline'
+  | 'cancel';
+
+export type CommandApprovalDecisionKind =
+  | 'accept'
+  | 'acceptForSession'
+  | 'acceptWithExecpolicyAmendment'
+  | 'applyNetworkPolicyAmendment'
   | 'decline'
   | 'cancel';
 
@@ -269,6 +336,12 @@ export interface PendingCommandRequest extends PendingRequestBase {
   reason?: string;
   command?: string;
   cwd?: string;
+  commandActions?: CommandAction[];
+  availableDecisions?: CommandApprovalDecision[];
+  additionalPermissions?: RequestPermissionProfile;
+  networkApprovalContext?: NetworkApprovalContext;
+  proposedExecpolicyAmendment?: ExecPolicyAmendment;
+  proposedNetworkPolicyAmendments?: NetworkPolicyAmendment[];
 }
 
 export interface PendingFileChangeRequest extends PendingRequestBase {
@@ -577,6 +650,29 @@ export type BridgeEvent =
       threadId: string;
       turnId: string;
       itemId: string;
+      delta: string;
+    }
+  | {
+      type: 'reasoningSummaryPartAdded';
+      threadId: string;
+      turnId: string;
+      itemId: string;
+      summaryIndex: number;
+    }
+  | {
+      type: 'reasoningSummaryTextDelta';
+      threadId: string;
+      turnId: string;
+      itemId: string;
+      summaryIndex: number;
+      delta: string;
+    }
+  | {
+      type: 'reasoningTextDelta';
+      threadId: string;
+      turnId: string;
+      itemId: string;
+      contentIndex: number;
       delta: string;
     }
   | {

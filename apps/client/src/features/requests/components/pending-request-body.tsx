@@ -1,5 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import {
+  describeCommandAction,
   describePermissionProfile,
   getRequestDescription,
 } from '@/features/requests/lib/request-utils';
@@ -22,6 +23,72 @@ export function PendingRequestBody({ request }: { request: PendingRequest }) {
             <p className="text-sm text-muted-foreground">
               {t('request.command.cwd')}: {request.cwd}
             </p>
+          ) : null}
+          {request.commandActions?.length ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t('request.command.actions')}
+              </p>
+              <ul className="space-y-1">
+                {request.commandActions.map((action, index) => (
+                  <li key={`${request.itemId}-action-${index}`}>
+                    {describeCommandAction(action, t)}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {request.additionalPermissions ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t('request.command.additionalPermissions')}
+              </p>
+              <ul className="space-y-1">
+                {describePermissionProfile(
+                  request.additionalPermissions,
+                  t,
+                ).map((detail) => (
+                  <li key={detail}>{detail}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {request.networkApprovalContext ? (
+            <p className="text-sm text-muted-foreground">
+              {t('request.command.networkContext', {
+                protocol: request.networkApprovalContext.protocol,
+                host: request.networkApprovalContext.host,
+              })}
+            </p>
+          ) : null}
+          {request.proposedExecpolicyAmendment ? (
+            <p className="text-sm text-muted-foreground">
+              {t('request.command.execPolicyHint', {
+                command: request.proposedExecpolicyAmendment.command.join(' '),
+              })}
+            </p>
+          ) : null}
+          {request.proposedNetworkPolicyAmendments?.length ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p className="font-medium text-foreground">
+                {t('request.command.networkPolicyHints')}
+              </p>
+              <ul className="space-y-1">
+                {request.proposedNetworkPolicyAmendments.map(
+                  (amendment, index) => (
+                    <li key={`${amendment.host}-${amendment.action}-${index}`}>
+                      {t('request.command.networkPolicyHintItem', {
+                        host: amendment.host,
+                        action:
+                          amendment.action === 'allow'
+                            ? t('request.command.networkPolicyAction.allow')
+                            : t('request.command.networkPolicyAction.deny'),
+                      })}
+                    </li>
+                  ),
+                )}
+              </ul>
+            </div>
           ) : null}
         </div>
       );

@@ -159,6 +159,16 @@ export const enMessages = {
   'detail.review.inProgress': 'Reviewing',
   'detail.review.show': 'Show review',
   'detail.reasoning.thinking': 'Thinking...',
+  'detail.reasoning.completed': 'Thought process',
+  'detail.reasoning.awaiting': 'Waiting for reasoning deltas...',
+  'detail.reasoning.turnStarted': ({ value }) =>
+    `Turn started: ${value ?? ''}`.trim(),
+  'detail.reasoning.turnCompleted': ({ value }) =>
+    `Turn completed: ${value ?? ''}`.trim(),
+  'detail.reasoning.turnDuration': ({ seconds }) =>
+    `Turn duration: ${seconds ?? '0'}s`.trim(),
+  'detail.reasoning.liveElapsedHint': ({ seconds }) =>
+    `Live (local): ${seconds ?? '0'}s`.trim(),
   'detail.switcher.description':
     'Jump to another session in this project without losing your current route.',
   'detail.switcher.empty': 'No sessions are available in this project yet.',
@@ -322,8 +332,35 @@ export const enMessages = {
   'pwa.update': 'Update',
   'request.action.command.allowOnce': 'Allow once',
   'request.action.command.allowSession': 'Allow for session',
+  'request.action.command.allowWithPolicy': 'Allow and remember policy',
   'request.action.command.deny': 'Deny',
+  'request.action.command.cancel': 'Cancel turn',
+  'request.action.command.networkAllow': ({ host }) =>
+    `Always allow ${host ?? 'host'}`.trim(),
+  'request.action.command.networkDeny': ({ host }) =>
+    `Always deny ${host ?? 'host'}`.trim(),
+  'request.action.command.noChoices':
+    'No actions are currently available for this request.',
   'request.command.cwd': 'cwd',
+  'request.command.actions': 'Detected actions',
+  'request.command.additionalPermissions': 'Requested extra permissions',
+  'request.command.networkContext': ({ protocol, host }) =>
+    `Network request: ${protocol ?? ''}://${host ?? ''}`.trim(),
+  'request.command.execPolicyHint': ({ command }) =>
+    `Suggested exec policy: ${command ?? ''}`.trim(),
+  'request.command.networkPolicyHints': 'Suggested network policy changes',
+  'request.command.networkPolicyHintItem': ({ host, action }) =>
+    `${action ?? ''}: ${host ?? ''}`.trim(),
+  'request.command.networkPolicyAction.allow': 'Allow',
+  'request.command.networkPolicyAction.deny': 'Deny',
+  'request.commandAction.read': ({ name, path }) =>
+    `Read ${name ?? 'file'} (${path ?? ''})`.trim(),
+  'request.commandAction.listFiles': ({ path }) =>
+    `List files in ${path ?? '.'}`.trim(),
+  'request.commandAction.search': ({ query, path }) =>
+    `Search "${query ?? ''}" in ${path ?? '.'}`.trim(),
+  'request.commandAction.unknown': ({ command }) =>
+    `Run command: ${command ?? ''}`.trim(),
   'request.action.file.allowSession': 'Allow for session',
   'request.action.file.applyOnce': 'Apply once',
   'request.action.file.deny': 'Deny',
