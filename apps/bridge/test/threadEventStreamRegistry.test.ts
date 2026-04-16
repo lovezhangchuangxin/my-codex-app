@@ -57,7 +57,11 @@ test('ThreadEventStreamRegistry reconnecting client cancels pending unsubscribe 
 
   // Wait well past the original grace period.
   await delay(150);
-  assert.equal(threadService.canUnloadCalls, 0, 'should not check canUnload because timer was cancelled');
+  assert.equal(
+    threadService.canUnloadCalls,
+    0,
+    'should not check canUnload because timer was cancelled',
+  );
   assert.equal(threadService.unsubscribeCalls, 0);
 
   // Cleanup.

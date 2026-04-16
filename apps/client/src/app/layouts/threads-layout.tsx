@@ -425,8 +425,7 @@ export function ThreadsLayout() {
           onInterrupt={handleInterrupt}
           onStartReview={handleStartReview}
           pendingMessages={
-            snapshot.mutations.pendingMessages.get(routeThreadId ?? '') ??
-            []
+            snapshot.mutations.pendingMessages.get(routeThreadId ?? '') ?? []
           }
           onCancelPendingMessage={(index) => {
             if (routeThreadId) {

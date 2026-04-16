@@ -742,10 +742,7 @@ export class BridgeThreadRuntime {
         // Drain queued messages when a turn completes or fails without retry.
         if (event.type === 'turnCompleted') {
           this.#drainMessageQueue(event.threadId);
-        } else if (
-          event.type === 'turnError' &&
-          !event.willRetry
-        ) {
+        } else if (event.type === 'turnError' && !event.willRetry) {
           this.#drainMessageQueue(event.threadId);
         }
       },

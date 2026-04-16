@@ -108,12 +108,9 @@ export function ThreadComposer({
   const { t } = useI18n();
   const bridgeClient = useBridgeClient();
   const committedSettings = buildComposerSettingsDraft(thread.settings);
-  const settingsKey = [
-    thread.id,
-    thread.settings?.model ?? '',
-    thread.settings?.reasoningEffort ?? '',
-    thread.settings?.permissionsPreset ?? '',
-  ].join(':');
+  // Only key on thread.id so in-progress draft edits survive threadSettingsUpdated
+  // events from the server (e.g. resumeThread / startTurn echo-back).
+  const settingsKey = thread.id;
   const [composerText, setComposerText] = useState('');
   const [caretPosition, setCaretPosition] = useState(0);
   const [commandActionPending, setCommandActionPending] = useState(false);
@@ -190,13 +187,6 @@ export function ThreadComposer({
   useEffect(() => {
     setRenameDraft(thread.name ?? '');
   }, [thread.id, thread.name]);
-
-  function resetSettingsDraft() {
-    setSettingsDraftState({
-      sourceKey: settingsKey,
-      value: committedSettings,
-    });
-  }
 
   function updateSettingsDraft(
     next: ThreadSettings | ((current: ThreadSettings) => ThreadSettings),
@@ -735,7 +725,7 @@ export function ThreadComposer({
     !compactPending &&
     composerText.trim().length > 0;
   const selectedModelSummary = formatModelTriggerText(
-    committedSettings,
+    settingsDraft,
     modelsState.models,
     t('common.notAvailable'),
   );
@@ -978,9 +968,6 @@ export function ThreadComposer({
         <div className="mt-2 flex items-center gap-1.5">
           <Sheet
             onOpenChange={(nextOpen) => {
-              if (!nextOpen) {
-                resetSettingsDraft();
-              }
               setSettingsOpen(nextOpen);
             }}
             open={settingsOpen}
@@ -1717,13 +1704,13 @@ function ContextUsageRing({ percentUsed }: { percentUsed: number | null }) {
 function buildComposerSettingsDraft(
   settings: ThreadSettings | null,
 ): ThreadSettings {
-  return (
-    settings ?? {
-      model: null,
-      reasoningEffort: null,
-      permissionsPreset: null,
-    }
-  );
+  return settings
+    ? { ...settings }
+    : {
+        model: null,
+        reasoningEffort: null,
+        permissionsPreset: null,
+      };
 }
 
 function stripSlashCommandPrefix(text: string): string {
