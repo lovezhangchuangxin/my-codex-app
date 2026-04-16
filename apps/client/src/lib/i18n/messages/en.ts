@@ -14,6 +14,7 @@ export const enMessages = {
   'common.notAvailable': 'n/a',
   'common.unknownClientError': 'Unknown client error',
   'connection.action.reconnect': 'Reconnect',
+  'connection.action.logout': 'Logout',
   'connection.target.apply': 'Apply bridge target',
   'connection.target.hint.tauri':
     'Android emulator: use http://10.0.2.2:8787. Real device: use your computer LAN IP. With adb reverse you can use http://127.0.0.1:8787.',

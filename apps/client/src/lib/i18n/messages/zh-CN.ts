@@ -10,6 +10,7 @@ export const zhCnMessages: typeof enMessages = {
   'common.notAvailable': '无',
   'common.unknownClientError': '未知客户端错误',
   'connection.action.reconnect': '重新连接',
+  'connection.action.logout': '退出',
   'connection.target.apply': '应用 Bridge 地址',
   'connection.target.hint.tauri':
     'Android 模拟器请使用 http://10.0.2.2:8787。真机请使用你电脑的局域网 IP。若使用 adb reverse，也可以填写 http://127.0.0.1:8787。',

@@ -4,7 +4,6 @@ import { KeyRound } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { bridgeBaseUrl } from '@/lib/env';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { BrowserBridgeCredentialStore } from '@/lib/runtime/bridge-credential-store';
 import {
@@ -13,7 +12,6 @@ import {
   toBridgeHealthUrl,
   writeStoredBridgeBaseUrl,
 } from '@/lib/runtime/bridge-target-store';
-import { isTauriHost } from '@/platform/host';
 import { appViewportDynamicHeight } from '@/platform/viewport';
 import { BridgeClient } from '@my-codex-app/sdk';
 
@@ -142,7 +140,7 @@ export function PairingScreen() {
         </div>
 
         <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5">
             <label
               className="text-xs font-mono tracking-[0.14em] uppercase text-muted-foreground"
               htmlFor="bridge-target"
@@ -162,13 +160,6 @@ export function PairingScreen() {
               type="url"
               value={bridgeTarget}
             />
-            <p className="text-xs leading-5 text-muted-foreground">
-              {isTauriHost
-                ? t('connection.target.hint.tauri')
-                : t('connection.target.hint.web', {
-                    target: bridgeBaseUrl,
-                  })}
-            </p>
           </div>
 
           <Input
