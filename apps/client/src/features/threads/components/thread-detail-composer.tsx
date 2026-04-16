@@ -1062,10 +1062,10 @@ export function ThreadComposer({
                         }}
                         value={modelSelectValue}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full rounded-lg border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="rounded-lg shadow-lg border-border/50">
                           {modelsState.models.map((model) => (
                             <SelectItem key={model.id} value={model.id}>
                               {model.displayName}
@@ -1103,10 +1103,10 @@ export function ThreadComposer({
                           selectedModel.defaultReasoningEffort
                         }
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full rounded-lg border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="rounded-lg shadow-lg border-border/50">
                           {selectedModel.supportedReasoningEfforts.map(
                             (option) => (
                               <SelectItem
@@ -1151,10 +1151,10 @@ export function ThreadComposer({
                       }}
                       value={settingsDraft.permissionsPreset ?? 'auto'}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full rounded-lg border-border/50 bg-muted/30 hover:bg-muted/50 transition-colors">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent className="rounded-lg shadow-lg border-border/50">
                         {getPermissionPresetOptions(t).map((option) => (
                           <SelectItem key={option.id} value={option.id}>
                             {option.label}
