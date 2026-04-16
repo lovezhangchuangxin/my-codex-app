@@ -147,15 +147,10 @@ export const zhCnMessages: typeof enMessages = {
   'detail.review.show': '查看审查',
   'detail.reasoning.thinking': '思考中...',
   'detail.reasoning.completed': '思考过程',
-  'detail.reasoning.awaiting': '等待推理增量...',
   'detail.reasoning.turnStarted': ({ value }) =>
     `回合开始：${value ?? ''}`.trim(),
   'detail.reasoning.turnCompleted': ({ value }) =>
     `回合结束：${value ?? ''}`.trim(),
-  'detail.reasoning.turnDuration': ({ seconds }) =>
-    `回合耗时：${seconds ?? '0'} 秒`.trim(),
-  'detail.reasoning.liveElapsedHint': ({ seconds }) =>
-    `实时（本地）：${seconds ?? '0'} 秒`.trim(),
   'detail.switcher.description':
     '直接切换到当前项目中的其他会话，而不会丢失当前路由。',
   'detail.switcher.empty': '这个项目里还没有可切换的会话。',

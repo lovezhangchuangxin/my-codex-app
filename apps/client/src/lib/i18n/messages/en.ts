@@ -162,15 +162,10 @@ export const enMessages = {
   'detail.review.show': 'Show review',
   'detail.reasoning.thinking': 'Thinking...',
   'detail.reasoning.completed': 'Thought process',
-  'detail.reasoning.awaiting': 'Waiting for reasoning deltas...',
   'detail.reasoning.turnStarted': ({ value }) =>
     `Turn started: ${value ?? ''}`.trim(),
   'detail.reasoning.turnCompleted': ({ value }) =>
     `Turn completed: ${value ?? ''}`.trim(),
-  'detail.reasoning.turnDuration': ({ seconds }) =>
-    `Turn duration: ${seconds ?? '0'}s`.trim(),
-  'detail.reasoning.liveElapsedHint': ({ seconds }) =>
-    `Live (local): ${seconds ?? '0'}s`.trim(),
   'detail.switcher.description':
     'Jump to another session in this project without losing your current route.',
   'detail.switcher.empty': 'No sessions are available in this project yet.',

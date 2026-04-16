@@ -394,6 +394,13 @@ function ThinkingBlock({
           {isInProgress
             ? t('detail.reasoning.thinking')
             : t('detail.reasoning.completed')}
+          <span className="ml-1 tabular-nums">
+            {isInProgress
+              ? `${derivedLiveElapsedSeconds}s`
+              : item.turnDurationMs !== undefined
+                ? `${Math.round(item.turnDurationMs / 1000)}s`
+                : ''}
+          </span>
         </span>
         <ChevronDown
           className={cn(
@@ -414,20 +421,6 @@ function ThinkingBlock({
           <span>
             {t('detail.reasoning.turnCompleted', {
               value: formatDateTime(item.turnCompletedAt),
-            })}
-          </span>
-        ) : null}
-        {item.turnDurationMs !== undefined ? (
-          <span>
-            {t('detail.reasoning.turnDuration', {
-              seconds: String(Math.round(item.turnDurationMs / 1000)),
-            })}
-          </span>
-        ) : null}
-        {isInProgress ? (
-          <span>
-            {t('detail.reasoning.liveElapsedHint', {
-              seconds: String(derivedLiveElapsedSeconds),
             })}
           </span>
         ) : null}
@@ -459,13 +452,6 @@ function ThinkingBlock({
                 </div>
               ))}
             </div>
-          ) : null}
-          {isInProgress &&
-          item.summary.length === 0 &&
-          item.content.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              {t('detail.reasoning.awaiting')}
-            </p>
           ) : null}
         </div>
       ) : null}
