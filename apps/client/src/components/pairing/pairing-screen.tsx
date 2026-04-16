@@ -1,5 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { KeyRound } from 'lucide-react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { ArrowLeft, KeyRound, QrCode } from 'lucide-react';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -17,6 +25,10 @@ import { BridgeClient } from '@my-codex-app/sdk';
 
 import { detectDeviceInfo } from './device-info';
 
+const QrScanner = lazy(() =>
+  import('./qr-scanner').then((m) => ({ default: m.QrScanner })),
+);
+
 type PairingState =
   | { status: 'idle' }
   | { status: 'submitting' }
@@ -28,6 +40,8 @@ type BridgeAvailability =
   | { status: 'missingTarget' }
   | { status: 'reachable' }
   | { status: 'unreachable' };
+
+type PairingView = 'form' | 'scanner';
 
 export function PairingScreen() {
   const { t } = useI18n();
@@ -43,11 +57,77 @@ export function PairingScreen() {
     useState<BridgeAvailability>({
       status: 'unknown',
     });
+  const [view, setView] = useState<PairingView>('form');
+  const pairingInFlight = useRef(false);
 
   const normalizedBridgeTarget = useMemo(
     () => normalizeBridgeBaseUrl(bridgeTarget),
     [bridgeTarget],
   );
+
+  const doPair = useCallback(
+    async (bridgeUrl: string, code: string) => {
+      if (pairingInFlight.current) return;
+      pairingInFlight.current = true;
+      setPairingState({ status: 'submitting' });
+      try {
+        const device = detectDeviceInfo();
+        const pairingClient = new BridgeClient({
+          baseUrl: bridgeUrl,
+          credentialStore: new BrowserBridgeCredentialStore(bridgeUrl),
+        });
+        await pairingClient.completePairing({ code, device });
+        writeStoredBridgeBaseUrl(bridgeUrl);
+        setPairingState({ status: 'success' });
+        window.history.replaceState({}, '', '/pair');
+        window.location.replace('/threads');
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : t('pairing.error.generic');
+        setPairingState({ status: 'error', message });
+      } finally {
+        pairingInFlight.current = false;
+      }
+    },
+    [t],
+  );
+
+  // Auto-pair from URL params (?bridge=...&code=...)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paramBridge = params.get('bridge');
+    const paramCode = params.get('code');
+    if (!paramBridge || !paramCode) return;
+
+    const bridgeUrl = normalizeBridgeBaseUrl(paramBridge);
+    if (!bridgeUrl) return;
+
+    setBridgeTarget(bridgeUrl);
+    setPairingCode(paramCode);
+    void doPair(bridgeUrl, paramCode);
+  }, [doPair]);
+
+  const handleScanResult = useCallback(
+    (result: { bridgeUrl: string; code: string }) => {
+      setBridgeTarget(result.bridgeUrl);
+      setPairingCode(result.code);
+      setView('form');
+      void doPair(result.bridgeUrl, result.code);
+    },
+    [doPair],
+  );
+
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  const handleScanError = useCallback((error: unknown) => {
+    const message =
+      error instanceof Error
+        ? error.message
+        : error instanceof DOMException
+          ? error.name
+          : String(error);
+    setScanError(message || 'unknown');
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -94,30 +174,69 @@ export function PairingScreen() {
         return;
       }
 
-      setPairingState({ status: 'submitting' });
-
-      try {
-        const device = detectDeviceInfo();
-        const pairingClient = new BridgeClient({
-          baseUrl: normalizedBridgeTarget,
-          credentialStore: new BrowserBridgeCredentialStore(
-            normalizedBridgeTarget,
-          ),
-        });
-        await pairingClient.completePairing({ code, device });
-        writeStoredBridgeBaseUrl(normalizedBridgeTarget);
-        setPairingState({ status: 'success' });
-        window.location.replace('/threads');
-      } catch (error) {
-        const message =
-          error instanceof Error ? error.message : t('pairing.error.generic');
-        setPairingState({ status: 'error', message });
-      }
+      void doPair(normalizedBridgeTarget, code);
     },
-    [normalizedBridgeTarget, pairingCode, t],
+    [normalizedBridgeTarget, pairingCode, t, doPair],
   );
 
   const isSubmitting = pairingState.status === 'submitting';
+
+  if (view === 'scanner') {
+    return (
+      <div
+        className="flex flex-col items-center px-8 [--pairing-shell-offset:8rem] lg:[--pairing-shell-offset:60px]"
+        style={{
+          minHeight: `calc(${appViewportDynamicHeight} - var(--pairing-shell-offset))`,
+        }}
+      >
+        <div className="w-full max-w-sm">
+          <button
+            type="button"
+            className="mb-4 flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+            onClick={() => setView('form')}
+          >
+            <ArrowLeft className="size-4" />
+            {t('pairing.backToManual')}
+          </button>
+
+          <h1 className="mb-4 text-xl font-semibold tracking-tight">
+            {t('pairing.scanQr')}
+          </h1>
+
+          <div className="overflow-hidden rounded-lg">
+            {scanError ? (
+              <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg bg-muted px-4">
+                <p className="max-w-xs text-center text-sm text-muted-foreground">
+                  {t('pairing.cameraUnavailable')}
+                </p>
+                <p className="max-w-xs text-center text-xs text-muted-foreground/60">
+                  {scanError}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setScanError(null)}
+                >
+                  {t('pairing.scanQr')}
+                </Button>
+              </div>
+            ) : (
+              <Suspense fallback={<div className="h-64 bg-muted" />}>
+                <QrScanner
+                  onScan={handleScanResult}
+                  onError={handleScanError}
+                />
+              </Suspense>
+            )}
+          </div>
+
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            {t('pairing.scanQrHint')}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -206,6 +325,21 @@ export function PairingScreen() {
             variant="outline"
           >
             {isSubmitting ? t('pairing.connecting') : t('pairing.connect')}
+          </Button>
+
+          <Button
+            className="w-full"
+            disabled={isSubmitting}
+            size="lg"
+            type="button"
+            variant="outline"
+            onClick={() => {
+              setScanError(null);
+              setView('scanner');
+            }}
+          >
+            <QrCode className="mr-2 size-4" />
+            {t('pairing.scanQr')}
           </Button>
         </form>
       </div>

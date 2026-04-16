@@ -5,7 +5,7 @@ import { ProjectService } from './projectService';
 import { ProjectRegistryStore } from './projects/projectRegistryStore';
 import { BridgeServer } from './server/bridgeServer';
 import { loadBridgeServerConfig } from './server/config';
-import { logPairingStatus } from './server/logging';
+import { logPairingStatus, resolveBridgeQrUrl } from './server/logging';
 import { ThreadEventStreamRegistry } from './server/threadEventStreamRegistry';
 import { ThreadService } from './threadService';
 import { WorkspaceService } from './workspaceService';
@@ -62,7 +62,8 @@ async function main(): Promise<void> {
     void shutdown();
   });
 
-  logPairingStatus(authService.getPairingStatus());
+  const bridgeUrl = resolveBridgeQrUrl(config.host, config.port);
+  logPairingStatus(authService.getPairingStatus(), bridgeUrl);
   bridgeServer.listen(() => {
     console.log(`Bridge listening on http://${config.host}:${config.port}`);
     console.log(`Bridge auth state path: ${config.bridgeStatePath}`);

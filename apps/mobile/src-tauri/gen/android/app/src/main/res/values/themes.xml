@@ -1,0 +1,12 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Theme.my_codex_app_mobile" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+    </style>
+
+    <style name="Theme.my_codex_app_mobile.Splash" parent="Theme.my_codex_app_mobile">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:statusBarColor">#0b0b0d</item>
+        <item name="android:navigationBarColor">#0b0b0d</item>
+    </style>
+</resources>

@@ -6,7 +6,6 @@ dev-dist
 
 .designs/
 apps/bridge/.local/
-apps/mobile/src-tauri/gen/
 apps/mobile/src-tauri/target/
 
 .env

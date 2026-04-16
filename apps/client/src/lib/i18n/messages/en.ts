@@ -243,6 +243,12 @@ export const enMessages = {
   'pairing.helperSuffix': ' in your terminal to get a code.',
   'pairing.subtitle': 'Enter the pairing code from your bridge terminal',
   'pairing.title': 'Pair your device',
+  'pairing.backToManual': 'Back to manual entry',
+  'pairing.cameraUnavailable':
+    'Camera not available. Please enter the code manually.',
+  'pairing.scanQr': 'Scan QR Code',
+  'pairing.scanQrHint':
+    'Point your camera at the QR code on the bridge terminal',
   'project.idle.disconnected.message': 'Bridge is currently unavailable.',
   'project.idle.disconnected.title': 'Bridge disconnected',
   'project.idle.unreachable.message':

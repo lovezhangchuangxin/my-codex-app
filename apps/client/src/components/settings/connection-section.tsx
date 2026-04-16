@@ -5,10 +5,7 @@ import { Button } from '@/components/ui/button';
 import { bridgeBaseUrl } from '@/lib/env';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { formatConnectionKind } from '@/lib/runtime/connection-utils';
-import {
-  useBridgeClient,
-  useRuntime,
-} from '@/lib/runtime/runtime-context';
+import { useBridgeClient, useRuntime } from '@/lib/runtime/runtime-context';
 import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
 import { cn } from '@/lib/utils';
 

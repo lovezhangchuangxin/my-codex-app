@@ -2,6 +2,7 @@ import { fileURLToPath, URL } from 'node:url';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
+import basicSsl from '@vitejs/plugin-basic-ssl';
 import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
@@ -15,6 +16,9 @@ export default defineConfig({
     exclude: ['@my-codex-app/protocol', '@my-codex-app/sdk'],
   },
   plugins: [
+    // HTTPS only for browser dev (LAN camera access requires secure context).
+    // Tauri dev skips this — WebView rejects self-signed certs.
+    ...(tauriDevHost ? [] : [basicSsl()]),
     react(),
     tailwindcss(),
     VitePWA({

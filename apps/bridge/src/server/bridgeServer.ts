@@ -40,7 +40,7 @@ import {
   writeError,
   writeJson,
 } from './http';
-import { logPairingStatus } from './logging';
+import { logPairingStatus, resolveBridgeQrUrl } from './logging';
 import { ThreadEventStreamRegistry } from './threadEventStreamRegistry';
 
 class RateLimiter {
@@ -156,7 +156,10 @@ export class BridgeServer {
       try {
         const status = this.services.authService.getPairingStatus();
         if (status.regenerated) {
-          logPairingStatus(status);
+          logPairingStatus(
+            status,
+            resolveBridgeQrUrl(this.config.host, this.config.port),
+          );
         }
         const payload: PairingStatusResponse = {
           pairingRequired: status.pairingRequired,
@@ -191,7 +194,10 @@ export class BridgeServer {
         }
 
         const result = this.services.authService.completePairing(payload);
-        logPairingStatus(this.services.authService.getPairingStatus());
+        logPairingStatus(
+          this.services.authService.getPairingStatus(),
+          resolveBridgeQrUrl(this.config.host, this.config.port),
+        );
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, 400);
