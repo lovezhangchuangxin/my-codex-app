@@ -1176,7 +1176,7 @@ export function ThreadComposer({
           <div className="ml-auto flex items-center gap-1">
             <ContextUsageButton usage={thread.contextUsage} />
 
-            {activeTurnId ? (
+            {activeTurnId && !composerText.trim() ? (
               <Button
                 className="size-7 rounded-full"
                 disabled={!actionsEnabled || interruptPending}

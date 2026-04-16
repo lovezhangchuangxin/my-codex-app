@@ -37,6 +37,8 @@ export const enMessages = {
   'detail.agent.noTextReturned': 'No text returned.',
   'detail.alert.latestClientError': 'Latest client error',
   'detail.banner.disconnected.message': 'Bridge is unavailable right now.',
+  'detail.pendingMessages.label': 'Pending',
+  'detail.pendingMessages.cancel': 'Cancel',
   'detail.banner.disconnected.title': 'Showing last known thread state',
   'detail.banner.expired.message':
     'Re-pair this browser to restore bridge access.',

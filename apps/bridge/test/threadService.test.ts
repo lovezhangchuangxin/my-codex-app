@@ -73,14 +73,44 @@ test('ThreadService does not overwrite live context usage that arrives before ro
   unsubscribeEvents();
 });
 
+test('ThreadService canUnloadThread blocks active threads', async () => {
+  const tempRoot = await mkdtemp(path.join(tmpdir(), 'thread-service-unload-'));
+  const rolloutPath = path.join(tempRoot, 'rollout.jsonl');
+  const threadId = '67e55044-10b1-426f-9247-bb680e5fe0c8';
+
+  const activeClient = new FakeAppServerClient(rolloutPath, null, 'active');
+  const activeService = new ThreadService(activeClient as never, tempRoot);
+  assert.equal(await activeService.canUnloadThread(threadId), false);
+
+  const idleClient = new FakeAppServerClient(rolloutPath, null, 'idle');
+  const idleService = new ThreadService(idleClient as never, tempRoot);
+  assert.equal(await idleService.canUnloadThread(threadId), true);
+});
+
+test('ThreadService canUnloadThread allows missing thread summaries', async () => {
+  const tempRoot = await mkdtemp(
+    path.join(tmpdir(), 'thread-service-unload-missing-'),
+  );
+  const rolloutPath = path.join(tempRoot, 'rollout.jsonl');
+  const threadId = '67e55044-10b1-426f-9247-bb680e5fe0c8';
+
+  const client = new FakeAppServerClient(rolloutPath);
+  client.readSummaryError = new Error('thread not found');
+
+  const service = new ThreadService(client as never, tempRoot);
+  assert.equal(await service.canUnloadThread(threadId), true);
+});
+
 class FakeAppServerClient extends EventEmitter {
   unsubscribeCalls = 0;
+  readSummaryError: Error | null = null;
 
   constructor(
     private readonly rolloutPath: string,
     private readonly resumeTokenUsage: ReturnType<
       typeof buildAppServerTokenUsage
     > | null = null,
+    private readonly summaryStatus: 'idle' | 'active' = 'idle',
   ) {
     super();
   }
@@ -118,6 +148,24 @@ class FakeAppServerClient extends EventEmitter {
 
   async unsubscribeThread() {
     this.unsubscribeCalls += 1;
+  }
+
+  async readThreadSummary(threadId: string) {
+    if (this.readSummaryError) {
+      throw this.readSummaryError;
+    }
+
+    return {
+      thread: {
+        id: threadId,
+        preview: 'preview',
+        createdAt: 1,
+        updatedAt: 2,
+        cwd: '/tmp/project',
+        modelProvider: 'openai',
+        status: { type: this.summaryStatus },
+      },
+    };
   }
 }
 

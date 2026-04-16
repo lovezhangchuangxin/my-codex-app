@@ -16,7 +16,10 @@ export class ThreadEventStreamRegistry {
     string,
     ReturnType<typeof setTimeout>
   >();
+  readonly #unloadCheckFailures = new Map<string, number>();
   #closing = false;
+
+  static readonly MAX_UNLOAD_CHECK_FAILURES = 10;
 
   constructor(
     private readonly threadService: ThreadService,
@@ -50,6 +53,7 @@ export class ThreadEventStreamRegistry {
     const subscriberCount = this.#threadSubscriberCounts.get(threadId) ?? 0;
     const hadPendingUnsubscribe =
       this.#cancelScheduledThreadUnsubscribe(threadId);
+    this.#unloadCheckFailures.delete(threadId);
     this.#threadSubscriberCounts.set(threadId, subscriberCount + 1);
 
     try {
@@ -96,6 +100,7 @@ export class ThreadEventStreamRegistry {
     }
     this.#eventClients.clear();
     this.#threadSubscriberCounts.clear();
+    this.#unloadCheckFailures.clear();
   }
 
   #cancelScheduledThreadUnsubscribe(threadId: string): boolean {
@@ -113,18 +118,42 @@ export class ThreadEventStreamRegistry {
     this.#cancelScheduledThreadUnsubscribe(threadId);
     const timer = setTimeout(
       () => {
-        this.#threadUnsubscribeTimers.delete(threadId);
-        if ((this.#threadSubscriberCounts.get(threadId) ?? 0) > 0) {
-          return;
-        }
-
-        this.#threadSubscriberCounts.delete(threadId);
-        void this.threadService.unsubscribeThread(threadId).catch(() => {
-          // Ignore delayed cleanup errors; the bridge remains authoritative on reconnect.
-        });
+        void this.#attemptThreadUnsubscribe(threadId);
       },
       Math.max(this.threadUnsubscribeGraceMs, 0),
     );
     this.#threadUnsubscribeTimers.set(threadId, timer);
+  }
+
+  async #attemptThreadUnsubscribe(threadId: string): Promise<void> {
+    this.#threadUnsubscribeTimers.delete(threadId);
+    if ((this.#threadSubscriberCounts.get(threadId) ?? 0) > 0) {
+      return;
+    }
+
+    let canUnload: boolean;
+    try {
+      canUnload = await this.threadService.canUnloadThread(threadId);
+    } catch {
+      const failures = (this.#unloadCheckFailures.get(threadId) ?? 0) + 1;
+      if (failures >= ThreadEventStreamRegistry.MAX_UNLOAD_CHECK_FAILURES) {
+        canUnload = true;
+      } else {
+        this.#unloadCheckFailures.set(threadId, failures);
+        this.#scheduleThreadUnsubscribe(threadId);
+        return;
+      }
+    }
+
+    if (!canUnload) {
+      this.#scheduleThreadUnsubscribe(threadId);
+      return;
+    }
+
+    this.#unloadCheckFailures.delete(threadId);
+    this.#threadSubscriberCounts.delete(threadId);
+    await this.threadService.unsubscribeThread(threadId).catch(() => {
+      // Ignore delayed cleanup errors; the bridge remains authoritative on reconnect.
+    });
   }
 }

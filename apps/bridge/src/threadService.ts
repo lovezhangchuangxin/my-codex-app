@@ -255,6 +255,25 @@ export class ThreadService {
     this.#cache.clearContextUsage(threadId);
   }
 
+  async canUnloadThread(threadId: string): Promise<boolean> {
+    try {
+      const result = await this.appServerClient.readThreadSummary(threadId);
+      return result.thread.status.type !== 'active';
+    } catch (error) {
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
+      if (
+        message.includes('not materialized') ||
+        message.includes('no rollout found') ||
+        message.includes('thread not found')
+      ) {
+        return true;
+      }
+
+      // Be conservative on unknown failures to avoid interrupting live turns.
+      return false;
+    }
+  }
+
   async startTurn(request: TurnStartRequest): Promise<TurnStartResponse> {
     const currentSettings = this.#cache.getThreadSettings(request.threadId);
     const result = await this.appServerClient.startTurn({

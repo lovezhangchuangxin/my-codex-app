@@ -13,6 +13,7 @@ export {
   previewFromUserInput,
   toThreadDetail,
   toThreadSummary,
+  type PendingMessage,
   type ThreadDetailState,
   type ThreadListState,
   type ThreadMutationState,

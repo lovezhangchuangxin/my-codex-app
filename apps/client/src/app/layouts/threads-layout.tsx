@@ -300,6 +300,19 @@ export function ThreadsLayout() {
             onSendMessage={handleSendMessage}
             onInterrupt={handleInterrupt}
             onStartReview={handleStartReview}
+            pendingMessages={
+              snapshot.mutations.pendingMessages.get(
+                mobilePanel.selectedThreadId ?? '',
+              ) ?? []
+            }
+            onCancelPendingMessage={(index) => {
+              if (mobilePanel.selectedThreadId) {
+                runtime.removePendingMessage(
+                  mobilePanel.selectedThreadId,
+                  index,
+                );
+              }
+            }}
             respondingRequestIds={snapshot.mutations.respondingRequestIds}
             selectedThreadId={mobilePanel.selectedThreadId}
             sendMessagePending={snapshot.mutations.sendMessagePending}
@@ -411,6 +424,15 @@ export function ThreadsLayout() {
           onSendMessage={handleSendMessage}
           onInterrupt={handleInterrupt}
           onStartReview={handleStartReview}
+          pendingMessages={
+            snapshot.mutations.pendingMessages.get(routeThreadId ?? '') ??
+            []
+          }
+          onCancelPendingMessage={(index) => {
+            if (routeThreadId) {
+              runtime.removePendingMessage(routeThreadId, index);
+            }
+          }}
           respondingRequestIds={snapshot.mutations.respondingRequestIds}
           selectedThreadId={routeThreadId}
           sendMessagePending={snapshot.mutations.sendMessagePending}

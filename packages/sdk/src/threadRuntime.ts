@@ -20,9 +20,11 @@ import { BridgeClient, BridgeClientError } from './bridgeClient';
 import {
   applyThreadEvent,
   createInitialSnapshot,
+  findActiveTurnId,
   setThreadMessagePending,
   toThreadDetail,
   toThreadSummary,
+  type PendingMessage,
   type ThreadDetailState,
   type ThreadRuntimeSnapshot,
   updateThreadSummaryState,
@@ -43,6 +45,7 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 export class BridgeThreadRuntime {
   readonly #listeners = new Set<Listener>();
   readonly #pendingEvents = new Map<string, BridgeEvent[]>();
+  readonly #drainingThreads = new Set<string>();
   #disposed = false;
   #reconnectAttempt = 0;
   #reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -249,6 +252,12 @@ export class BridgeThreadRuntime {
       return;
     }
 
+    // If there is an active turn, queue the message instead of sending immediately.
+    if (this.#hasActiveTurn(threadId)) {
+      this.#enqueueMessage(threadId, nextText, settings);
+      return;
+    }
+
     const input: UserInput[] = [{ type: 'text', text: nextText }];
     this.#updateMutations({ sendMessagePending: true, lastError: null });
 
@@ -353,12 +362,14 @@ export class BridgeThreadRuntime {
     this.#disconnectEvents();
     this.#unsubscribeSessionEvents();
     this.#pendingEvents.clear();
+    this.#drainingThreads.clear();
   }
 
   resetState(): void {
     this.#clearReconnectTimer();
     this.#disconnectEvents();
     this.#pendingEvents.clear();
+    this.#drainingThreads.clear();
     this.#snapshot = createInitialSnapshot(this.client.hasCredentials());
     for (const listener of this.#listeners) {
       listener();
@@ -727,6 +738,16 @@ export class BridgeThreadRuntime {
             event,
           ),
         }));
+
+        // Drain queued messages when a turn completes or fails without retry.
+        if (event.type === 'turnCompleted') {
+          this.#drainMessageQueue(event.threadId);
+        } else if (
+          event.type === 'turnError' &&
+          !event.willRetry
+        ) {
+          this.#drainMessageQueue(event.threadId);
+        }
       },
       onDisconnect: (error) => {
         if (this.#snapshot.selectedThreadId !== threadId) {
@@ -949,6 +970,71 @@ export class BridgeThreadRuntime {
 
   #isThreadCompactingPending(threadId: string): boolean {
     return this.#snapshot.mutations.compactingThreadIds.includes(threadId);
+  }
+
+  #hasActiveTurn(threadId: string): boolean {
+    const detail = this.#snapshot.detail;
+    if (detail.kind !== 'ready' || detail.thread.id !== threadId) {
+      return false;
+    }
+    return findActiveTurnId(detail.thread) !== null;
+  }
+
+  #enqueueMessage(
+    threadId: string,
+    text: string,
+    settings?: ThreadTurnSettingsOverrides,
+  ): void {
+    const queue = this.#snapshot.mutations.pendingMessages.get(threadId) ?? [];
+    const entry: PendingMessage = { text };
+    if (settings) entry.settings = settings;
+    queue.push(entry);
+    this.#updateMutations({
+      pendingMessages: new Map([
+        ...this.#snapshot.mutations.pendingMessages,
+        [threadId, queue],
+      ]),
+    });
+  }
+
+  #drainMessageQueue(threadId: string): void {
+    if (this.#drainingThreads.has(threadId)) {
+      return;
+    }
+    const queue = this.#snapshot.mutations.pendingMessages.get(threadId);
+    if (!queue || queue.length === 0) {
+      return;
+    }
+
+    const next = queue[0]!;
+    const remaining = queue.slice(1);
+    const nextMap = new Map(this.#snapshot.mutations.pendingMessages);
+    if (remaining.length === 0) {
+      nextMap.delete(threadId);
+    } else {
+      nextMap.set(threadId, remaining);
+    }
+    this.#updateMutations({ pendingMessages: nextMap });
+
+    this.#drainingThreads.add(threadId);
+    void this.sendMessage(threadId, next.text, next.settings).finally(() => {
+      this.#drainingThreads.delete(threadId);
+    });
+  }
+
+  removePendingMessage(threadId: string, index: number): void {
+    const queue = this.#snapshot.mutations.pendingMessages.get(threadId);
+    if (!queue || index < 0 || index >= queue.length) {
+      return;
+    }
+    const updated = queue.filter((_, i) => i !== index);
+    const nextMap = new Map(this.#snapshot.mutations.pendingMessages);
+    if (updated.length === 0) {
+      nextMap.delete(threadId);
+    } else {
+      nextMap.set(threadId, updated);
+    }
+    this.#updateMutations({ pendingMessages: nextMap });
   }
 
   #setThreadCompacting(threadId: string, isCompacting: boolean): void {

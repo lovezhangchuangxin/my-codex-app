@@ -23,6 +23,11 @@ export type ThreadDetailState =
   | { kind: 'ready'; thread: ThreadDetail }
   | { kind: 'error'; threadId: string; message: string };
 
+export interface PendingMessage {
+  text: string;
+  settings?: import('@my-codex-app/protocol').ThreadTurnSettingsOverrides;
+}
+
 export interface ThreadMutationState {
   startThreadPending: boolean;
   sendMessagePending: boolean;
@@ -30,6 +35,7 @@ export interface ThreadMutationState {
   compactingThreadIds: string[];
   respondingRequestIds: JsonRpcRequestId[];
   lastError: string | null;
+  pendingMessages: Map<string, PendingMessage[]>;
 }
 
 export interface ThreadRuntimeSnapshot {
@@ -57,6 +63,7 @@ export function createInitialSnapshot(
       compactingThreadIds: [],
       respondingRequestIds: [],
       lastError: null,
+      pendingMessages: new Map(),
     },
   };
 }

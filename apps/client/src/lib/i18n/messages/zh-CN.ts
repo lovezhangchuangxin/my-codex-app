@@ -33,6 +33,8 @@ export const zhCnMessages: typeof enMessages = {
   'detail.agent.noTextReturned': '未返回文本内容。',
   'detail.alert.latestClientError': '最近一次客户端错误',
   'detail.banner.disconnected.message': '本地 Bridge 当前不可用。',
+  'detail.pendingMessages.label': '待发送',
+  'detail.pendingMessages.cancel': '取消',
   'detail.banner.disconnected.title': '正在显示最近一次已知线程状态',
   'detail.banner.expired.message': '请重新配对此浏览器以恢复 Bridge 访问。',
   'detail.banner.expired.title': '会话已过期',

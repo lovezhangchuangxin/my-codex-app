@@ -11,6 +11,7 @@ import { ThreadComposer } from '@/features/threads/components/thread-detail-comp
 import { ThreadDetailEmptyState } from '@/features/threads/components/thread-detail-empty-state';
 import { ThreadDetailHeader } from '@/features/threads/components/thread-detail-header';
 import { ThreadMessageStream } from '@/features/threads/components/thread-detail-messages';
+import { PendingMessageList } from '@/features/threads/components/pending-message-list';
 import { ThreadSwitcherSheet } from '@/features/threads/components/thread-switcher-sheet';
 import { parseFilePathWithLine } from '@/features/threads/components/thread-detail-utils';
 import type { WorkspaceBrowserRequestedTargetKind } from '@/features/threads/components/use-workspace-browser';
@@ -20,7 +21,7 @@ import { flattenTurnItems } from '@/features/threads/lib/thread-utils';
 import { toWorkspaceRelativePath } from '@/features/threads/lib/workspace-utils';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import type { ThreadDetailState, ThreadListState } from '@my-codex-app/sdk';
-import { findActiveTurnId } from '@my-codex-app/sdk';
+import { findActiveTurnId, type PendingMessage } from '@my-codex-app/sdk';
 import type {
   LocalConnectionState,
   RequestRespondRequest,
@@ -52,6 +53,8 @@ export function ThreadDetailPanel({
   onSendMessage,
   onInterrupt,
   onStartReview,
+  pendingMessages,
+  onCancelPendingMessage,
   respondingRequestIds,
   selectedThreadId,
   sendMessagePending,
@@ -77,6 +80,8 @@ export function ThreadDetailPanel({
   ) => Promise<boolean>;
   onInterrupt: (threadId: string, turnId: string) => Promise<void>;
   onStartReview: (request: ThreadReviewRequest) => Promise<boolean>;
+  pendingMessages: PendingMessage[];
+  onCancelPendingMessage: (index: number) => void;
   respondingRequestIds: Array<string | number>;
   selectedThreadId: string | null;
   sendMessagePending: boolean;
@@ -150,6 +155,8 @@ export function ThreadDetailPanel({
       onRespondToRequest={onRespondToRequest}
       onSendMessage={onSendMessage}
       onStartReview={onStartReview}
+      pendingMessages={pendingMessages}
+      onCancelPendingMessage={onCancelPendingMessage}
       respondingRequestIds={respondingRequestIds}
       selectedThreadId={selectedThreadId}
       sendMessagePending={sendMessagePending}
@@ -175,6 +182,8 @@ function ReadyThreadDetail({
   onRespondToRequest,
   onSendMessage,
   onStartReview,
+  pendingMessages,
+  onCancelPendingMessage,
   respondingRequestIds,
   selectedThreadId,
   sendMessagePending,
@@ -200,6 +209,8 @@ function ReadyThreadDetail({
     settings?: ThreadTurnSettingsOverrides,
   ) => Promise<boolean>;
   onStartReview: (request: ThreadReviewRequest) => Promise<boolean>;
+  pendingMessages: PendingMessage[];
+  onCancelPendingMessage: (index: number) => void;
   respondingRequestIds: Array<string | number>;
   selectedThreadId: string | null;
   sendMessagePending: boolean;
@@ -352,6 +363,11 @@ function ReadyThreadDetail({
           scrollRef={scrollRef}
         />
       )}
+
+      <PendingMessageList
+        messages={pendingMessages}
+        onCancel={onCancelPendingMessage}
+      />
 
       <div className="shrink-0 border-t border-subtle/6 bg-background/82 px-4 py-3 backdrop-blur-xl md:px-5">
         <ThreadComposer
