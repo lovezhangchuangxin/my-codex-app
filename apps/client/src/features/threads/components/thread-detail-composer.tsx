@@ -600,7 +600,7 @@ export function ThreadComposer({
       }));
 
       try {
-        const response = await bridgeClient.listModels(true);
+        const response = await bridgeClient.listModels(false);
         if (cancelled) {
           return;
         }
@@ -754,7 +754,7 @@ export function ThreadComposer({
     }));
 
     try {
-      const response = await bridgeClient.listModels(true);
+      const response = await bridgeClient.listModels(false);
       setModelsState({
         kind: 'ready',
         models: response.data,
