@@ -1,0 +1,176 @@
+name: Release Android
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Release tag to create or update (for example mobile-v0.1.0)'
+        required: true
+        type: string
+      draft:
+        description: 'Create or keep the release as a draft'
+        required: true
+        default: true
+        type: boolean
+  push:
+    tags:
+      - 'mobile-v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release-android:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve release metadata
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RELEASE_TAG="${{ github.event.inputs.release_tag }}"
+            RELEASE_DRAFT="${{ github.event.inputs.draft }}"
+            CHECKOUT_REF="refs/tags/${RELEASE_TAG}"
+          else
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            RELEASE_DRAFT="false"
+            CHECKOUT_REF="${GITHUB_REF}"
+          fi
+
+          case "${RELEASE_TAG}" in
+            mobile-v*) ;;
+            *)
+              echo "release_tag must use the mobile-v<version> format" >&2
+              exit 1
+              ;;
+          esac
+
+          {
+            echo "release_tag=${RELEASE_TAG}"
+            echo "release_draft=${RELEASE_DRAFT}"
+            echo "checkout_ref=${CHECKOUT_REF}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.meta.outputs.checkout_ref }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0" "ndk;27.0.12077973"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - name: Validate tag matches app version
+        shell: bash
+        env:
+          RELEASE_TAG: ${{ steps.meta.outputs.release_tag }}
+        run: |
+          APP_VERSION="$(node -e "const fs=require('node:fs'); const config=JSON.parse(fs.readFileSync('apps/mobile/src-tauri/tauri.conf.json','utf8')); process.stdout.write(config.version);")"
+          TAG_VERSION="${RELEASE_TAG#mobile-v}"
+
+          if [ "${APP_VERSION}" != "${TAG_VERSION}" ]; then
+            echo "Tag ${RELEASE_TAG} does not match apps/mobile/src-tauri/tauri.conf.json version ${APP_VERSION}" >&2
+            exit 1
+          fi
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Restore Android keystore
+        working-directory: apps/mobile/src-tauri/gen/android
+        env:
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_BASE64: ${{ secrets.ANDROID_KEY_BASE64 }}
+        shell: bash
+        run: |
+          printf '%s' "${ANDROID_KEY_BASE64}" | base64 --decode > "${RUNNER_TEMP}/upload-keystore.jks"
+          {
+            echo "keyAlias=${ANDROID_KEY_ALIAS}"
+            echo "keyPassword=${ANDROID_KEY_PASSWORD}"
+            echo "storePassword=${ANDROID_STORE_PASSWORD}"
+            echo "storeFile=${RUNNER_TEMP}/upload-keystore.jks"
+          } > keystore.properties
+
+      - name: Build Android release assets
+        run: pnpm --filter @my-codex-app/mobile build
+
+      - name: Verify release assets exist
+        shell: bash
+        run: |
+          test -f apps/mobile/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk
+          test -f apps/mobile/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab
+
+      - name: Compute checksums
+        shell: bash
+        run: |
+          APK_PATH="apps/mobile/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
+          AAB_PATH="apps/mobile/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab"
+          sha256sum "${APK_PATH}" > "${APK_PATH}.sha256"
+          sha256sum "${AAB_PATH}" > "${AAB_PATH}.sha256"
+
+      - name: Upload mapping files
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-mapping-${{ steps.meta.outputs.release_tag }}
+          path: apps/mobile/src-tauri/gen/android/app/build/outputs/mapping
+          if-no-files-found: error
+
+      - name: Create or update GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ steps.meta.outputs.release_tag }}
+          RELEASE_DRAFT: ${{ steps.meta.outputs.release_draft }}
+        shell: bash
+        run: |
+          assets=(
+            "apps/mobile/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk"
+            "apps/mobile/src-tauri/gen/android/app/build/outputs/apk/universal/release/app-universal-release.apk.sha256"
+            "apps/mobile/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab"
+            "apps/mobile/src-tauri/gen/android/app/build/outputs/bundle/universalRelease/app-universal-release.aab.sha256"
+          )
+
+          if gh release view "${RELEASE_TAG}" >/dev/null 2>&1; then
+            gh release upload "${RELEASE_TAG}" "${assets[@]}" --clobber
+          else
+            draft_flag=()
+            if [ "${RELEASE_DRAFT}" = "true" ]; then
+              draft_flag+=(--draft)
+            fi
+
+            gh release create "${RELEASE_TAG}" \
+              "${assets[@]}" \
+              --verify-tag \
+              --title "${RELEASE_TAG}" \
+              --generate-notes \
+              "${draft_flag[@]}"
+          fi
+
+          release_id="$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" --jq '.id')"
+          gh api \
+            --method PATCH \
+            "repos/${GITHUB_REPOSITORY}/releases/${release_id}" \
+            -F "draft=${RELEASE_DRAFT}" \
+            >/dev/null

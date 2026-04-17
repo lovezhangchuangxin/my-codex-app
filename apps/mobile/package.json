@@ -6,7 +6,7 @@
     "android:dev": "node ./scripts/ensure-android-local-direct.mjs && tauri android dev",
     "android:init": "tauri android init && node ./scripts/ensure-android-local-direct.mjs",
     "check": "cargo check --manifest-path src-tauri/Cargo.toml",
-    "build": "node ./scripts/ensure-android-local-direct.mjs && tauri android build",
+    "build": "node ./scripts/ensure-android-local-direct.mjs && tauri android build --apk --aab",
     "dev": "tauri dev",
     "ios:dev": "tauri ios dev",
     "ios:init": "tauri ios init",

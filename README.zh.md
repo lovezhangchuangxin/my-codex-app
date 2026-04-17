@@ -243,6 +243,30 @@ pnpm release
 
 `pnpm release` 会执行 `pnpm build && changeset publish`。
 
+Android 应用的发布与 npm 包分开进行。`.github/workflows/release-android.yml`
+会从 `apps/mobile` 构建签名后的 Android 发布产物，并把 universal APK 与
+AAB 上传到 GitHub Release。这个工作流依赖仓库 Actions secrets 中配置的
+Android 签名 keystore。
+
+推荐流程：
+
+```sh
+# 先更新 apps/mobile/src-tauri/tauri.conf.json 中的 version
+git tag mobile-v0.1.0
+git push origin mobile-v0.1.0
+```
+
+tag 推送会默认创建一个已发布的 GitHub Release。
+
+也可以手动运行 `workflow_dispatch` 来重建一个已经推送过的
+`mobile-v<version>` tag。手动路径会先 checkout 这个 tag 再构建，并允许你
+显式选择最终 Release 保持 draft 还是直接发布。
+
+参见：
+
+- `docs/specs/2026-04-17-android-github-release-automation.md`
+- `docs/plans/2026-04-17-android-github-release-automation.md`
+
 ## 贡献
 
 - 修改架构或协议行为前，先阅读 `docs/specs/` 和 `docs/plans/` 中相关文档

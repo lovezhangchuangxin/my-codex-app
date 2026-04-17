@@ -259,6 +259,32 @@ pnpm release
 
 The `pnpm release` script runs `pnpm build && changeset publish`.
 
+Android app releases are published separately from the npm packages. The
+workflow at `.github/workflows/release-android.yml` builds signed Android
+release assets from `apps/mobile`, uploads a universal APK and AAB to a GitHub
+Release, and expects repository Actions secrets for the Android signing
+keystore.
+
+Recommended flow:
+
+```sh
+# Update apps/mobile/src-tauri/tauri.conf.json version first
+git tag mobile-v0.1.0
+git push origin mobile-v0.1.0
+```
+
+Tag pushes create a published GitHub Release by default.
+
+You can also run the workflow manually with `workflow_dispatch` to rebuild an
+existing pushed `mobile-v<version>` tag. The manual path checks out that tag
+before building and lets you choose whether the resulting release stays draft or
+is published.
+
+See:
+
+- `docs/specs/2026-04-17-android-github-release-automation.md`
+- `docs/plans/2026-04-17-android-github-release-automation.md`
+
 ## Contributing
 
 - Read the relevant docs in `docs/specs/` and `docs/plans/` before changing
