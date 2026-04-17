@@ -114,6 +114,30 @@ my-codex-app/
 | `pnpm typecheck`            | Type-check all TypeScript |
 | `pnpm fmt`                  | Format code               |
 
+## Publishing
+
+Three packages are published to npm under the `@my-codex-app` scope: `protocol`, `sdk`, and `bridge`. Versions are managed with [changesets](https://github.com/changesets/changesets) in fixed mode (all three share the same version).
+
+### Prerequisites
+
+- `npm login` completed
+- `@my-codex-app` organization created on [npmjs.com](https://www.npmjs.com/org/create)
+
+### Release a new version
+
+```sh
+# 1. Describe the change
+pnpm changeset
+
+# 2. Bump versions and update changelogs
+pnpm version
+
+# 3. Commit the version bump, then build and publish
+pnpm release
+```
+
+The `pnpm release` script runs `pnpm build && changeset publish`. Push the resulting commit and tags to trigger the deployment.
+
 ## Roadmap
 
 See [TODO.md](./TODO.md) for milestone tracking. Upcoming:

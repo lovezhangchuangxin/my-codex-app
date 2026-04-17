@@ -113,6 +113,30 @@ my-codex-app/
 | `pnpm typecheck`          | 类型检查                     |
 | `pnpm fmt`                | 格式化代码                   |
 
+## 发包
+
+三个包发布到 npm 的 `@my-codex-app` scope 下：`protocol`、`sdk`、`bridge`。使用 [changesets](https://github.com/changesets/changesets) 管理版本，采用 fixed 模式（三个包统一版本号）。
+
+### 前置条件
+
+- 已执行 `npm login`
+- 已在 [npmjs.com](https://www.npmjs.com/org/create) 创建 `@my-codex-app` 组织
+
+### 发布新版本
+
+```sh
+# 1. 声明变更
+pnpm changeset
+
+# 2. 更新版本号和 changelog
+pnpm version
+
+# 3. 提交版本变更，然后构建并发布
+pnpm release
+```
+
+`pnpm release` 会执行 `pnpm build && changeset publish`。将生成的提交和 tag 推送到远程即可触发部署。
+
 ## 路线图
 
 查看 [TODO.md](./TODO.md) 了解里程碑进度。即将推进：
