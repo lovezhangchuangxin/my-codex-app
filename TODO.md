@@ -221,13 +221,18 @@ Scope:
 
 - native Android/iOS device validation coverage
 - stronger packaged-host security review
-- release build verification beyond `cargo check`
 - eventual migration away from browser local storage to Tauri-native secure storage
 
 Expected outcome:
 
 - Tauri mobile host is documented and validated beyond the current dev-path baseline
 - release packaging risks are reduced and tracked explicitly
+
+Progress:
+
+- [x] Android release APK builds successfully with `pnpm mobile:android:build` (signed, `chrome105` Vite target)
+- [ ] iOS release build verification
+- [ ] broader native-device validation and security review
 
 ### [ ] 10. Start Relay Phase
 

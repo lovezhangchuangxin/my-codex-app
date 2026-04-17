@@ -256,6 +256,10 @@ Minimum required verification:
 - `pnpm build`
 - `pnpm --filter @my-codex-app/mobile check`
 
+Android release build (requires local Android SDK + signing config):
+
+- `pnpm mobile:android:build` — produces a signed release APK under `apps/mobile/src-tauri/gen/android/app/build/outputs/`
+
 Focused manual checks:
 
 1. Hosted browser path with no stored bridge target still resolves to the

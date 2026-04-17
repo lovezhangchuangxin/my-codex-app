@@ -103,15 +103,16 @@ my-codex-app/
 
 ## Common Commands
 
-| Command                   | Description               |
-| ------------------------- | ------------------------- |
-| `pnpm dev:bridge`         | Start bridge dev server   |
-| `pnpm dev:client`         | Start client dev server   |
-| `pnpm mobile:android:dev` | Run Tauri app on Android  |
-| `pnpm mobile:ios:dev`     | Run Tauri app on iOS      |
-| `pnpm build`              | Build all packages        |
-| `pnpm typecheck`          | Type-check all TypeScript |
-| `pnpm fmt`                | Format code               |
+| Command                     | Description                   |
+| --------------------------- | ----------------------------- |
+| `pnpm dev:bridge`           | Start bridge dev server       |
+| `pnpm dev:client`           | Start client dev server       |
+| `pnpm mobile:android:dev`   | Run Tauri app on Android      |
+| `pnpm mobile:android:build` | Build Android release APK     |
+| `pnpm mobile:ios:dev`       | Run Tauri app on iOS          |
+| `pnpm build`                | Build all packages            |
+| `pnpm typecheck`            | Type-check all TypeScript     |
+| `pnpm fmt`                  | Format code                   |
 
 ## Roadmap
 
