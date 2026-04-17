@@ -228,24 +228,15 @@ export const enMessages = {
   'header.openRequests': 'Open pending requests',
   'header.openSettings': 'Open settings',
   'header.searchPlaceholder': 'Search...',
-  'pairing.bridgeUnavailable':
-    'Bridge not detected. Make sure pnpm dev:bridge is running on your computer.',
-  'pairing.bridgeUnavailablePrefix': 'Bridge not detected. Make sure ',
-  'pairing.bridgeUnavailableSuffix': ' is running on your computer.',
-  'pairing.bridgeUnavailableWithTarget': ({ target }) =>
-    `Bridge not detected at ${target ?? 'the configured target'}.`,
+  'pairing.cameraUnavailable':
+    'Camera not available. Use your device camera to scan the QR code instead.',
   'pairing.codePlaceholder': 'e.g. ABCD1234',
   'pairing.connect': 'Connect',
   'pairing.connecting': 'Connecting...',
+  'pairing.enterManually': 'Enter manually',
+  'pairing.enterManuallyHint':
+    'Enter the bridge address and pairing code from your bridge terminal',
   'pairing.error.generic': 'Pairing failed. Please try again.',
-  'pairing.helper': 'Run pnpm dev:bridge in your terminal to get a code.',
-  'pairing.helperPrefix': 'Run ',
-  'pairing.helperSuffix': ' in your terminal to get a code.',
-  'pairing.subtitle': 'Enter the pairing code from your bridge terminal',
-  'pairing.title': 'Pair your device',
-  'pairing.backToManual': 'Back to manual entry',
-  'pairing.cameraUnavailable':
-    'Camera not available. Please enter the code manually.',
   'pairing.scanQr': 'Scan QR Code',
   'pairing.scanQrHint':
     'Point your camera at the QR code on the bridge terminal',

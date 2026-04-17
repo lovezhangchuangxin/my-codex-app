@@ -210,24 +210,14 @@ export const zhCnMessages: typeof enMessages = {
   'header.openRequests': '打开待处理请求',
   'header.openSettings': '打开设置',
   'header.searchPlaceholder': '搜索...',
-  'pairing.bridgeUnavailable':
-    '未检测到 Bridge。请确认你的电脑上正在运行 pnpm dev:bridge。',
-  'pairing.bridgeUnavailablePrefix':
-    '未检测到 Bridge。请确认你的电脑上正在运行 ',
-  'pairing.bridgeUnavailableSuffix': '。',
-  'pairing.bridgeUnavailableWithTarget': ({ target }) =>
-    `未在 ${target ?? '当前配置地址'} 检测到 Bridge。`,
+  'pairing.cameraUnavailable':
+    '摄像头不可用，请使用系统相机扫描二维码。',
   'pairing.codePlaceholder': '例如 ABCD1234',
   'pairing.connect': '连接',
   'pairing.connecting': '连接中...',
+  'pairing.enterManually': '手动输入',
+  'pairing.enterManuallyHint': '输入 Bridge 终端中的地址和配对码',
   'pairing.error.generic': '配对失败，请重试。',
-  'pairing.helper': '在终端运行 pnpm dev:bridge 以获取配对码。',
-  'pairing.helperPrefix': '在终端运行 ',
-  'pairing.helperSuffix': ' 以获取配对码。',
-  'pairing.subtitle': '输入 Bridge 终端中的配对码',
-  'pairing.title': '配对你的设备',
-  'pairing.backToManual': '返回手动输入',
-  'pairing.cameraUnavailable': '摄像头不可用，请手动输入配对码。',
   'pairing.scanQr': '扫描二维码',
   'pairing.scanQrHint': '将摄像头对准 Bridge 终端上的二维码',
   'project.idle.disconnected.message': 'Bridge 当前不可用。',
