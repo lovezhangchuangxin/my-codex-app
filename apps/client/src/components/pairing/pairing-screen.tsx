@@ -192,27 +192,19 @@ export function PairingScreen() {
           ) : null}
 
           <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
-            <div className="space-y-2.5">
-              <label
-                className="text-xs font-mono tracking-[0.14em] uppercase text-muted-foreground"
-                htmlFor="bridge-target"
-              >
-                {t('connection.target.label')}
-              </label>
-              <Input
-                autoCapitalize="none"
-                autoCorrect="off"
-                disabled={isSubmitting}
-                id="bridge-target"
-                onChange={(event) => {
-                  setBridgeTarget(event.target.value);
-                }}
-                placeholder={t('connection.target.placeholder')}
-                spellCheck={false}
-                type="url"
-                value={bridgeTarget}
-              />
-            </div>
+            <Input
+              autoCapitalize="none"
+              autoCorrect="off"
+              disabled={isSubmitting}
+              id="bridge-target"
+              onChange={(event) => {
+                setBridgeTarget(event.target.value);
+              }}
+              placeholder={t('connection.target.placeholder')}
+              spellCheck={false}
+              type="url"
+              value={bridgeTarget}
+            />
 
             <Input
               autoFocus={false}
@@ -269,22 +261,7 @@ export function PairingScreen() {
       }}
     >
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-between gap-3">
-          <Button
-            size="sm"
-            type="button"
-            variant="outline"
-            onClick={returnToManual}
-          >
-            {t('pairing.backToManual')}
-          </Button>
-          <p className="text-center text-xs font-mono tracking-[0.14em] uppercase text-muted-foreground">
-            {t('pairing.scanQr')}
-          </p>
-          <span className="w-[92px]" aria-hidden="true" />
-        </div>
-
-        <div className="mt-4 flex flex-col items-center space-y-1.5 text-center">
+        <div className="flex flex-col items-center space-y-1.5 text-center">
           <div className="flex size-10 items-center justify-center rounded-full border bg-muted">
             <QrCode className="size-5 text-muted-foreground" />
           </div>
@@ -331,6 +308,20 @@ export function PairingScreen() {
             </Suspense>
           )}
         </div>
+
+        {pairingState.status !== 'error' && scanFeedback?.kind !== 'scan' ? (
+          <div className="mt-4">
+            <Button
+              className="w-full"
+              size="sm"
+              type="button"
+              variant="outline"
+              onClick={returnToManual}
+            >
+              {t('pairing.backToManual')}
+            </Button>
+          </div>
+        ) : null}
 
         {showScanningHint ? (
           <p className="mt-3 text-center text-sm text-muted-foreground">
