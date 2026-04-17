@@ -27,7 +27,33 @@
 - 自动重连和重新同步恢复机制
 - 局域网访问 —— 同一网络下的手机可直接打开客户端
 
-## 快速开始
+## 使用指南
+
+### 1. 安装 Bridge
+
+```sh
+npm i -g @my-codex-app/bridge
+```
+
+### 2. 启动 Bridge
+
+```sh
+codexb start
+```
+
+此命令会在后台启动 Bridge 守护进程。请确保已安装 [Codex CLI](https://github.com/openai/codex) 并在 PATH 中。
+
+### 3. 通过浏览器连接
+
+首次启动时，Bridge 会在终端打印一个 URL 和**配对验证码**。在浏览器中打开该 URL，输入验证码即可连接。
+
+### 4. 通过手机连接
+
+安装移动端 App，扫描 `codexb pair show` 显示的二维码即可连接。确保手机和电脑在同一 Wi-Fi 网络下。
+
+完整的 Bridge 命令参考请查看 [apps/bridge/README.md](apps/bridge/README.md)。
+
+## 开发指南
 
 ### 前置条件
 
@@ -35,38 +61,21 @@
 - [pnpm](https://pnpm.io/) >= 10
 - 已安装并配置 [Codex CLI](https://github.com/openai/codex)
 
-### 1. 安装依赖
+### 环境搭建
 
 ```sh
 pnpm install
-```
-
-### 2. 配置环境
-
-```sh
 cp .env.example .env
 # 编辑 .env，将 CODEX_SOURCE_CODE_HOME 设为你本地 Codex 源码路径
+pnpm build
 ```
 
-### 3. 启动 Bridge
+### 开发模式
 
 ```sh
-pnpm dev:bridge
+pnpm dev:bridge   # 启动 bridge
+pnpm dev:client   # 启动 client
 ```
-
-Bridge 会在终端打印一个**配对验证码**。首次连接新设备时需要输入此验证码。
-
-### 4. 启动 Client
-
-```sh
-pnpm dev:client
-```
-
-在浏览器打开 [http://localhost:5173](http://localhost:5173)，输入配对验证码即可连接。
-
-### 手机访问
-
-确保手机和电脑连接同一个 Wi-Fi。Client 开发服务器启动后，终端会打印 `Network` 地址（如 `http://192.168.1.2:5173`），在手机浏览器中打开即可。
 
 ### Tauri Android 使用说明
 
@@ -107,10 +116,6 @@ my-codex-app/
 | `pnpm build`              | 构建所有包                   |
 | `pnpm typecheck`          | 类型检查                     |
 | `pnpm fmt`                | 格式化代码                   |
-
-## Bridge CLI
-
-Bridge 以 `@my-codex-app/bridge` 的名称发布到 npm。完整的命令参考、配置和使用指南请查看 [apps/bridge/README.md](apps/bridge/README.md)。
 
 ## 路线图
 

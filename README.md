@@ -27,7 +27,33 @@ Access [Codex](https://github.com/openai/codex) from your browser and phone. Cod
 - Automatic reconnect and resync recovery
 - LAN access — open the client from your phone on the same network
 
-## Quick Start
+## Getting Started
+
+### 1. Install the bridge
+
+```sh
+npm i -g @my-codex-app/bridge
+```
+
+### 2. Start the bridge
+
+```sh
+codexb start
+```
+
+This starts the bridge daemon in the background. Make sure [Codex CLI](https://github.com/openai/codex) is installed and on your PATH.
+
+### 3. Connect from your browser
+
+The bridge prints a URL and a **pairing code** on first start. Open the URL in your browser, enter the pairing code, and you're connected.
+
+### 4. Connect from your phone
+
+Install the mobile app, scan the QR code displayed by `codexb pair show`, and you're connected. Both devices must be on the same Wi-Fi.
+
+For the full bridge command reference, see [apps/bridge/README.md](apps/bridge/README.md).
+
+## Development Guide
 
 ### Prerequisites
 
@@ -35,38 +61,21 @@ Access [Codex](https://github.com/openai/codex) from your browser and phone. Cod
 - [pnpm](https://pnpm.io/) >= 10
 - [Codex CLI](https://github.com/openai/codex) installed and configured
 
-### 1. Install dependencies
+### Setup
 
 ```sh
 pnpm install
-```
-
-### 2. Configure environment
-
-```sh
 cp .env.example .env
 # Edit .env and set CODEX_SOURCE_CODE_HOME to your local Codex source checkout path
+pnpm build
 ```
 
-### 3. Start the bridge
+### Run in dev mode
 
 ```sh
-pnpm dev:bridge
+pnpm dev:bridge   # Start bridge
+pnpm dev:client   # Start client
 ```
-
-The bridge prints a **pairing code** in the terminal. You'll need this once to trust a new device.
-
-### 4. Start the client
-
-```sh
-pnpm dev:client
-```
-
-Open [http://localhost:5173](http://localhost:5173) in your browser, enter the pairing code, and you're connected.
-
-### Access from your phone
-
-Both devices must be on the same Wi-Fi. With the client dev server running, find the `Network` address printed in the terminal (e.g. `http://192.168.1.2:5173`) and open it on your phone.
 
 ### Tauri Android Notes
 
@@ -107,10 +116,6 @@ my-codex-app/
 | `pnpm build`              | Build all packages        |
 | `pnpm typecheck`          | Type-check all TypeScript |
 | `pnpm fmt`                | Format code               |
-
-## Bridge CLI
-
-The bridge is published as `@my-codex-app/bridge` on npm. For the full command reference, configuration, and usage guide, see [apps/bridge/README.md](apps/bridge/README.md).
 
 ## Roadmap
 
