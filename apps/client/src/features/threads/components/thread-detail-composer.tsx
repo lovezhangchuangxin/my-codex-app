@@ -50,6 +50,7 @@ import { formatTokenCount } from '@/features/threads/components/thread-detail-ut
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { useBridgeClient } from '@/lib/runtime/runtime-context';
 import { cn } from '@/lib/utils';
+import { isTauriHost } from '@/platform/host';
 import {
   readNativeKeyboardInsetHeight,
   tauriKeyboardInsetChangeEvent,
@@ -453,8 +454,10 @@ export function ThreadComposer({
     };
   }, [commandPopupOpen, filePopupOpen, composerLift]);
 
+  // Skip on Tauri: TauriViewportSync (providers.tsx) handles keyboard adjustment
+  // via --app-viewport-height, avoiding double-adjustment flicker.
   useEffect(() => {
-    if (isDesktop || typeof window === 'undefined') {
+    if (isDesktop || isTauriHost || typeof window === 'undefined') {
       return;
     }
 
