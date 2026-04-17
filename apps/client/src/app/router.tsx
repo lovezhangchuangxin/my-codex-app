@@ -41,32 +41,32 @@ const routerOpts = basename ? { basename } : undefined;
 
 export const appRouter = createBrowserRouter(
   [
-  {
-    path: '/',
-    element: <AppShell />,
-    children: [
-      {
-        index: true,
-        element: <Navigate replace to="/threads" />,
-      },
-      {
-        path: 'pair',
-        element: withSuspense(<PairingScreen />),
-      },
-      {
-        path: 'threads',
-        element: <AuthGuard>{withSuspense(<ThreadsLayout />)}</AuthGuard>,
-      },
-      {
-        path: 'threads/:threadId',
-        element: <AuthGuard>{withSuspense(<ThreadsLayout />)}</AuthGuard>,
-      },
-      {
-        path: '*',
-        element: <Navigate replace to="/" />,
-      },
-    ],
-  },
-],
+    {
+      path: '/',
+      element: <AppShell />,
+      children: [
+        {
+          index: true,
+          element: <Navigate replace to="/threads" />,
+        },
+        {
+          path: 'pair',
+          element: withSuspense(<PairingScreen />),
+        },
+        {
+          path: 'threads',
+          element: <AuthGuard>{withSuspense(<ThreadsLayout />)}</AuthGuard>,
+        },
+        {
+          path: 'threads/:threadId',
+          element: <AuthGuard>{withSuspense(<ThreadsLayout />)}</AuthGuard>,
+        },
+        {
+          path: '*',
+          element: <Navigate replace to="/" />,
+        },
+      ],
+    },
+  ],
   routerOpts,
 );

@@ -4,11 +4,11 @@ on:
   push:
     branches: [main]
     paths:
-      - "apps/client/**"
-      - "packages/protocol/**"
-      - "packages/sdk/**"
-      - "pnpm-lock.yaml"
-      - ".github/workflows/deploy-client.yml"
+      - 'apps/client/**'
+      - 'packages/protocol/**'
+      - 'packages/sdk/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/deploy-client.yml'
 
 permissions:
   contents: read
