@@ -43,11 +43,7 @@ codexb start
 
 此命令会在后台启动 Bridge 守护进程。请确保已安装 [Codex CLI](https://github.com/openai/codex) 并在 PATH 中。
 
-### 3. 通过浏览器连接
-
-首次启动时，Bridge 会在终端打印一个 URL 和**配对验证码**。在浏览器中打开该 URL，输入验证码即可连接。
-
-### 4. 通过手机连接
+### 3. 通过手机连接
 
 安装移动端 App，扫描 `codexb pair show` 显示的二维码即可连接。确保手机和电脑在同一 Wi-Fi 网络下。
 

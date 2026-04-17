@@ -43,11 +43,7 @@ codexb start
 
 This starts the bridge daemon in the background. Make sure [Codex CLI](https://github.com/openai/codex) is installed and on your PATH.
 
-### 3. Connect from your browser
-
-The bridge prints a URL and a **pairing code** on first start. Open the URL in your browser, enter the pairing code, and you're connected.
-
-### 4. Connect from your phone
+### 3. Connect from your phone
 
 Install the mobile app, scan the QR code displayed by `codexb pair show`, and you're connected. Both devices must be on the same Wi-Fi.
 
