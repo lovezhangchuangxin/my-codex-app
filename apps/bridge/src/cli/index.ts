@@ -96,30 +96,6 @@ const DEFAULT_LOG_TAIL_LINES = 200;
 const START_TIMEOUT_MS = 30_000;
 const STOP_TIMEOUT_MS = 10_000;
 const LOG_POLL_INTERVAL_MS = 1_000;
-const HELP_COMMANDS = [
-  'start',
-  'run',
-  'stop',
-  'restart',
-  'status',
-  'logs',
-  'doctor',
-  'version',
-  'pair show',
-  'pair refresh',
-  'devices list',
-  'devices revoke',
-  'devices delete',
-  'config show',
-  'config get',
-  'config set',
-  'config edit',
-  'config reset',
-  'projects list',
-  'projects import',
-  'projects remove',
-  'completion',
-];
 
 export async function main(argv = process.argv.slice(2)): Promise<void> {
   const parsed = parseArgs(argv);
@@ -998,22 +974,92 @@ function configToJson(config: BridgeServerConfig): Record<string, unknown> {
   };
 }
 
+const COMMAND_HELP: Array<{
+  group: string;
+  entries: Array<{ command: string; description: string }>;
+}> = [
+  {
+    group: 'Daemon',
+    entries: [
+      { command: 'start', description: 'Start the bridge daemon in the background' },
+      { command: 'run', description: 'Run the bridge daemon in the foreground' },
+      { command: 'stop', description: 'Stop the running bridge daemon' },
+      { command: 'restart', description: 'Restart the bridge daemon' },
+      { command: 'status', description: 'Show daemon status and connection info' },
+      { command: 'logs', description: 'Show daemon logs (--follow to tail)' },
+    ],
+  },
+  {
+    group: 'Pairing',
+    entries: [
+      { command: 'pair show', description: 'Show pairing QR code and status' },
+      { command: 'pair refresh', description: 'Generate a new pairing code' },
+    ],
+  },
+  {
+    group: 'Devices',
+    entries: [
+      { command: 'devices list', description: 'List all trusted devices' },
+      { command: 'devices revoke <id>', description: 'Revoke access for a device' },
+      { command: 'devices delete <id>', description: 'Remove a device record' },
+    ],
+  },
+  {
+    group: 'Configuration',
+    entries: [
+      { command: 'config show', description: 'Display current configuration' },
+      { command: 'config get <key>', description: 'Get a single config value' },
+      { command: 'config set <key> <value>', description: 'Set a config value' },
+      { command: 'config edit', description: 'Open config file in $EDITOR' },
+      { command: 'config reset', description: 'Reset config to defaults' },
+    ],
+  },
+  {
+    group: 'Projects',
+    entries: [
+      { command: 'projects list', description: 'List imported projects' },
+      { command: 'projects import <path>', description: 'Import a project directory' },
+      { command: 'projects remove <path>', description: 'Remove an imported project' },
+    ],
+  },
+  {
+    group: 'Utilities',
+    entries: [
+      { command: 'doctor', description: 'Run diagnostics and check prerequisites' },
+      { command: 'version', description: 'Print version information' },
+      { command: 'completion', description: 'Output shell completion script' },
+    ],
+  },
+];
+
 function printHelp(): void {
   console.log('Usage: codexb <command> [options]');
   console.log('');
-  console.log('Commands:');
-  for (const command of HELP_COMMANDS) {
-    console.log(`  ${command}`);
+
+  const maxCommandLen = Math.max(
+    ...COMMAND_HELP.flatMap((g) => g.entries.map((e) => e.command.length)),
+  );
+
+  for (const group of COMMAND_HELP) {
+    console.log(`${group.group}:`);
+    for (const entry of group.entries) {
+      const paddedCommand = entry.command.padEnd(maxCommandLen + 2);
+      console.log(`  ${paddedCommand}${entry.description}`);
+    }
+    console.log('');
   }
-  console.log('');
-  console.log('Common flags:');
-  console.log('  --json');
-  console.log('  --runtime-root <path>');
-  console.log('  --host <host>');
-  console.log('  --port <port>');
-  console.log('  --bridge-url <url>');
-  console.log('  --cors-origin <origin>');
-  console.log('  --thread-unsubscribe-grace-ms <ms>');
+
+  console.log('Flags:');
+  console.log('  --json                                Output as JSON');
+  console.log('  --runtime-root <path>                 Runtime data directory');
+  console.log('  --host <host>                         Bind host (default: 127.0.0.1)');
+  console.log('  --port <port>                         Bind port (default: 46832)');
+  console.log('  --bridge-url <url>                    Override bridge URL');
+  console.log('  --cors-origin <origin>                Allowed CORS origin (repeatable)');
+  console.log('  --thread-unsubscribe-grace-ms <ms>    Grace period for thread cleanup');
+  console.log('  --tail <n>                            Lines to show (logs command)');
+  console.log('  --follow                              Tail logs in real time');
+  console.log('  --shell <shell>                       Target shell (completion command)');
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
