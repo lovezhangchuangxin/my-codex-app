@@ -110,7 +110,8 @@ export default defineConfig({
   build: isTauriBuild
     ? {
         target:
-          process.env.TAURI_ENV_PLATFORM === 'windows'
+          process.env.TAURI_ENV_PLATFORM === 'windows' ||
+          process.env.TAURI_ENV_PLATFORM === 'android'
             ? 'chrome105'
             : 'safari13',
         minify: process.env.TAURI_ENV_DEBUG ? false : 'esbuild',

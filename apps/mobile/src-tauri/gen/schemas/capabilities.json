@@ -1,9 +1,1 @@
-{
-  "default": {
-    "identifier": "default",
-    "description": "Default capability for the my-codex-app mobile host.",
-    "local": true,
-    "windows": ["main"],
-    "permissions": ["core:default"]
-  }
-}
+{"default":{"identifier":"default","description":"Default capability for the my-codex-app mobile host.","local":true,"windows":["main"],"permissions":["core:default"]}}

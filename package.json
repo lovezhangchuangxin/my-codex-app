@@ -7,6 +7,7 @@
     "dev:bridge": "pnpm --filter @my-codex-app/bridge dev",
     "dev:client": "pnpm --filter @my-codex-app/client dev",
     "mobile:android:dev": "pnpm --filter @my-codex-app/mobile android:dev",
+    "mobile:android:build": "pnpm --filter @my-codex-app/mobile build",
     "mobile:android:init": "pnpm --filter @my-codex-app/mobile android:init",
     "mobile:check": "pnpm --filter @my-codex-app/mobile check",
     "mobile:build": "pnpm --filter @my-codex-app/mobile build",
