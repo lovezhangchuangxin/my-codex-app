@@ -9,6 +9,7 @@ import { BrowserBridgeCredentialStore } from '@/lib/runtime/bridge-credential-st
 import { assertCompatibleBridgeVersion } from '@/lib/runtime/bridge-version';
 import {
   normalizeBridgeBaseUrl,
+  resolveBridgeTargetInputValue,
   writeStoredBridgeBaseUrl,
 } from '@/lib/runtime/bridge-target-store';
 import { appViewportDynamicHeight } from '@/platform/viewport';
@@ -44,7 +45,9 @@ export function PairingScreen() {
   });
   const [scanFeedback, setScanFeedback] = useState<ScanFeedback>(null);
   const [view, setView] = useState<PairingView>('form');
-  const [bridgeTarget, setBridgeTarget] = useState('');
+  const [bridgeTarget, setBridgeTarget] = useState(() =>
+    resolveBridgeTargetInputValue(),
+  );
   const [pairingCode, setPairingCode] = useState('');
   const pairingInFlight = useRef(false);
 

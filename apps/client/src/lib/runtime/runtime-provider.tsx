@@ -6,7 +6,6 @@ import {
   type ReactNode,
 } from 'react';
 
-import { bridgeBaseUrl } from '@/lib/env';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { BrowserBridgeCredentialStore } from '@/lib/runtime/bridge-credential-store';
 import { ensureCompatibleBridgeVersionOrReport } from '@/lib/runtime/bridge-version';
@@ -14,20 +13,24 @@ import {
   BridgeClientContext,
   RuntimeContext,
 } from '@/lib/runtime/runtime-context';
+import { useBridgeBaseUrl } from '@/lib/runtime/use-bridge-base-url';
+import { useStoredBridgeCredentials } from '@/lib/runtime/use-stored-bridge-credentials';
 import { BridgeClient, BridgeThreadRuntime } from '@my-codex-app/sdk';
 
 interface RuntimeContainer {
+  baseUrl: string;
   bridgeClient: BridgeClient;
   runtime: BridgeThreadRuntime;
 }
 
-function createRuntimeContainer(): RuntimeContainer {
+function createRuntimeContainer(baseUrl: string): RuntimeContainer {
   const bridgeClient = new BridgeClient({
-    baseUrl: bridgeBaseUrl,
-    credentialStore: new BrowserBridgeCredentialStore(bridgeBaseUrl),
+    baseUrl,
+    credentialStore: new BrowserBridgeCredentialStore(baseUrl),
   });
 
   return {
+    baseUrl,
     bridgeClient,
     runtime: new BridgeThreadRuntime(bridgeClient),
   };
@@ -43,15 +46,22 @@ function isStaleRuntimeContainer(container: RuntimeContainer): boolean {
 
 export function RuntimeProvider({ children }: { children: ReactNode }) {
   const { t } = useI18n();
+  const bridgeBaseUrl = useBridgeBaseUrl();
+  const hasStoredCredentials = useStoredBridgeCredentials(bridgeBaseUrl);
   const [container, setContainer] = useState<RuntimeContainer>(() =>
-    createRuntimeContainer(),
+    createRuntimeContainer(bridgeBaseUrl),
   );
   const runtime = container.runtime;
   const bridgeClient = container.bridgeClient;
-  const staleContainer = isStaleRuntimeContainer(container);
+  const staleContainer =
+    isStaleRuntimeContainer(container) || container.baseUrl !== bridgeBaseUrl;
   const disposeStateRef = useRef<{
     runtime: BridgeThreadRuntime;
     timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+  const credentialPresenceRef = useRef<{
+    baseUrl: string;
+    hasStoredCredentials: boolean;
   } | null>(null);
   const translateRef = useRef(t);
 
@@ -59,14 +69,55 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
     translateRef.current = t;
   }, [t]);
 
+  useEffect(() => {
+    const previous = credentialPresenceRef.current;
+    credentialPresenceRef.current = {
+      baseUrl: bridgeBaseUrl,
+      hasStoredCredentials,
+    };
+
+    if (staleContainer || previous?.baseUrl !== bridgeBaseUrl) {
+      return;
+    }
+
+    if (previous.hasStoredCredentials || !hasStoredCredentials) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      const isCompatible = await ensureCompatibleBridgeVersionOrReport(
+        bridgeClient,
+        runtime,
+        translateRef.current,
+      );
+      if (!isCompatible || cancelled) {
+        return;
+      }
+
+      await runtime.bootstrap();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    bridgeBaseUrl,
+    bridgeClient,
+    hasStoredCredentials,
+    runtime,
+    staleContainer,
+  ]);
+
   useLayoutEffect(() => {
     if (!staleContainer) {
       return;
     }
 
     runtime.dispose();
-    setContainer(createRuntimeContainer());
-  }, [runtime, staleContainer]);
+    setContainer(createRuntimeContainer(bridgeBaseUrl));
+  }, [bridgeBaseUrl, runtime, staleContainer]);
 
   useEffect(() => {
     if (disposeStateRef.current?.runtime === runtime) {

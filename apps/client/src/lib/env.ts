@@ -3,6 +3,12 @@ import {
   toBridgeHealthUrl,
 } from '@/lib/runtime/bridge-target-store';
 
-export const bridgeBaseUrl = resolveBridgeBaseUrl();
-export const bridgeHealthUrl = toBridgeHealthUrl(bridgeBaseUrl);
+export function readBridgeBaseUrl() {
+  return resolveBridgeBaseUrl();
+}
+
+export function readBridgeHealthUrl() {
+  return toBridgeHealthUrl(readBridgeBaseUrl());
+}
+
 export const connectionModeLabel = 'Local';

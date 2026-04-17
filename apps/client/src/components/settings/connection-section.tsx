@@ -2,17 +2,18 @@ import { LogOut, RefreshCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
-import { bridgeBaseUrl } from '@/lib/env';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { ensureCompatibleBridgeVersionOrReport } from '@/lib/runtime/bridge-version';
 import { formatConnectionKind } from '@/lib/runtime/connection-utils';
 import { useBridgeClient, useRuntime } from '@/lib/runtime/runtime-context';
+import { useBridgeBaseUrl } from '@/lib/runtime/use-bridge-base-url';
 import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
 import { cn } from '@/lib/utils';
 
 export function ConnectionSection() {
   const { t } = useI18n();
   const navigate = useNavigate();
+  const bridgeBaseUrl = useBridgeBaseUrl();
   const bridgeClient = useBridgeClient();
   const runtime = useRuntime();
   const snapshot = useRuntimeSnapshot();

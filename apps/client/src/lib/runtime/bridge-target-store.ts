@@ -1,6 +1,7 @@
 import { isTauriHost } from '@/platform/host';
 
 const BRIDGE_TARGET_STORAGE_KEY = 'my-codex-app.bridge-target';
+const BRIDGE_TARGET_CHANGE_EVENT = 'my-codex-app:bridge-target-change';
 const BRIDGE_PORT = 8787;
 const DEFAULT_LOCALHOST_BRIDGE_URL = `http://127.0.0.1:${BRIDGE_PORT}`;
 
@@ -59,13 +60,32 @@ export function writeStoredBridgeBaseUrl(raw: string): string {
 
   if (typeof window !== 'undefined') {
     window.localStorage.setItem(BRIDGE_TARGET_STORAGE_KEY, normalized);
+    window.dispatchEvent(new Event(BRIDGE_TARGET_CHANGE_EVENT));
   }
 
   return normalized;
 }
 
-export function bridgeCredentialStorageKey(baseUrl: string): string {
-  return `${BRIDGE_TARGET_STORAGE_KEY}:session:${encodeURIComponent(baseUrl)}`;
+export function subscribeToBridgeBaseUrlChange(
+  listener: () => void,
+): () => void {
+  if (typeof window === 'undefined') {
+    return () => {};
+  }
+
+  const handleStorage = (event: StorageEvent) => {
+    if (event.key === null || event.key === BRIDGE_TARGET_STORAGE_KEY) {
+      listener();
+    }
+  };
+
+  window.addEventListener(BRIDGE_TARGET_CHANGE_EVENT, listener);
+  window.addEventListener('storage', handleStorage);
+
+  return () => {
+    window.removeEventListener(BRIDGE_TARGET_CHANGE_EVENT, listener);
+    window.removeEventListener('storage', handleStorage);
+  };
 }
 
 export function resolveBridgeBaseUrl(): string {

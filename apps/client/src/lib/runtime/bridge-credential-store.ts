@@ -3,7 +3,10 @@ import type {
   BridgeSessionCredentials,
 } from '@my-codex-app/sdk';
 
-import { bridgeCredentialStorageKey } from '@/lib/runtime/bridge-target-store';
+import {
+  bridgeCredentialStorageKey,
+  notifyStoredBridgeCredentialsChanged,
+} from '@/lib/runtime/bridge-credential-events';
 
 export class BrowserBridgeCredentialStore implements BridgeCredentialStore {
   readonly #storageKey: string;
@@ -14,6 +17,7 @@ export class BrowserBridgeCredentialStore implements BridgeCredentialStore {
 
   clear(): void {
     window.localStorage.removeItem(this.#storageKey);
+    notifyStoredBridgeCredentialsChanged();
   }
 
   load(): BridgeSessionCredentials | null {
@@ -32,6 +36,7 @@ export class BrowserBridgeCredentialStore implements BridgeCredentialStore {
 
   save(credentials: BridgeSessionCredentials): void {
     window.localStorage.setItem(this.#storageKey, JSON.stringify(credentials));
+    notifyStoredBridgeCredentialsChanged();
   }
 }
 
