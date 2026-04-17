@@ -8,8 +8,18 @@ import { VitePWA } from 'vite-plugin-pwa';
 
 const tauriDevHost = process.env.TAURI_DEV_HOST;
 const isTauriBuild = Boolean(process.env.TAURI_ENV_PLATFORM);
+const base = process.env.VITE_BASE || '/';
+
+// Build PWA allowlist patterns based on base path.
+// When base is "/" (local/Tauri): patterns match /, /threads, etc.
+// When base is "/my-codex-app/" (GitHub Pages): patterns match /my-codex-app/, /my-codex-app/threads, etc.
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+const basePrefix = escapeRegex(base === '/' ? '' : base.replace(/\/$/, ''));
 
 export default defineConfig({
+  base,
   clearScreen: false,
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   optimizeDeps: {
@@ -52,8 +62,8 @@ export default defineConfig({
       workbox: {
         navigateFallback: 'index.html',
         navigateFallbackAllowlist: [
-          /^\/$/,
-          /^\/(threads|inbox|connection)(\/.*)?$/,
+          new RegExp(`^${basePrefix}/$`),
+          new RegExp(`^${basePrefix}/(threads|inbox|connection)(/.*)?$`),
         ],
         manifestTransforms: [
           (entries) => {

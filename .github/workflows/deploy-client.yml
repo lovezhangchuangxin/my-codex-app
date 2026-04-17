@@ -1,0 +1,56 @@
+name: Deploy Client to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/client/**"
+      - "packages/protocol/**"
+      - "packages/sdk/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/deploy-client.yml"
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter @my-codex-app/client build
+        env:
+          VITE_BASE: /my-codex-app/
+
+      - name: Copy index.html to 404.html for SPA routing
+        run: cp apps/client/dist/index.html apps/client/dist/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/client/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

@@ -4,6 +4,13 @@ import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AppShell } from '@/app/layouts/app-shell';
 import { AuthGuard } from '@/app/layouts/auth-guard';
 
+// Derive basename from Vite's base config for GitHub Pages compatibility.
+// import.meta.env.BASE_URL is "/" locally or "/my-codex-app/" on GitHub Pages.
+const basename =
+  import.meta.env.BASE_URL === '/'
+    ? undefined
+    : import.meta.env.BASE_URL.replace(/\/$/, '');
+
 const PairingScreen = lazy(async () => {
   const module = await import('@/components/pairing/pairing-screen');
   return { default: module.PairingScreen };
@@ -30,7 +37,10 @@ function withSuspense(element: React.ReactNode) {
   return <Suspense fallback={<RouteFallback />}>{element}</Suspense>;
 }
 
-export const appRouter = createBrowserRouter([
+const routerOpts = basename ? { basename } : undefined;
+
+export const appRouter = createBrowserRouter(
+  [
   {
     path: '/',
     element: <AppShell />,
@@ -57,4 +67,6 @@ export const appRouter = createBrowserRouter([
       },
     ],
   },
-]);
+],
+  routerOpts,
+);
