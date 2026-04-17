@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Keyboard, QrCode } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ type ScanFeedback = {
 type ScanFeedbackEntry = Exclude<ScanFeedback, null>;
 
 export function PairingScreen() {
+  const navigate = useNavigate();
   const { t } = useI18n();
 
   const [pairingState, setPairingState] = useState<PairingState>({
@@ -74,8 +76,7 @@ export function PairingScreen() {
         await pairingClient.completePairing({ code, device });
         writeStoredBridgeBaseUrl(bridgeUrl);
         setPairingState({ status: 'success' });
-        window.history.replaceState({}, '', '/pair');
-        window.location.replace('/threads');
+        navigate('/threads', { replace: true });
       } catch (error) {
         const message =
           error instanceof Error ? error.message : t('pairing.error.generic');
@@ -84,7 +85,7 @@ export function PairingScreen() {
         pairingInFlight.current = false;
       }
     },
-    [t],
+    [t, navigate],
   );
 
   const handleScanResult = useCallback(
