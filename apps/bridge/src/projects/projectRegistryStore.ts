@@ -27,6 +27,10 @@ export class ProjectRegistryStore {
     this.#state = this.#load();
   }
 
+  reload(): void {
+    this.#state = this.#load();
+  }
+
   listProjects(): ProjectRegistryRecord[] {
     return [...this.#state.projects]
       .sort((left, right) => right.updatedAt - left.updatedAt)
@@ -57,6 +61,22 @@ export class ProjectRegistryStore {
     };
     this.#save();
     return { ...nextRecord };
+  }
+
+  removeProject(path: string): boolean {
+    const nextProjects = this.#state.projects.filter(
+      (record) => record.path !== path,
+    );
+    if (nextProjects.length === this.#state.projects.length) {
+      return false;
+    }
+
+    this.#state = {
+      version: 1,
+      projects: nextProjects,
+    };
+    this.#save();
+    return true;
   }
 
   #load(): ProjectRegistryState {

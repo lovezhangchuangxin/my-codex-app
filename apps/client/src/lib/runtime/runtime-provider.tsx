@@ -7,7 +7,9 @@ import {
 } from 'react';
 
 import { bridgeBaseUrl } from '@/lib/env';
+import { useI18n } from '@/lib/i18n/use-i18n';
 import { BrowserBridgeCredentialStore } from '@/lib/runtime/bridge-credential-store';
+import { ensureCompatibleBridgeVersionOrReport } from '@/lib/runtime/bridge-version';
 import {
   BridgeClientContext,
   RuntimeContext,
@@ -40,6 +42,7 @@ function isStaleRuntimeContainer(container: RuntimeContainer): boolean {
 }
 
 export function RuntimeProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [container, setContainer] = useState<RuntimeContainer>(() =>
     createRuntimeContainer(),
   );
@@ -50,6 +53,11 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
     runtime: BridgeThreadRuntime;
     timer: ReturnType<typeof setTimeout>;
   } | null>(null);
+  const translateRef = useRef(t);
+
+  useEffect(() => {
+    translateRef.current = t;
+  }, [t]);
 
   useLayoutEffect(() => {
     if (!staleContainer) {
@@ -86,15 +94,54 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    void runtime.bootstrap();
+    let cancelled = false;
+
+    const bootstrapRuntime = async () => {
+      if (bridgeClient.hasCredentials()) {
+        const isCompatible = await ensureCompatibleBridgeVersionOrReport(
+          bridgeClient,
+          runtime,
+          translateRef.current,
+        );
+        if (!isCompatible || cancelled) {
+          return;
+        }
+      }
+
+      if (cancelled) {
+        return;
+      }
+
+      await runtime.bootstrap();
+    };
 
     const retryConnection = () => {
       const { connection } = runtime.getSnapshot();
       if (connection.kind === 'authenticated') {
         return;
       }
-      void runtime.retryConnection();
+
+      void (async () => {
+        if (bridgeClient.hasCredentials()) {
+          const isCompatible = await ensureCompatibleBridgeVersionOrReport(
+            bridgeClient,
+            runtime,
+            translateRef.current,
+          );
+          if (!isCompatible || cancelled) {
+            return;
+          }
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        await runtime.retryConnection();
+      })();
     };
+
+    void bootstrapRuntime();
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -107,11 +154,12 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('focus', retryConnection);
       window.removeEventListener('online', retryConnection);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [runtime, staleContainer]);
+  }, [bridgeClient, runtime, staleContainer]);
 
   if (staleContainer) {
     return null;

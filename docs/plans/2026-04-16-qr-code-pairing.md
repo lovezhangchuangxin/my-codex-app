@@ -31,7 +31,8 @@ Tasks are ordered by dependency. Each task produces a testable increment.
 **Approach:**
 
 1. `logPairingStatus()` accepts an additional `bridgeUrl: string` parameter.
-2. Build QR payload: `${bridgeUrl}/pair?code=${pairingCode}`.
+2. Build QR payload as a plain text block containing `bridge=${bridgeUrl}`
+   and `code=${pairingCode}`.
 3. Call `qrcode.generate(payload, { small: true })` to render inline in terminal.
 4. Print above the existing pairing code line.
 
@@ -51,31 +52,29 @@ Scan QR code to pair your device:
 Pairing code: ABCD1234 (expires at 2026-04-16T12:00:00.000Z)
 ```
 
-**Verification:** Run `pnpm dev:bridge`, confirm QR renders in terminal and the encoded URL opens in a browser.
+**Verification:** Run `pnpm dev:bridge`, confirm QR renders in terminal and the
+payload contains both bridge and code fields.
 
 ---
 
-### Task 2: Client — URL parameter auto-pairing
+### Task 2: Client — QR payload parsing
 
 **Files to modify:**
 
-- `apps/client/src/components/pairing/pairing-screen.tsx` — read `?bridge` and `?code` from URL search params
+- `apps/client/src/components/pairing/qr-scanner.tsx` — parse bridge-independent QR payloads
+- `apps/client/src/components/pairing/pairing-screen.tsx` — consume parsed bridge URL and code
 
 **Approach:**
 
-1. On mount, read `bridge` and `code` from `URLSearchParams`.
-2. If both present: auto-fill `bridgeTarget` and `pairingCode` state, then auto-submit.
-3. If only `code` present and `bridgeTarget` already resolves: auto-submit.
-4. After consumption, replace URL to clear params (avoid re-submit on refresh).
-5. Show a brief "pairing..." state during auto-submit.
+1. Add a parser that accepts a text payload with `bridge=...` and `code=...`
+   fields.
+2. Parse the payload from the QR scanner callback.
+3. Normalize the bridge URL before writing it into pairing state.
+4. Keep parsing tolerant of whitespace and line order, but fail closed on
+   missing bridge or code fields.
 
-**Key details:**
-
-- Use `window.location.search` + `URLSearchParams` (React Router v7 compatible).
-- Auto-submit only when bridge is `reachable` (reuse existing health check).
-- On auto-submit failure, show error but keep fields filled for manual retry.
-
-**Verification:** Open `http://localhost:5173/pair?bridge=http://localhost:8787&code=ABCD1234` with bridge running, confirm auto-pairing.
+**Verification:** Scan a terminal QR payload and confirm the bridge URL and
+pairing code are extracted correctly.
 
 ---
 
@@ -90,7 +89,8 @@ Pairing code: ABCD1234 (expires at 2026-04-16T12:00:00.000Z)
 1. Create a `QrScanner` component that:
    - Renders the `Scanner` from `@yudiel/react-qr-scanner` with `facingMode: 'environment'` (rear camera).
    - Restricts `formats` to `['qr_code']`.
-   - On successful scan: parses the URL, extracts `bridge` origin + `code` query param, calls `onScan(result)` callback.
+   - On successful scan: parses the payload, extracts `bridge` + `code`
+     fields, calls `onScan(result)` callback.
    - On error: calls `onError(error)` callback.
    - Shows a viewfinder overlay with scanning hint text.
 2. Handle camera unavailability gracefully:
@@ -100,20 +100,22 @@ Pairing code: ABCD1234 (expires at 2026-04-16T12:00:00.000Z)
 
 **Parsed QR content handling:**
 
-- If scanned text is a URL matching pattern `http(s)://.../pair?code=...`:
-  - `bridge` = URL origin (e.g. `http://192.168.1.100:8787`)
-  - `code` = `code` query param value
+- If scanned text contains `bridge=...` and `code=...` fields:
+  - `bridge` = normalized bridge URL
+  - `code` = pairing code value
 - Otherwise: treat as invalid QR, show error.
 
-**Verification:** Render component in /pair page, scan a test QR, confirm correct parsing.
+**Verification:** Render component in the pairing screen, scan a test QR,
+confirm correct parsing.
 
 ---
 
-### Task 4: Client — /pair page QR scan integration
+### Task 4: Client — pairing screen QR scan integration
 
 **Files to modify:**
 
-- `apps/client/src/components/pairing/pairing-screen.tsx` — add scan mode toggle and scanner UI
+- `apps/client/src/components/pairing/pairing-screen.tsx` — add scan mode
+  toggle and scanner UI
 
 **Approach:**
 
@@ -162,7 +164,8 @@ Pairing code: ABCD1234 (expires at 2026-04-16T12:00:00.000Z)
 └──────────────────────────────┘
 ```
 
-**Verification:** Full flow: bridge shows QR → /pair scan → auto-pair → redirect to /threads.
+**Verification:** Full flow: bridge shows QR → scan in app → auto-pair →
+redirect to /threads.
 
 ---
 
@@ -214,10 +217,10 @@ After all tasks:
 - [ ] `pnpm build` passes with no type errors
 - [ ] `pnpm fmt` passes
 - [ ] Bridge terminal renders QR code alongside pairing code
-- [ ] Bridge QR encodes correct URL (`{bridgeUrl}/pair?code={code}`)
-- [ ] /pair page "Scan QR" button opens camera scanner
+- [ ] Bridge QR encodes `bridge=...` and `code=...` fields
+- [ ] Pairing screen "Scan QR" button opens camera scanner
 - [ ] Scanning bridge QR auto-fills and auto-submits pairing
-- [ ] /pair page accepts `?bridge=...&code=...` URL params for auto-pairing
+- [ ] Scanner extracts bridge URL and pairing code from the payload
 - [ ] Camera unavailability shows graceful fallback message
 - [ ] Manual code entry still works (regression)
 - [ ] i18n strings render in both English and Chinese

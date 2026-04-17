@@ -1,6 +1,8 @@
 import { useCallback } from 'react';
 import { Scanner } from '@yudiel/react-qr-scanner';
 
+import { normalizeBridgeBaseUrl } from '@/lib/runtime/bridge-target-store';
+
 export interface QrScanResult {
   bridgeUrl: string;
   code: string;
@@ -17,18 +19,13 @@ export function QrScanner({ onScan, onError }: QrScannerProps) {
       const raw = detectedCodes[0]?.rawValue;
       if (!raw) return;
 
-      try {
-        const url = new URL(raw);
-        const code = url.searchParams.get('code');
-        if (!code || code.length === 0) {
-          onError(new Error('Invalid QR code: missing pairing code'));
-          return;
-        }
-        const bridgeUrl = `${url.protocol}//${url.host}`;
-        onScan({ bridgeUrl, code });
-      } catch {
-        onError(new Error('Invalid QR code content'));
+      const result = parsePairingPayload(raw);
+      if (!result) {
+        onError(new Error('Invalid QR code payload'));
+        return;
       }
+
+      onScan(result);
     },
     [onScan, onError],
   );
@@ -49,4 +46,38 @@ export function QrScanner({ onScan, onError }: QrScannerProps) {
       }}
     />
   );
+}
+
+function parsePairingPayload(raw: string): QrScanResult | null {
+  const fields = new Map<string, string>();
+  for (const segment of raw.trim().split(/[\r\n&]+/)) {
+    const trimmed = segment.trim();
+    if (trimmed.length === 0) {
+      continue;
+    }
+
+    const separatorIndex = trimmed.indexOf('=');
+    if (separatorIndex <= 0) {
+      continue;
+    }
+
+    const key = trimmed.slice(0, separatorIndex).trim().toLowerCase();
+    const value = trimmed.slice(separatorIndex + 1).trim();
+    if (!key || value.length === 0) {
+      continue;
+    }
+
+    fields.set(key, value);
+  }
+
+  const bridgeUrl = normalizeBridgeBaseUrl(fields.get('bridge') ?? '');
+  const code = fields.get('code')?.trim();
+  if (!bridgeUrl || !code) {
+    return null;
+  }
+
+  return {
+    bridgeUrl,
+    code,
+  };
 }

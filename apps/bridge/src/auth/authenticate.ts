@@ -4,7 +4,7 @@ import {
   BridgeAuthError,
   type AuthenticatedBridgeSession,
   type BridgeAuthService,
-} from './authService';
+} from './authService.js';
 
 export function authenticateBridgeRequest(
   request: IncomingMessage,

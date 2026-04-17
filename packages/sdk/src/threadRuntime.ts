@@ -376,6 +376,34 @@ export class BridgeThreadRuntime {
     }
   }
 
+  reportConnectionFailure(message: string): void {
+    this.#clearReconnectTimer();
+    this.#disconnectEvents();
+    this.#pendingEvents.clear();
+    this.#update((current) => ({
+      ...current,
+      connection: withLastSyncedAt(
+        { kind: 'disconnected', message },
+        current.connection.lastSyncedAt,
+      ),
+      threads:
+        current.threads.kind === 'ready'
+          ? current.threads
+          : {
+              kind: 'error',
+              message,
+            },
+      detail:
+        current.selectedThreadId && current.detail.kind !== 'ready'
+          ? {
+              kind: 'error',
+              threadId: current.selectedThreadId,
+              message,
+            }
+          : current.detail,
+    }));
+  }
+
   async #performResync(reason: ResyncReason): Promise<void> {
     this.#clearReconnectTimer();
 

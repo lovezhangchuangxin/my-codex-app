@@ -53,6 +53,33 @@ export interface PairingStatusResponse {
   pairingRequired: boolean;
   instructions: string;
   expiresAt: number;
+  pairingCode: string;
+}
+
+export const BRIDGE_PROTOCOL_VERSION = 1;
+
+export interface BridgeVersionResponse {
+  bridgePackageVersion: string;
+  bridgeProtocolVersion: number;
+}
+
+export interface BridgeDaemonStatusResponse {
+  running: boolean;
+  reachable: boolean;
+  pid: number | null;
+  host: string | null;
+  port: number | null;
+  bridgeUrl: string | null;
+  startedAt: number | null;
+  pairingRequired: boolean | null;
+  pairingExpiresAt: number | null;
+  configPath: string | null;
+  statePath: string | null;
+  projectStatePath: string | null;
+  logPath: string | null;
+  runtimeManifestPath: string | null;
+  version: BridgeVersionResponse | null;
+  message?: string;
 }
 
 export interface PairingCompleteRequest {

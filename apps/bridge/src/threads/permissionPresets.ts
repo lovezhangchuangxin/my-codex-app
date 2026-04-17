@@ -3,7 +3,7 @@ import type { ThreadPermissionPresetId } from '@my-codex-app/protocol';
 import type {
   AppServerApprovalPolicy,
   AppServerSandboxPolicy,
-} from '../appServerClient';
+} from '../appServerClient.js';
 
 export function toAppServerPermissionPreset(
   threadCwd: string | undefined,

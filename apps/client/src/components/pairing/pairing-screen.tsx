@@ -1,17 +1,11 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { lazy, Suspense, useCallback, useRef, useState } from 'react';
 import { Keyboard, QrCode } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { BrowserBridgeCredentialStore } from '@/lib/runtime/bridge-credential-store';
+import { assertCompatibleBridgeVersion } from '@/lib/runtime/bridge-version';
 import {
   normalizeBridgeBaseUrl,
   writeStoredBridgeBaseUrl,
@@ -31,23 +25,44 @@ type PairingState =
   | { status: 'success' }
   | { message: string; status: 'error' };
 
+type PairingView = 'form' | 'scanner';
+
+type ScanFeedback = {
+  kind: 'camera' | 'scan';
+  message: string;
+} | null;
+
+type ScanFeedbackEntry = Exclude<ScanFeedback, null>;
+
 export function PairingScreen() {
   const { t } = useI18n();
 
   const [pairingState, setPairingState] = useState<PairingState>({
     status: 'idle',
   });
-  const [scanError, setScanError] = useState<string | null>(null);
-  const [showManual, setShowManual] = useState(false);
+  const [scanFeedback, setScanFeedback] = useState<ScanFeedback>(null);
+  const [view, setView] = useState<PairingView>('form');
   const [bridgeTarget, setBridgeTarget] = useState('');
   const [pairingCode, setPairingCode] = useState('');
   const pairingInFlight = useRef(false);
+
+  const startScanner = useCallback(() => {
+    setScanFeedback(null);
+    setPairingState({ status: 'idle' });
+    setView('scanner');
+  }, []);
+
+  const returnToManual = useCallback(() => {
+    setScanFeedback(null);
+    setPairingState({ status: 'idle' });
+    setView('form');
+  }, []);
 
   const doPair = useCallback(
     async (bridgeUrl: string, code: string) => {
       if (pairingInFlight.current) return;
       pairingInFlight.current = true;
-      setScanError(null);
+      setScanFeedback(null);
       setPairingState({ status: 'submitting' });
       try {
         const device = detectDeviceInfo();
@@ -55,6 +70,7 @@ export function PairingScreen() {
           baseUrl: bridgeUrl,
           credentialStore: new BrowserBridgeCredentialStore(bridgeUrl),
         });
+        await assertCompatibleBridgeVersion(pairingClient, t);
         await pairingClient.completePairing({ code, device });
         writeStoredBridgeBaseUrl(bridgeUrl);
         setPairingState({ status: 'success' });
@@ -71,35 +87,29 @@ export function PairingScreen() {
     [t],
   );
 
-  // Auto-pair from URL params (?bridge=...&code=...)
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const paramBridge = params.get('bridge');
-    const paramCode = params.get('code');
-    if (!paramBridge || !paramCode) return;
-
-    const bridgeUrl = normalizeBridgeBaseUrl(paramBridge);
-    if (!bridgeUrl) return;
-
-    void doPair(bridgeUrl, paramCode);
-  }, [doPair]);
-
   const handleScanResult = useCallback(
     (result: { bridgeUrl: string; code: string }) => {
+      setScanFeedback(null);
+      setPairingState({ status: 'idle' });
+      setBridgeTarget(result.bridgeUrl);
+      setPairingCode(result.code);
+      setView('form');
       void doPair(result.bridgeUrl, result.code);
     },
     [doPair],
   );
 
-  const handleScanError = useCallback((error: unknown) => {
-    const message =
-      error instanceof Error
-        ? error.message
-        : error instanceof DOMException
-          ? error.name
-          : String(error);
-    setScanError(message || 'unknown');
-  }, []);
+  const handleScanError = useCallback(
+    (error: unknown) => {
+      const feedback = classifyScannerError(error, t);
+      setScanFeedback(feedback);
+      if (feedback.kind === 'camera') {
+        setPairingState({ status: 'idle' });
+        setView('form');
+      }
+    },
+    [t],
+  );
 
   const handleSubmit = useCallback(
     (event: { preventDefault: () => void }) => {
@@ -122,8 +132,33 @@ export function PairingScreen() {
   );
 
   const isSubmitting = pairingState.status === 'submitting';
+  const submittingLabel =
+    view === 'scanner' ? t('pairing.autoPairing') : t('pairing.connecting');
+  const showScanningHint =
+    view === 'scanner' &&
+    pairingState.status !== 'error' &&
+    scanFeedback?.kind !== 'scan';
 
-  if (showManual) {
+  if (isSubmitting) {
+    return (
+      <div
+        className="flex items-center justify-center px-8 [--pairing-shell-offset:8rem] lg:[--pairing-shell-offset:60px]"
+        style={{
+          minHeight: `calc(${appViewportDynamicHeight} - var(--pairing-shell-offset))`,
+        }}
+      >
+        <div
+          role="status"
+          className="flex h-64 w-full max-w-sm flex-col items-center justify-center gap-2 rounded-lg bg-muted"
+        >
+          <div className="size-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
+          <p className="text-sm text-muted-foreground">{submittingLabel}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'form') {
     return (
       <div
         className="flex items-center justify-center px-8 [--pairing-shell-offset:8rem] lg:[--pairing-shell-offset:60px]"
@@ -143,6 +178,18 @@ export function PairingScreen() {
               {t('pairing.enterManuallyHint')}
             </p>
           </div>
+
+          {scanFeedback ? (
+            <div
+              className={`mt-6 rounded-lg border px-4 py-3 text-sm ${
+                scanFeedback.kind === 'camera'
+                  ? 'border-amber-200 bg-amber-50 text-amber-950'
+                  : 'border-border bg-muted text-muted-foreground'
+              }`}
+            >
+              {scanFeedback.message}
+            </div>
+          ) : null}
 
           <form className="mt-6 space-y-3" onSubmit={handleSubmit}>
             <div className="space-y-2.5">
@@ -186,16 +233,12 @@ export function PairingScreen() {
 
             <Button
               className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-              disabled={
-                isSubmitting || pairingCode.trim().length === 0
-              }
+              disabled={isSubmitting || pairingCode.trim().length === 0}
               size="lg"
               type="submit"
               variant="outline"
             >
-              {isSubmitting
-                ? t('pairing.connecting')
-                : t('pairing.connect')}
+              {isSubmitting ? t('pairing.connecting') : t('pairing.connect')}
             </Button>
 
             <Button
@@ -206,8 +249,7 @@ export function PairingScreen() {
               type="button"
               variant="outline"
               onClick={() => {
-                setScanError(null);
-                setShowManual(false);
+                startScanner();
               }}
             >
               <QrCode className="mr-2 size-4" />
@@ -227,7 +269,22 @@ export function PairingScreen() {
       }}
     >
       <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center space-y-1.5 text-center">
+        <div className="flex items-center justify-between gap-3">
+          <Button
+            size="sm"
+            type="button"
+            variant="outline"
+            onClick={returnToManual}
+          >
+            {t('pairing.backToManual')}
+          </Button>
+          <p className="text-center text-xs font-mono tracking-[0.14em] uppercase text-muted-foreground">
+            {t('pairing.scanQr')}
+          </p>
+          <span className="w-[92px]" aria-hidden="true" />
+        </div>
+
+        <div className="mt-4 flex flex-col items-center space-y-1.5 text-center">
           <div className="flex size-10 items-center justify-center rounded-full border bg-muted">
             <QrCode className="size-5 text-muted-foreground" />
           </div>
@@ -240,67 +297,94 @@ export function PairingScreen() {
         </div>
 
         <div className="mt-6 overflow-hidden rounded-lg">
-          {isSubmitting ? (
-            <div
-              role="status"
-              className="flex h-64 flex-col items-center justify-center gap-2 rounded-lg bg-muted"
-            >
-              <div className="size-5 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
-              <p className="text-sm text-muted-foreground">
-                {t('pairing.connecting')}
-              </p>
-            </div>
-          ) : pairingState.status === 'error' ? (
+          {pairingState.status === 'error' ? (
             <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg bg-destructive/10 px-4">
               <p className="max-w-xs text-center text-sm text-destructive">
                 {pairingState.message}
               </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  setScanError(null);
-                  setPairingState({ status: 'idle' });
-                }}
-              >
-                {t('pairing.scanQr')}
-              </Button>
-            </div>
-          ) : scanError ? (
-            <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg bg-muted px-4">
-              <p className="max-w-xs text-center text-sm text-muted-foreground">
-                {t('pairing.cameraUnavailable')}
-              </p>
-              <p className="max-w-xs text-center text-xs text-muted-foreground/60">
-                {scanError}
-              </p>
               <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setScanError(null)}
-                >
+                <Button size="sm" variant="outline" onClick={startScanner}>
                   {t('pairing.scanQr')}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setShowManual(true)}
-                >
-                  {t('pairing.enterManually')}
+                <Button size="sm" variant="outline" onClick={returnToManual}>
+                  {t('pairing.backToManual')}
+                </Button>
+              </div>
+            </div>
+          ) : scanFeedback?.kind === 'scan' ? (
+            <div className="flex h-64 flex-col items-center justify-center gap-3 rounded-lg bg-muted px-4">
+              <p className="max-w-xs text-center text-sm text-muted-foreground">
+                {scanFeedback.message}
+              </p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={startScanner}>
+                  {t('pairing.scanQr')}
+                </Button>
+                <Button size="sm" variant="outline" onClick={returnToManual}>
+                  {t('pairing.backToManual')}
                 </Button>
               </div>
             </div>
           ) : (
             <Suspense fallback={<div className="h-64 rounded-lg bg-muted" />}>
-              <QrScanner
-                onScan={handleScanResult}
-                onError={handleScanError}
-              />
+              <QrScanner onScan={handleScanResult} onError={handleScanError} />
             </Suspense>
           )}
         </div>
+
+        {showScanningHint ? (
+          <p className="mt-3 text-center text-sm text-muted-foreground">
+            {t('pairing.scanning')}
+          </p>
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function classifyScannerError(
+  error: unknown,
+  t: (key: string) => string,
+): ScanFeedbackEntry {
+  if (error instanceof DOMException) {
+    return isCameraErrorName(error.name)
+      ? { kind: 'camera', message: t('pairing.cameraUnavailable') }
+      : { kind: 'scan', message: t('pairing.scanFailed') };
+  }
+
+  const message =
+    error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+  if (isCameraErrorMessage(message)) {
+    return { kind: 'camera', message: t('pairing.cameraUnavailable') };
+  }
+
+  if (message.toLowerCase().includes('invalid qr')) {
+    return { kind: 'scan', message: t('pairing.scanFailed') };
+  }
+
+  return { kind: 'scan', message: t('pairing.scanFailed') };
+}
+
+function isCameraErrorName(name: string): boolean {
+  return (
+    name === 'NotAllowedError' ||
+    name === 'NotFoundError' ||
+    name === 'NotReadableError' ||
+    name === 'OverconstrainedError' ||
+    name === 'SecurityError'
+  );
+}
+
+function isCameraErrorMessage(message: string): boolean {
+  const normalized = message.toLowerCase();
+  return (
+    normalized.includes('camera') ||
+    normalized.includes('permission') ||
+    normalized.includes('not allowed') ||
+    normalized.includes('notfound') ||
+    normalized.includes('not found') ||
+    normalized.includes('not readable') ||
+    normalized.includes('overconstrained') ||
+    normalized.includes('secure context')
   );
 }

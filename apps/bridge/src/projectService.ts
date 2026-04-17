@@ -15,9 +15,9 @@ import {
   getProjectDisplayName,
   normalizeAbsolutePath,
   resolveProjectIdentityPath,
-} from './projects/projectPathUtils';
-import { ProjectRegistryStore } from './projects/projectRegistryStore';
-import { ThreadService } from './threadService';
+} from './projects/projectPathUtils.js';
+import { ProjectRegistryStore } from './projects/projectRegistryStore.js';
+import { ThreadService } from './threadService.js';
 
 const DEFAULT_PROJECT_SEARCH_LIMIT = 12;
 const MAX_PROJECT_SEARCH_LIMIT = 20;
@@ -50,6 +50,7 @@ export class ProjectService {
   ) {}
 
   async listProjects(): Promise<ProjectListResponse> {
+    this.registryStore.reload();
     return {
       data: await this.#buildProjectSummaries(),
     };
@@ -58,6 +59,7 @@ export class ProjectService {
   async searchProjects(
     request: ProjectSearchRequest,
   ): Promise<ProjectSearchResponse> {
+    this.registryStore.reload();
     const query = request.query.trim();
     const limit = normalizeSearchLimit(request.limit);
     const projects = await this.#buildProjectSummaries();
@@ -100,6 +102,7 @@ export class ProjectService {
   async importProject(
     request: ProjectImportRequest,
   ): Promise<ProjectImportResponse> {
+    this.registryStore.reload();
     const canonicalPath = await resolveImportProjectPath(request.path);
     this.registryStore.upsertProject(canonicalPath, nowInSeconds());
 

@@ -2,7 +2,7 @@ import type { ServerResponse } from 'node:http';
 
 import type { BridgeEvent } from '@my-codex-app/protocol';
 
-import { ThreadService } from '../threadService';
+import { ThreadService } from '../threadService.js';
 
 type EventClient = {
   response: ServerResponse;

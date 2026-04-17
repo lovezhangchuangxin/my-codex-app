@@ -4,7 +4,7 @@ import { dirname } from 'node:path';
 
 import type { DeviceInfo, DeviceTrustRecord } from '@my-codex-app/protocol';
 
-import { createSigningSecret } from './tokenCodec';
+import { createSigningSecret } from './tokenCodec.js';
 
 interface StoredPairingChallenge {
   code: string;
@@ -43,6 +43,10 @@ export class DeviceTrustStore {
 
   constructor(statePath: string) {
     this.#statePath = statePath;
+    this.#state = this.#load();
+  }
+
+  reload(): void {
     this.#state = this.#load();
   }
 

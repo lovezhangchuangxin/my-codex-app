@@ -20,6 +20,12 @@ export const enMessages = {
     'Android emulator: use http://10.0.2.2:8787. Real device: use your computer LAN IP. With adb reverse you can use http://127.0.0.1:8787.',
   'connection.target.hint.web': ({ target }) =>
     `Default target: ${target ?? 'current page host'}.`,
+  'connection.error.incompatibleVersion': ({
+    actual,
+    bridgeVersion,
+    expected,
+  }) =>
+    `Incompatible bridge protocol version. This app expects ${expected ?? ''}, but the bridge reports ${actual ?? ''} (bridge ${bridgeVersion ?? 'unknown'}).`.trim(),
   'connection.target.invalid': 'Enter a valid bridge URL.',
   'connection.target.label': 'Bridge target',
   'connection.target.placeholder': 'http://192.168.1.20:8787',
@@ -236,7 +242,7 @@ export const enMessages = {
   'header.openSettings': 'Open settings',
   'header.searchPlaceholder': 'Search...',
   'pairing.cameraUnavailable':
-    'Camera not available. Use your device camera to scan the QR code instead.',
+    'Camera not available. Please enter the code manually.',
   'pairing.codePlaceholder': 'e.g. ABCD1234',
   'pairing.connect': 'Connect',
   'pairing.connecting': 'Connecting...',
@@ -244,9 +250,14 @@ export const enMessages = {
   'pairing.enterManuallyHint':
     'Enter the bridge address and pairing code from your bridge terminal',
   'pairing.error.generic': 'Pairing failed. Please try again.',
+  'pairing.autoPairing': 'Pairing automatically...',
+  'pairing.backToManual': 'Back to manual entry',
   'pairing.scanQr': 'Scan QR Code',
   'pairing.scanQrHint':
     'Point your camera at the QR code on the bridge terminal',
+  'pairing.scanFailed':
+    'Could not read QR code. Please try again or enter the code manually.',
+  'pairing.scanning': 'Scanning...',
   'project.idle.disconnected.message': 'Bridge is currently unavailable.',
   'project.idle.disconnected.title': 'Bridge disconnected',
   'project.idle.unreachable.message':

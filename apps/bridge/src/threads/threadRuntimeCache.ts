@@ -9,7 +9,7 @@ import type {
   TurnDetail,
 } from '@my-codex-app/protocol';
 
-import { PendingRequestState } from '../pendingRequestState';
+import { PendingRequestState } from '../pendingRequestState.js';
 
 type CommandExecutionItem = Extract<ThreadItem, { type: 'commandExecution' }>;
 type CachedCommandItem = { turnId: string; item: CommandExecutionItem };

@@ -2,6 +2,7 @@ import type {
   ApiErrorPayload,
   BridgeEvent,
   BridgeAuthErrorCode,
+  BridgeVersionResponse,
   DeviceDeleteRequest,
   DeviceDeleteResponse,
   DeviceListResponse,
@@ -143,6 +144,17 @@ export class BridgeClient {
   getPairingStatus(): Promise<PairingStatusResponse> {
     return this.#requestJson<PairingStatusResponse>(
       '/api/pairing',
+      { method: 'GET' },
+      undefined,
+      {
+        requiresAuth: false,
+      },
+    );
+  }
+
+  getBridgeVersion(): Promise<BridgeVersionResponse> {
+    return this.#requestJson<BridgeVersionResponse>(
+      '/api/version',
       { method: 'GET' },
       undefined,
       {

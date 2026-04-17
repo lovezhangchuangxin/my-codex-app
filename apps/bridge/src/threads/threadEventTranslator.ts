@@ -15,7 +15,7 @@ import type {
   AppServerTurn,
   AppServerCommandExecutionRequestApprovalParams,
   RequestEnvelope,
-} from '../appServerClient';
+} from '../appServerClient.js';
 import {
   asRequestId,
   asNumber,
@@ -35,8 +35,8 @@ import {
   toThreadItem,
   toTurnDetail,
   toRuntimeStatus,
-} from './threadMappers';
-import type { ThreadRuntimeCache } from './threadRuntimeCache';
+} from './threadMappers.js';
+import type { ThreadRuntimeCache } from './threadRuntimeCache.js';
 
 export class ThreadEventTranslator {
   constructor(private readonly cache: ThreadRuntimeCache) {}

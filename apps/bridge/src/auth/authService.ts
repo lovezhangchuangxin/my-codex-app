@@ -17,12 +17,12 @@ import {
   createRefreshToken,
   DeviceTrustStore,
   generatePairingCode,
-} from './deviceTrustStore';
+} from './deviceTrustStore.js';
 import {
   issueAccessToken,
   verifyAccessToken,
   type AccessTokenPayload,
-} from './tokenCodec';
+} from './tokenCodec.js';
 
 const ACCESS_TOKEN_TTL_SECONDS = 10 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -50,35 +50,27 @@ export class BridgeAuthService {
     pairingCode: string;
     regenerated: boolean;
   } {
+    this.store.reload();
     const now = nowInSeconds();
     const current = this.store.getPairingChallenge();
     if (current.expiresAt > now) {
-      return {
-        pairingRequired: true,
-        instructions: 'Enter the pairing code shown in the bridge terminal.',
-        expiresAt: current.expiresAt,
-        pairingCode: current.code,
-        regenerated: false,
-      };
+      return this.#toPairingStatus(current.code, current.expiresAt, false);
     }
 
-    const nextCode = generatePairingCode();
-    const nextChallenge = {
-      code: nextCode,
-      issuedAt: now,
-      expiresAt: now + PAIRING_CODE_TTL_SECONDS,
-    };
-    this.store.setPairingChallenge(nextChallenge);
-    return {
-      pairingRequired: true,
-      instructions: 'Enter the pairing code shown in the bridge terminal.',
-      expiresAt: nextChallenge.expiresAt,
-      pairingCode: nextChallenge.code,
-      regenerated: true,
-    };
+    return this.#rotatePairingChallenge(now);
+  }
+
+  refreshPairingStatus(): PairingStatusResponse & {
+    pairingCode: string;
+    regenerated: boolean;
+  } {
+    this.store.reload();
+    const now = nowInSeconds();
+    return this.#rotatePairingChallenge(now);
   }
 
   completePairing(request: PairingCompleteRequest): PairingCompleteResponse {
+    this.store.reload();
     const device = sanitizeDeviceInfo(request.device);
     const now = nowInSeconds();
     if (this.store.hasDeviceId(device.deviceId)) {
@@ -113,6 +105,7 @@ export class BridgeAuthService {
   }
 
   refreshSession(request: SessionRefreshRequest): SessionRefreshResponse {
+    this.store.reload();
     const now = nowInSeconds();
     const nextRefreshToken = createRefreshToken();
     const nextRefreshTokenExpiresAt = now + REFRESH_TOKEN_TTL_SECONDS;
@@ -158,6 +151,7 @@ export class BridgeAuthService {
   }
 
   authenticateAccessToken(accessToken: string): AuthenticatedBridgeSession {
+    this.store.reload();
     const now = nowInSeconds();
     const verified = verifyAccessToken(
       accessToken,
@@ -204,12 +198,14 @@ export class BridgeAuthService {
   }
 
   listDevices(): DeviceListResponse {
+    this.store.reload();
     return {
       devices: this.store.listDevices(),
     };
   }
 
   revokeDevice(deviceId: string): DeviceRevokeResponse {
+    this.store.reload();
     const revoked = this.store.revokeDevice(deviceId, nowInSeconds());
     if (!revoked) {
       throw new BridgeAuthError('Unknown device', 'invalidAccessToken', 404);
@@ -218,6 +214,7 @@ export class BridgeAuthService {
   }
 
   deleteDevice(deviceId: string): DeviceDeleteResponse {
+    this.store.reload();
     const device = this.store.getDevice(deviceId);
     if (!device) {
       throw new BridgeAuthError('Unknown device', 'invalidAccessToken', 404);
@@ -231,6 +228,41 @@ export class BridgeAuthService {
     }
     this.store.deleteDevice(deviceId);
     return {};
+  }
+
+  #rotatePairingChallenge(now: number): PairingStatusResponse & {
+    pairingCode: string;
+    regenerated: boolean;
+  } {
+    const nextCode = generatePairingCode();
+    const nextChallenge = {
+      code: nextCode,
+      issuedAt: now,
+      expiresAt: now + PAIRING_CODE_TTL_SECONDS,
+    };
+    this.store.setPairingChallenge(nextChallenge);
+    return this.#toPairingStatus(
+      nextChallenge.code,
+      nextChallenge.expiresAt,
+      true,
+    );
+  }
+
+  #toPairingStatus(
+    pairingCode: string,
+    expiresAt: number,
+    regenerated: boolean,
+  ): PairingStatusResponse & {
+    pairingCode: string;
+    regenerated: boolean;
+  } {
+    return {
+      pairingRequired: true,
+      instructions: 'Enter the pairing code shown in the bridge terminal.',
+      expiresAt,
+      pairingCode,
+      regenerated,
+    };
   }
 
   #issueSession(deviceId: string, refreshToken: string, now: number) {

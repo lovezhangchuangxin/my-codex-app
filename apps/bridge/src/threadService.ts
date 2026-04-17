@@ -22,11 +22,11 @@ import type {
   TurnStartResponse,
 } from '@my-codex-app/protocol';
 
-import { AppServerClient } from './appServerClient';
-import type { AppServerReviewTarget } from './appServerClient';
-import { resolveProjectIdentityPath } from './projects/projectPathUtils';
-import { toAppServerPermissionPreset } from './threads/permissionPresets';
-import { ThreadEventTranslator } from './threads/threadEventTranslator';
+import { AppServerClient } from './appServerClient.js';
+import type { AppServerReviewTarget } from './appServerClient.js';
+import { resolveProjectIdentityPath } from './projects/projectPathUtils.js';
+import { toAppServerPermissionPreset } from './threads/permissionPresets.js';
+import { ThreadEventTranslator } from './threads/threadEventTranslator.js';
 import {
   attachThreadRuntime,
   mergeThreadSettings,
@@ -38,9 +38,9 @@ import {
   toThreadSettings,
   toThreadSummary,
   toTurnDetail,
-} from './threads/threadMappers';
-import { ThreadRuntimeCache } from './threads/threadRuntimeCache';
-import { extractTokenUsageFromRollout } from './threads/rolloutTokenUsage';
+} from './threads/threadMappers.js';
+import { ThreadRuntimeCache } from './threads/threadRuntimeCache.js';
+import { extractTokenUsageFromRollout } from './threads/rolloutTokenUsage.js';
 
 export class ThreadService {
   readonly #cache = new ThreadRuntimeCache();

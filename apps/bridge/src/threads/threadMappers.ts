@@ -34,9 +34,9 @@ import type {
   AppServerUserInput,
   ThreadResumeResult,
   ThreadStartResult,
-} from '../appServerClient';
-import { derivePermissionPreset } from './permissionPresets';
-import type { ThreadRuntimeCache } from './threadRuntimeCache';
+} from '../appServerClient.js';
+import { derivePermissionPreset } from './permissionPresets.js';
+import type { ThreadRuntimeCache } from './threadRuntimeCache.js';
 
 type JsonRpcParams = Record<string, unknown>;
 

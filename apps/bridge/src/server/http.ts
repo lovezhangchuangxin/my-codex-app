@@ -2,7 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import type { ApiErrorPayload } from '@my-codex-app/protocol';
 
-import { BridgeAuthError } from '../auth/authService';
+import { BridgeAuthError } from '../auth/authService.js';
 
 export function parseOptionalInt(value: string | null): number | undefined {
   if (value === null) {

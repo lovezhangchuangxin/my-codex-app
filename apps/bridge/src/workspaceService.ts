@@ -13,7 +13,7 @@ import type {
   WorkspaceSearchFilesResponse,
 } from '@my-codex-app/protocol';
 
-import { AppServerClient } from './appServerClient';
+import { AppServerClient } from './appServerClient.js';
 
 const MAX_TEXT_PREVIEW_BYTES = 512 * 1024;
 const DEFAULT_WORKSPACE_SEARCH_LIMIT = 12;

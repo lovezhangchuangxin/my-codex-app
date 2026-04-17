@@ -49,6 +49,7 @@ Already implemented:
 Known constraints of the current baseline:
 
 - [ ] reconnect/resync is hardened for short local-direct disconnects, but bridge-restart recovery is still limited
+- [x] bridge CLI/daemon packaging is in place as `codexb`
 - [ ] browser credential storage is functional, but not yet polished for Tauri-native secure storage
 - [ ] Tauri mobile host is implemented, but release hardening and broader native-device validation are still pending
 - [ ] relay is not implemented
@@ -187,7 +188,30 @@ Expected outcome:
 - root verification exercises the mobile host scaffold
 - current Android local-direct builds remain compatible with HTTP LAN bridge targets
 
-### [ ] 8. Harden Tauri Mobile Release Behavior
+### [x] 8. Harden Bridge CLI And Daemon Packaging
+
+Goal:
+
+- turn `@my-codex-app/bridge` into a packaged standalone CLI/daemon product that users can
+  install and run directly from npm/pnpm
+
+Scope:
+
+- CLI entrypoint and subcommand tree
+- foreground and background daemon lifecycle
+- config, status, logs, pairing, devices, and project admin commands
+- OS-level config/state/log directories
+- version compatibility surface for the separate frontend
+
+Expected outcome:
+
+- `codexb` is installed globally from npm/pnpm and started as a standalone
+  command-line service
+- bridge never launches or hosts the frontend
+- the frontend connects to the bridge through an explicit target URL
+- bridge runtime state is stored outside the repository tree
+
+### [ ] 9. Harden Tauri Mobile Release Behavior
 
 Goal:
 
@@ -205,7 +229,7 @@ Expected outcome:
 - Tauri mobile host is documented and validated beyond the current dev-path baseline
 - release packaging risks are reduced and tracked explicitly
 
-### [ ] 9. Start Relay Phase
+### [ ] 10. Start Relay Phase
 
 Goal:
 

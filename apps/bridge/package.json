@@ -1,20 +1,34 @@
 {
   "name": "@my-codex-app/bridge",
   "version": "0.1.0",
-  "private": true,
+  "private": false,
+  "bin": {
+    "codexb": "./dist/apps/bridge/src/cli/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
+  "main": "./dist/apps/bridge/src/cli/index.js",
+  "types": "./dist/apps/bridge/src/cli/index.d.ts",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "dev": "node --import tsx src/server.ts",
+    "dev": "node --import tsx src/cli/index.ts run",
+    "start": "node dist/apps/bridge/src/cli/index.js start",
+    "doctor": "node dist/apps/bridge/src/cli/index.js doctor",
+    "pack:dry-run": "npm pack --dry-run",
     "test": "node --import tsx --test test/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@my-codex-app/protocol": "workspace:*",
     "ignore": "^7.0.5",
     "qrcode-terminal": "^0.12.0"
   },
   "devDependencies": {
+    "@my-codex-app/protocol": "workspace:*",
     "@types/node": "^24.6.0",
     "@types/qrcode-terminal": "^0.12.2",
     "tsx": "^4.20.6"

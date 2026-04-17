@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { bridgeBaseUrl } from '@/lib/env';
 import { useI18n } from '@/lib/i18n/use-i18n';
+import { ensureCompatibleBridgeVersionOrReport } from '@/lib/runtime/bridge-version';
 import { formatConnectionKind } from '@/lib/runtime/connection-utils';
 import { useBridgeClient, useRuntime } from '@/lib/runtime/runtime-context';
 import { useRuntimeSnapshot } from '@/lib/runtime/use-runtime-snapshot';
@@ -46,7 +47,18 @@ export function ConnectionSection() {
         <Button
           className="w-full"
           onClick={() => {
-            void runtime.retryConnection();
+            void (async () => {
+              const isCompatible = await ensureCompatibleBridgeVersionOrReport(
+                bridgeClient,
+                runtime,
+                t,
+              );
+              if (!isCompatible) {
+                return;
+              }
+
+              await runtime.retryConnection();
+            })();
           }}
           size="sm"
           variant="outline"

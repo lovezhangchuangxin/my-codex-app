@@ -9,7 +9,7 @@ import type {
   JsonRpcSuccess,
   NotificationEnvelope,
   RequestEnvelope,
-} from './types';
+} from './types.js';
 
 type PendingRequest = {
   resolve: (value: unknown) => void;

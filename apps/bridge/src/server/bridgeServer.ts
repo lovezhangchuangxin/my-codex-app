@@ -5,6 +5,7 @@ import {
 } from 'node:http';
 
 import type {
+  BridgeVersionResponse,
   DeviceDeleteRequest,
   DeviceRevokeRequest,
   ModelListRequest,
@@ -26,12 +27,13 @@ import type {
   WorkspaceSearchFilesRequest,
 } from '@my-codex-app/protocol';
 
-import { authenticateBridgeRequest } from '../auth/authenticate';
-import { BridgeAuthService } from '../auth/authService';
-import { ProjectService } from '../projectService';
-import { ThreadService } from '../threadService';
-import { WorkspaceService } from '../workspaceService';
-import type { BridgeServerConfig } from './config';
+import { authenticateBridgeRequest } from '../auth/authenticate.js';
+import { BridgeAuthService } from '../auth/authService.js';
+import { ProjectService } from '../projectService.js';
+import { ThreadService } from '../threadService.js';
+import { WorkspaceService } from '../workspaceService.js';
+import { BRIDGE_PACKAGE_VERSION, BRIDGE_PROTOCOL_VERSION } from '../version.js';
+import type { BridgeServerConfig } from './config.js';
 import {
   classifyAppServerError,
   isRecord,
@@ -39,9 +41,8 @@ import {
   readJsonBody,
   writeError,
   writeJson,
-} from './http';
-import { logPairingStatus, resolveBridgeQrUrl } from './logging';
-import { ThreadEventStreamRegistry } from './threadEventStreamRegistry';
+} from './http.js';
+import { ThreadEventStreamRegistry } from './threadEventStreamRegistry.js';
 
 class RateLimiter {
   readonly #entries = new Map<string, { count: number; resetAt: number }>();
@@ -83,8 +84,20 @@ export class BridgeServer {
     private readonly services: BridgeServerServices,
   ) {}
 
-  listen(onListening: () => void): void {
-    this.#server.listen(this.config.port, this.config.host, onListening);
+  listen(onListening: () => void): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const onError = (error: Error): void => {
+        this.#server.off('error', onError);
+        reject(error);
+      };
+
+      this.#server.once('error', onError);
+      this.#server.listen(this.config.port, this.config.host, () => {
+        this.#server.off('error', onError);
+        onListening();
+        resolve();
+      });
+    });
   }
 
   async close(): Promise<void> {
@@ -152,19 +165,23 @@ export class BridgeServer {
       return true;
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/version') {
+      const payload: BridgeVersionResponse = {
+        bridgePackageVersion: BRIDGE_PACKAGE_VERSION,
+        bridgeProtocolVersion: BRIDGE_PROTOCOL_VERSION,
+      };
+      writeJson(response, 200, payload);
+      return true;
+    }
+
     if (request.method === 'GET' && url.pathname === '/api/pairing') {
       try {
         const status = this.services.authService.getPairingStatus();
-        if (status.regenerated) {
-          logPairingStatus(
-            status,
-            resolveBridgeQrUrl(this.config.host, this.config.port),
-          );
-        }
         const payload: PairingStatusResponse = {
           pairingRequired: status.pairingRequired,
           instructions: status.instructions,
           expiresAt: status.expiresAt,
+          pairingCode: status.pairingCode,
         };
         writeJson(response, 200, payload);
       } catch (error) {
@@ -194,10 +211,6 @@ export class BridgeServer {
         }
 
         const result = this.services.authService.completePairing(payload);
-        logPairingStatus(
-          this.services.authService.getPairingStatus(),
-          resolveBridgeQrUrl(this.config.host, this.config.port),
-        );
         writeJson(response, 200, result);
       } catch (error) {
         writeError(response, error, 400);
@@ -682,11 +695,16 @@ export class BridgeServer {
       return true;
     }
 
+    const corsOrigin = this.#resolveCorsOrigin(
+      typeof request.headers.origin === 'string'
+        ? request.headers.origin
+        : undefined,
+    );
     response.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': this.config.bridgeOrigin,
+      ...(corsOrigin ? { 'Access-Control-Allow-Origin': corsOrigin } : {}),
     });
     response.flushHeaders();
     response.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
@@ -710,12 +728,31 @@ export class BridgeServer {
   }
 
   #setCorsHeaders(response: ServerResponse): void {
-    response.setHeader('Access-Control-Allow-Origin', this.config.bridgeOrigin);
+    const origin = this.#resolveCorsOrigin(undefined);
+    if (origin) {
+      response.setHeader('Access-Control-Allow-Origin', origin);
+    }
     response.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     response.setHeader(
       'Access-Control-Allow-Headers',
       'Authorization,Content-Type',
     );
+  }
+
+  #resolveCorsOrigin(origin: string | undefined): string | null {
+    if (this.config.corsOrigins.includes('*')) {
+      return '*';
+    }
+
+    if (origin && this.config.corsOrigins.includes(origin)) {
+      return origin;
+    }
+
+    if (!origin) {
+      return this.config.corsOrigins[0] ?? null;
+    }
+
+    return null;
   }
 }
 

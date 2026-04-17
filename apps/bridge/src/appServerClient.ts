@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events';
 
-import { JsonRpcProcessClient } from './app-server/jsonRpcProcessClient';
+import { JsonRpcProcessClient } from './app-server/jsonRpcProcessClient.js';
 import type {
   FsReadDirectoryParams,
   FsReadDirectoryResult,
@@ -30,7 +30,8 @@ import type {
   TurnInterruptParams,
   TurnStartParams,
   TurnStartResult,
-} from './app-server/types';
+} from './app-server/types.js';
+import { BRIDGE_PACKAGE_VERSION } from './version.js';
 
 export type {
   AppServerAdditionalPermissionProfile,
@@ -66,7 +67,7 @@ export type {
   ThreadReadResult,
   ThreadResumeResult,
   ThreadStartResult,
-} from './app-server/types';
+} from './app-server/types.js';
 
 export class AppServerClient extends EventEmitter {
   readonly #transport: JsonRpcProcessClient;
@@ -98,7 +99,7 @@ export class AppServerClient extends EventEmitter {
       clientInfo: {
         name: 'my_codex_app_bridge',
         title: 'My Codex App Bridge',
-        version: '0.1.0',
+        version: BRIDGE_PACKAGE_VERSION,
       },
     });
 
