@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "pnpm -r --filter @my-codex-app/protocol --filter @my-codex-app/sdk --filter @my-codex-app/bridge --filter @my-codex-app/client build && pnpm --filter @my-codex-app/mobile check",
+    "build": "pnpm --filter @my-codex-app/protocol build && pnpm --filter @my-codex-app/sdk build && pnpm --filter @my-codex-app/bridge build && pnpm --filter @my-codex-app/client build && pnpm --filter @my-codex-app/mobile check",
     "dev:bridge": "pnpm --filter @my-codex-app/bridge dev",
     "dev:client": "pnpm --filter @my-codex-app/client dev",
     "mobile:android:dev": "pnpm --filter @my-codex-app/mobile android:dev",
@@ -15,10 +15,14 @@
     "mobile:ios:dev": "pnpm --filter @my-codex-app/mobile ios:dev",
     "mobile:ios:init": "pnpm --filter @my-codex-app/mobile ios:init",
     "typecheck": "pnpm -r --filter @my-codex-app/protocol --filter @my-codex-app/sdk --filter @my-codex-app/bridge --filter @my-codex-app/client --filter @my-codex-app/mobile typecheck",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "release": "pnpm build && changeset publish",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "oxfmt": "^0.45.0",
     "typescript": "^5.9.3"
   },

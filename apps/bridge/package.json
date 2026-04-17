@@ -2,23 +2,28 @@
   "name": "@my-codex-app/bridge",
   "version": "0.1.0",
   "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lovezhangchuangxin/my-codex-app",
+    "directory": "apps/bridge"
+  },
   "bin": {
-    "codexb": "./dist/apps/bridge/src/cli/index.js"
+    "codexb": "./dist/index.mjs"
   },
   "files": [
     "dist"
   ],
   "type": "module",
-  "main": "./dist/apps/bridge/src/cli/index.js",
-  "types": "./dist/apps/bridge/src/cli/index.d.ts",
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "prebuild": "pnpm --filter @my-codex-app/protocol build",
+    "build": "tsdown",
     "dev": "node --import tsx src/cli/index.ts run",
-    "start": "node dist/apps/bridge/src/cli/index.js start",
-    "doctor": "node dist/apps/bridge/src/cli/index.js doctor",
+    "start": "node dist/index.mjs start",
+    "doctor": "node dist/index.mjs doctor",
     "pack:dry-run": "npm pack --dry-run",
     "test": "node --import tsx --test test/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
@@ -31,6 +36,7 @@
     "@my-codex-app/protocol": "workspace:*",
     "@types/node": "^24.6.0",
     "@types/qrcode-terminal": "^0.12.2",
+    "tsdown": "^0.21.9",
     "tsx": "^4.20.6"
   }
 }

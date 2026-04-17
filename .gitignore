@@ -14,3 +14,8 @@ apps/mobile/src-tauri/target/
 .claude
 .codex
 .omc
+
+# changeset
+.changeset/*.md
+!.changeset/config.json
+!**/.changeset/README.md
