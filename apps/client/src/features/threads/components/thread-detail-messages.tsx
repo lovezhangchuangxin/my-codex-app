@@ -9,11 +9,14 @@ import {
 } from 'react';
 import {
   Brain,
+  Check,
   ChevronDown,
   ExternalLink,
   FileCode2,
   GalleryHorizontal,
   Search,
+  Sparkles,
+  Square,
   SquareTerminal,
   TriangleAlert,
 } from 'lucide-react';
@@ -32,10 +35,21 @@ import {
   getCommandDisplay,
   looksLikeMarkdownContent,
 } from '@/features/threads/components/thread-detail-utils';
-import type { FlatThreadItem } from '@/features/threads/lib/thread-utils';
+import type {
+  FlatThreadItem,
+  TurnPhase,
+} from '@/features/threads/lib/thread-utils';
+import {
+  formatDurationCompact,
+  formatTokensCompact,
+} from '@/features/threads/lib/thread-utils';
+import type {
+  ThreadItem,
+  ThreadContextUsage,
+  TurnError,
+} from '@my-codex-app/protocol';
 import { useI18n } from '@/lib/i18n/use-i18n';
 import { cn } from '@/lib/utils';
-import type { ThreadItem, TurnError } from '@my-codex-app/protocol';
 
 const LazyMarkdownContent = lazy(async () => {
   const module = await import('@/components/common/markdown-content');
@@ -83,12 +97,14 @@ function estimateItemSize(item: FlatThreadItem): number {
 }
 
 export function ThreadMessageStream({
+  contextUsage,
   flatItems,
   onFilePathClick,
   onOpenWorkspacePath,
   resolveWorkspacePath,
   scrollRef,
 }: {
+  contextUsage: ThreadContextUsage | null;
   flatItems: FlatThreadItem[];
   onFilePathClick?: ((href: string) => void) | undefined;
   onOpenWorkspacePath: (
@@ -181,6 +197,7 @@ export function ThreadMessageStream({
             >
               <div className="pb-4">
                 <FlatItemRenderer
+                  contextUsage={contextUsage}
                   liveNowMs={liveNowMs}
                   item={item}
                   nextItem={flatItems[virtualRow.index + 1] ?? null}
@@ -201,6 +218,7 @@ export function ThreadMessageStream({
 }
 
 const FlatItemRenderer = memo(function FlatItemRenderer({
+  contextUsage,
   liveNowMs,
   item,
   nextItem,
@@ -208,6 +226,7 @@ const FlatItemRenderer = memo(function FlatItemRenderer({
   onOpenWorkspacePath,
   resolveWorkspacePath,
 }: {
+  contextUsage: ThreadContextUsage | null;
   liveNowMs: number;
   item: FlatThreadItem;
   nextItem: FlatThreadItem | null;
@@ -249,7 +268,13 @@ const FlatItemRenderer = memo(function FlatItemRenderer({
         </AgentMessageBlock>
       );
     case 'reasoning':
-      return <ThinkingBlock item={item} liveNowMs={liveNowMs} />;
+      return (
+        <ThinkingBlock
+          contextUsage={contextUsage}
+          item={item}
+          liveNowMs={liveNowMs}
+        />
+      );
     case 'commandExecution':
       return <CommandCard item={item} />;
     case 'fileChange':
@@ -346,9 +371,11 @@ function AgentMessageBlock({ children }: { children: ReactNode }) {
 }
 
 function ThinkingBlock({
+  contextUsage,
   liveNowMs,
   item,
 }: {
+  contextUsage: ThreadContextUsage | null;
   liveNowMs: number;
   item: Extract<FlatThreadItem, { type: 'reasoning' }>;
 }) {
@@ -381,6 +408,17 @@ function ThinkingBlock({
     return Math.max(0, Math.floor((liveNowMs - startedAtMs) / 1000));
   })();
 
+  const phase = item.turnPhase;
+  const isActive =
+    phase === 'thinking' || phase === 'generating' || phase === 'executing';
+  const timer = isActive
+    ? formatDurationCompact(derivedLiveElapsedSeconds)
+    : item.turnDurationMs !== undefined
+      ? formatDurationCompact(Math.round(item.turnDurationMs / 1000))
+      : '';
+
+  const hasContent = item.summary.length > 0 || item.content.length > 0;
+
   return (
     <div className="lg:ml-9">
       <button
@@ -389,25 +427,19 @@ function ThinkingBlock({
         onClick={() => setOpen(!open)}
         type="button"
       >
-        <Brain className="size-3.5" />
-        <span>
-          {isInProgress
-            ? t('detail.reasoning.thinking')
-            : t('detail.reasoning.completed')}
-          <span className="ml-1 tabular-nums">
-            {isInProgress
-              ? `${derivedLiveElapsedSeconds}s`
-              : item.turnDurationMs !== undefined
-                ? `${Math.round(item.turnDurationMs / 1000)}s`
-                : ''}
-          </span>
-        </span>
-        <ChevronDown
-          className={cn(
-            'size-3 transition-transform duration-200',
-            !open ? '-rotate-90' : '',
-          )}
-        />
+        <PhaseIcon phase={phase} />
+        <span>{phaseLabel(phase, t)}</span>
+        {timer ? <span className="ml-1 tabular-nums">{timer}</span> : null}
+        <TokenCounts contextUsage={contextUsage} />
+        <PhaseBadge phase={phase} t={t} />
+        {hasContent ? (
+          <ChevronDown
+            className={cn(
+              'size-3 transition-transform duration-200',
+              !open ? '-rotate-90' : '',
+            )}
+          />
+        ) : null}
       </button>
       <div className="mt-1 flex flex-wrap gap-2 text-[0.7rem] uppercase tracking-[0.12em] text-muted-foreground">
         {item.turnStartedAt !== undefined ? (
@@ -425,7 +457,7 @@ function ThinkingBlock({
           </span>
         ) : null}
       </div>
-      {open && (item.summary.length > 0 || item.content.length > 0) ? (
+      {open && hasContent ? (
         <div className="mt-2 space-y-2 rounded-xl border border-subtle/8 bg-secondary/6 p-3">
           {item.summary.length > 0 ? (
             <ul className="space-y-1.5 text-sm leading-6 text-foreground">
@@ -457,6 +489,94 @@ function ThinkingBlock({
       ) : null}
     </div>
   );
+}
+
+function PhaseIcon({ phase }: { phase: TurnPhase }) {
+  const isActive =
+    phase === 'thinking' || phase === 'generating' || phase === 'executing';
+  const className = cn('size-3.5', isActive && 'animate-pulse');
+
+  switch (phase) {
+    case 'thinking':
+      return <Brain className={className} />;
+    case 'generating':
+      return <Sparkles className={className} />;
+    case 'executing':
+      return <SquareTerminal className={className} />;
+    case 'completed':
+      return <Check className={className} />;
+    case 'failed':
+      return <TriangleAlert className={className} />;
+    case 'interrupted':
+      return <Square className={className} />;
+  }
+}
+
+function phaseLabel(phase: TurnPhase, t: (key: string) => string): string {
+  switch (phase) {
+    case 'thinking':
+      return t('detail.progress.thinking');
+    case 'generating':
+      return t('detail.progress.generating');
+    case 'executing':
+      return t('detail.progress.executing');
+    case 'completed':
+      return t('detail.progress.completed');
+    case 'failed':
+      return t('detail.progress.failed');
+    case 'interrupted':
+      return t('detail.progress.interrupted');
+  }
+}
+
+function TokenCounts({
+  contextUsage,
+}: {
+  contextUsage: ThreadContextUsage | null;
+}) {
+  const turnTokens = contextUsage?.last ?? null;
+  if (!turnTokens) return null;
+
+  const inputStr = formatTokensCompact(turnTokens.inputTokens);
+  const outputStr = formatTokensCompact(turnTokens.outputTokens);
+
+  return (
+    <span className="hidden text-muted-foreground/70 sm:inline">
+      <span className="mx-1">·</span>↓ {inputStr}
+      <span className="mx-0.5"> </span>↑ {outputStr}
+    </span>
+  );
+}
+
+function PhaseBadge({
+  phase,
+  t,
+}: {
+  phase: TurnPhase;
+  t: (key: string) => string;
+}) {
+  switch (phase) {
+    case 'thinking':
+      return (
+        <StatusBadge
+          label={t('detail.progress.phase.reasoning')}
+          tone="active"
+        />
+      );
+    case 'generating':
+      return (
+        <StatusBadge label={t('detail.progress.phase.writing')} tone="active" />
+      );
+    case 'executing':
+      return (
+        <StatusBadge
+          label={t('detail.progress.phase.executing')}
+          tone="active"
+        />
+      );
+    default:
+      return null;
+  }
 }
 
 function CommandCard({

@@ -161,12 +161,19 @@ export const enMessages = {
   'detail.review.completed': 'Review result',
   'detail.review.inProgress': 'Reviewing',
   'detail.review.show': 'Show review',
-  'detail.reasoning.thinking': 'Thinking...',
-  'detail.reasoning.completed': 'Thought process',
   'detail.reasoning.turnStarted': ({ value }) =>
     `Turn started: ${value ?? ''}`.trim(),
   'detail.reasoning.turnCompleted': ({ value }) =>
     `Turn completed: ${value ?? ''}`.trim(),
+  'detail.progress.thinking': 'Thinking\u2026',
+  'detail.progress.generating': 'Generating\u2026',
+  'detail.progress.executing': 'Executing\u2026',
+  'detail.progress.completed': 'Completed',
+  'detail.progress.failed': 'Failed',
+  'detail.progress.interrupted': 'Interrupted',
+  'detail.progress.phase.reasoning': 'reasoning',
+  'detail.progress.phase.writing': 'writing',
+  'detail.progress.phase.executing': 'executing',
   'detail.switcher.description':
     'Jump to another session in this project without losing your current route.',
   'detail.switcher.empty': 'No sessions are available in this project yet.',

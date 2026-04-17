@@ -354,6 +354,7 @@ function ReadyThreadDetail({
         </div>
       ) : (
         <ThreadMessageStream
+          contextUsage={thread.contextUsage}
           flatItems={flatItems}
           onFilePathClick={handleFilePathClick}
           onOpenWorkspacePath={(path, requestedTargetKind) => {

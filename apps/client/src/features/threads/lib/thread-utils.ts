@@ -14,6 +14,14 @@ import {
 } from '@/lib/i18n/formatters';
 import { translateEnglish } from '@/lib/i18n/catalog';
 
+export type TurnPhase =
+  | 'thinking'
+  | 'generating'
+  | 'executing'
+  | 'completed'
+  | 'failed'
+  | 'interrupted';
+
 export type FlatThreadItem = ThreadItem & {
   turnId: string;
   turnIndex: number;
@@ -21,10 +29,30 @@ export type FlatThreadItem = ThreadItem & {
   turnStartedAt?: number;
   turnCompletedAt?: number;
   turnDurationMs?: number;
+  turnPhase: TurnPhase;
   isReasoningLive: boolean;
   isFirstInTurn: boolean;
   turnError?: TurnError;
 };
+
+export function formatTokensCompact(value: number): string {
+  if (!Number.isFinite(value) || value < 0) return '0';
+  if (value < 1000) return String(Math.round(value));
+  if (value < 1_000_000) {
+    const v = Math.round(value / 100) / 10;
+    if (v >= 1000) return '1M';
+    return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)}k`;
+  }
+  const v = Math.round(value / 100_000) / 10;
+  return `${v % 1 === 0 ? v.toFixed(0) : v.toFixed(1)}M`;
+}
+
+export function formatDurationCompact(seconds: number): string {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${String(s).padStart(2, '0')}s`;
+}
 
 export type ThreadStatusFilter =
   | 'all'
@@ -213,6 +241,38 @@ export function groupThreadsByWorkspace(
   }));
 }
 
+export function deriveTurnPhase(
+  turnStatus: TurnDetail['status'],
+  lastItem: ThreadItem | undefined,
+  isLastItemReasoningLive: boolean,
+): TurnPhase {
+  switch (turnStatus) {
+    case 'failed':
+      return 'failed';
+    case 'interrupted':
+      return 'interrupted';
+    case 'completed':
+      return 'completed';
+    case 'inProgress':
+      break;
+    default:
+      return 'thinking';
+  }
+
+  if (!lastItem) return 'thinking';
+
+  switch (lastItem.type) {
+    case 'reasoning':
+      return isLastItemReasoningLive ? 'thinking' : 'generating';
+    case 'agentMessage':
+      return 'generating';
+    case 'commandExecution':
+      return lastItem.status === 'inProgress' ? 'executing' : 'generating';
+    default:
+      return 'thinking';
+  }
+}
+
 export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
   const items: FlatThreadItem[] = [];
 
@@ -232,6 +292,13 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
       }
       visibleTurnItems.push({ base, isReasoningLive });
     }
+
+    const lastVisible = visibleTurnItems.at(-1);
+    const turnPhase = deriveTurnPhase(
+      turn.status,
+      lastVisible?.base,
+      lastVisible?.isReasoningLive ?? false,
+    );
 
     for (
       let visibleItemIndex = 0;
@@ -253,6 +320,7 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
         ...(turn.durationMs !== undefined
           ? { turnDurationMs: turn.durationMs }
           : {}),
+        turnPhase,
         isReasoningLive,
         isFirstInTurn: visibleItemIndex === 0,
         ...(visibleItemIndex === visibleTurnItems.length - 1 && turn.error
@@ -280,6 +348,7 @@ export function flattenTurnItems(turns: TurnDetail[]): FlatThreadItem[] {
         ...(turn.durationMs !== undefined
           ? { turnDurationMs: turn.durationMs }
           : {}),
+        turnPhase,
         isReasoningLive: false,
         isFirstInTurn: true,
         turnError: turn.error,

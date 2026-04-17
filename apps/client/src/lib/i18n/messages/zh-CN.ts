@@ -146,12 +146,19 @@ export const zhCnMessages: typeof enMessages = {
   'detail.review.completed': '审查结果',
   'detail.review.inProgress': '审查中',
   'detail.review.show': '查看审查',
-  'detail.reasoning.thinking': '思考中...',
-  'detail.reasoning.completed': '思考过程',
   'detail.reasoning.turnStarted': ({ value }) =>
     `回合开始：${value ?? ''}`.trim(),
   'detail.reasoning.turnCompleted': ({ value }) =>
     `回合结束：${value ?? ''}`.trim(),
+  'detail.progress.thinking': '思考中\u2026',
+  'detail.progress.generating': '生成中\u2026',
+  'detail.progress.executing': '执行中\u2026',
+  'detail.progress.completed': '已完成',
+  'detail.progress.failed': '已失败',
+  'detail.progress.interrupted': '已中断',
+  'detail.progress.phase.reasoning': '推理',
+  'detail.progress.phase.writing': '输出',
+  'detail.progress.phase.executing': '执行',
   'detail.switcher.description':
     '直接切换到当前项目中的其他会话，而不会丢失当前路由。',
   'detail.switcher.empty': '这个项目里还没有可切换的会话。',
@@ -210,8 +217,7 @@ export const zhCnMessages: typeof enMessages = {
   'header.openRequests': '打开待处理请求',
   'header.openSettings': '打开设置',
   'header.searchPlaceholder': '搜索...',
-  'pairing.cameraUnavailable':
-    '摄像头不可用，请使用系统相机扫描二维码。',
+  'pairing.cameraUnavailable': '摄像头不可用，请使用系统相机扫描二维码。',
   'pairing.codePlaceholder': '例如 ABCD1234',
   'pairing.connect': '连接',
   'pairing.connecting': '连接中...',
