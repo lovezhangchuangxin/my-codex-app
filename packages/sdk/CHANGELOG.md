@@ -1,5 +1,16 @@
 # @my-codex-app/sdk
 
+## 0.3.0
+
+### Minor Changes
+
+- fix pairing page not navigating on first QR scan
+
+### Patch Changes
+
+- Updated dependencies
+  - @my-codex-app/protocol@0.3.0
+
 ## 0.2.0
 
 ### Minor Changes
