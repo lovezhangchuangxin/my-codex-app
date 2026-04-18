@@ -830,14 +830,39 @@ export class BridgeThreadRuntime {
 
   #connectGlobalEvents(): void {
     this.#disconnectGlobalEvents();
+
+    // Batch global events to prevent render storms — multiple events arriving
+    // in quick succession (e.g., on reconnect after background) are applied in
+    // a single #update() call, producing only one React re-render.
+    let pendingGlobalEvents: BridgeEvent[] = [];
+    let globalFlushScheduled = false;
+
+    const flushGlobalEvents = (): void => {
+      globalFlushScheduled = false;
+      const events = pendingGlobalEvents;
+      pendingGlobalEvents = [];
+      if (events.length === 0) return;
+
+      this.#update((current) => {
+        let threads = current.threads;
+        for (const event of events) {
+          threads = updateThreadSummaryState(threads, event);
+        }
+        return { ...current, threads };
+      });
+    };
+
     this.#unsubscribeGlobalEvents = this.client.subscribeToGlobalEvents({
       onEvent: (event) => {
-        this.#update((current) => ({
-          ...current,
-          threads: updateThreadSummaryState(current.threads, event),
-        }));
+        pendingGlobalEvents.push(event);
+        if (!globalFlushScheduled) {
+          globalFlushScheduled = true;
+          queueMicrotask(flushGlobalEvents);
+        }
       },
       onDisconnect: () => {
+        pendingGlobalEvents = [];
+        globalFlushScheduled = false;
         if (this.#snapshot.connection.kind === 'authenticated') {
           this.#scheduleReconnect('Global event stream disconnected');
         }
