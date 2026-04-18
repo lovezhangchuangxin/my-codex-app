@@ -1,6 +1,6 @@
 [package]
 name = "my-codex-app-mobile"
-version = "0.1.0"
+version = "0.1.1"
 description = "Tauri 2 mobile host for my-codex-app"
 edition = "2021"
 
