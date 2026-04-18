@@ -1,6 +1,7 @@
 package com.mycodexapp.mobile
 
 import android.os.Bundle
+import com.mycodexapp.mobile.BuildConfig
 import android.webkit.WebView
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.ViewCompat
@@ -24,6 +25,15 @@ class MainActivity : TauriActivity() {
 
   override fun onWebViewCreate(webView: WebView) {
     super.onWebViewCreate(webView)
+
+    // Allow the WebView (loaded from https://tauri.localhost in release builds)
+    // to fetch plain-HTTP bridge endpoints on the LAN.
+    webView.settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+    // Enable WebView debugging in debug builds only (connect via chrome://inspect)
+    if (BuildConfig.DEBUG) {
+      android.webkit.WebView.setWebContentsDebuggingEnabled(true)
+    }
 
     ViewCompat.setOnApplyWindowInsetsListener(webView) { _, windowInsets ->
       val imeInsets = windowInsets.getInsets(WindowInsetsCompat.Type.ime())

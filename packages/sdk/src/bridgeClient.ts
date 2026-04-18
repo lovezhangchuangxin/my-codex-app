@@ -111,12 +111,14 @@ interface BridgeRequestOptions {
 
 export class BridgeClient {
   readonly #baseUrl: string;
+  readonly #baseOrigin: string;
   readonly #credentialStore: BridgeCredentialStore | null;
   readonly #sessionListeners = new Set<(event: BridgeSessionEvent) => void>();
   #refreshPromise: Promise<BridgeSessionCredentials> | null = null;
 
   constructor(config: BridgeClientConfig) {
     this.#baseUrl = config.baseUrl;
+    this.#baseOrigin = new URL(config.baseUrl).origin;
     this.#credentialStore = config.credentialStore ?? null;
   }
 
@@ -757,6 +759,12 @@ export class BridgeClient {
     includeAccessToken = true,
   ): string {
     const url = new URL(path, this.#baseUrl);
+    if (url.origin !== this.#baseOrigin) {
+      throw new BridgeClientError(
+        'Request target does not match configured bridge origin',
+        { kind: 'network' },
+      );
+    }
     if (searchParams) {
       for (const [key, value] of Object.entries(searchParams)) {
         url.searchParams.set(key, value);

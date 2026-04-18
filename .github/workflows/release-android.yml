@@ -107,6 +107,13 @@ jobs:
         shell: bash
         run: |
           printf '%s' "${ANDROID_KEY_BASE64}" | base64 --decode > "${RUNNER_TEMP}/upload-keystore.jks"
+
+          # Verify the decoded file is a valid keystore
+          if ! keytool -list -keystore "${RUNNER_TEMP}/upload-keystore.jks" -storepass "${ANDROID_STORE_PASSWORD}" >/dev/null 2>&1; then
+            echo "::error::Keystore validation failed. Check ANDROID_KEY_BASE64 and ANDROID_STORE_PASSWORD secrets." >&2
+            exit 1
+          fi
+
           {
             echo "keyAlias=${ANDROID_KEY_ALIAS}"
             echo "keyPassword=${ANDROID_KEY_PASSWORD}"
