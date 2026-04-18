@@ -1,6 +1,6 @@
 {
   "name": "my-codex-app",
-  "version": "0.1.1",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "pnpm --filter @my-codex-app/protocol build && pnpm --filter @my-codex-app/sdk build && pnpm --filter @my-codex-app/bridge build && pnpm --filter @my-codex-app/client build && pnpm --filter @my-codex-app/mobile check",
