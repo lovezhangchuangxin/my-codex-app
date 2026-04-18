@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { useBridgeClient } from '@/lib/runtime/runtime-context';
 import { upsertProjectSummary } from '@/features/projects/lib/project-utils';
@@ -30,11 +30,7 @@ export function useProjectHome(
   // selectedProjectPath is now driven by URL — preferredProjectPath is the
   // source of truth and passed through directly.
   const selectedProjectPath = preferredProjectPath;
-  const [sessionsState, setSessionsState] = useState<ThreadListState>({
-    kind: 'idle',
-  });
   const [projectsReloadToken, setProjectsReloadToken] = useState(0);
-  const [sessionsReloadToken, setSessionsReloadToken] = useState(0);
 
   useEffect(() => {
     if (!canQueryBridge(connectionKind)) {
@@ -81,81 +77,8 @@ export function useProjectHome(
     };
   }, [bridgeClient, connectionKind, projectsReloadToken]);
 
-  useEffect(() => {
-    if (!canQueryBridge(connectionKind)) {
-      setSessionsState({ kind: 'idle' });
-      return;
-    }
-
-    if (!selectedProjectPath) {
-      setSessionsState({ kind: 'idle' });
-      return;
-    }
-
-    let cancelled = false;
-    const controller = new AbortController();
-    setSessionsState({ kind: 'loading' });
-
-    void bridgeClient
-      .listThreads({ cwd: selectedProjectPath }, { signal: controller.signal })
-      .then((response) => {
-        if (cancelled) {
-          return;
-        }
-        setSessionsState({
-          kind: 'ready',
-          threads: response.data,
-        });
-      })
-      .catch((error: unknown) => {
-        if (cancelled) {
-          return;
-        }
-        const message =
-          error instanceof Error ? error.message : 'Unable to load sessions';
-        setSessionsState((current) =>
-          current.kind === 'ready'
-            ? current
-            : {
-                kind: 'error',
-                message,
-              },
-        );
-      });
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [bridgeClient, connectionKind, selectedProjectPath, sessionsReloadToken]);
-
-  useEffect(() => {
-    if (!canQueryBridge(connectionKind)) {
-      return;
-    }
-
-    if (runtimeThreadsState.kind !== 'ready') {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      setProjectsReloadToken((current) => current + 1);
-      if (selectedProjectPath !== null) {
-        setSessionsReloadToken((current) => current + 1);
-      }
-    }, 120);
-
-    return () => {
-      window.clearTimeout(timer);
-    };
-  }, [connectionKind, runtimeThreadsState, selectedProjectPath]);
-
   function refreshProjects() {
     setProjectsReloadToken((current) => current + 1);
-  }
-
-  function refreshSessions() {
-    setSessionsReloadToken((current) => current + 1);
   }
 
   async function searchProjects(
@@ -177,15 +100,46 @@ export function useProjectHome(
         : current,
     );
     refreshProjects();
-    refreshSessions();
     return response.project;
   }
+
+  const sessionsState = useMemo<ThreadListState>(() => {
+    if (!selectedProjectPath) {
+      return { kind: 'idle' };
+    }
+    if (!canQueryBridge(connectionKind)) {
+      // Preserve last-known ready state during transient connection loss.
+      if (runtimeThreadsState.kind === 'ready') {
+        return {
+          kind: 'ready',
+          threads: runtimeThreadsState.threads.filter(
+            (t) => t.cwd === selectedProjectPath,
+          ),
+        };
+      }
+      return { kind: 'idle' };
+    }
+    if (runtimeThreadsState.kind === 'loading') {
+      return { kind: 'loading' };
+    }
+    if (runtimeThreadsState.kind === 'error') {
+      return { kind: 'error', message: runtimeThreadsState.message };
+    }
+    if (runtimeThreadsState.kind === 'ready') {
+      return {
+        kind: 'ready',
+        threads: runtimeThreadsState.threads.filter(
+          (t) => t.cwd === selectedProjectPath,
+        ),
+      };
+    }
+    return { kind: 'idle' };
+  }, [runtimeThreadsState, selectedProjectPath, connectionKind]);
 
   return {
     importProject,
     projectsState,
     refreshProjects,
-    refreshSessions,
     searchProjects,
     selectedProjectPath,
     sessionsState,

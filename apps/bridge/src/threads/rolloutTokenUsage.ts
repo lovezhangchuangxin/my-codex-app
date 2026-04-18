@@ -61,7 +61,7 @@ async function resolveRolloutPath(
   return findRolloutPath(source.codexHome, source.threadId);
 }
 
-async function findRolloutPath(
+export async function findRolloutPath(
   codexHome: string,
   threadId: string,
 ): Promise<string | null> {

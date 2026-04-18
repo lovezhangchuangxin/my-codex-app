@@ -52,6 +52,7 @@ export class BridgeThreadRuntime {
   #resyncPromise: Promise<void> | null = null;
   #snapshot: ThreadRuntimeSnapshot;
   #unsubscribeEvents: (() => void) | null = null;
+  #unsubscribeGlobalEvents: (() => void) | null = null;
   readonly #unsubscribeSessionEvents: () => void;
 
   constructor(private readonly client: BridgeClient) {
@@ -198,6 +199,7 @@ export class BridgeThreadRuntime {
       }));
 
       this.#showSelectedThread(thread);
+      this.#connectGlobalEvents();
       return thread.id;
     } catch (error) {
       this.#setActionError(error);
@@ -360,6 +362,7 @@ export class BridgeThreadRuntime {
     this.#disposed = true;
     this.#clearReconnectTimer();
     this.#disconnectEvents();
+    this.#disconnectGlobalEvents();
     this.#unsubscribeSessionEvents();
     this.#pendingEvents.clear();
     this.#drainingThreads.clear();
@@ -368,6 +371,7 @@ export class BridgeThreadRuntime {
   resetState(): void {
     this.#clearReconnectTimer();
     this.#disconnectEvents();
+    this.#disconnectGlobalEvents();
     this.#pendingEvents.clear();
     this.#drainingThreads.clear();
     this.#snapshot = createInitialSnapshot(this.client.hasCredentials());
@@ -448,6 +452,7 @@ export class BridgeThreadRuntime {
           ...current,
           detail: { kind: 'idle' },
         }));
+        this.#connectGlobalEvents();
         this.#markAuthenticated();
         return;
       }
@@ -484,6 +489,7 @@ export class BridgeThreadRuntime {
         detail: { kind: 'ready', thread },
       }));
       this.#connectEvents(selectedThreadId);
+      this.#connectGlobalEvents();
       this.#markAuthenticated();
     } catch (error) {
       const classification = classifyBridgeFailure(error);
@@ -822,6 +828,28 @@ export class BridgeThreadRuntime {
     this.#unsubscribeEvents = null;
   }
 
+  #connectGlobalEvents(): void {
+    this.#disconnectGlobalEvents();
+    this.#unsubscribeGlobalEvents = this.client.subscribeToGlobalEvents({
+      onEvent: (event) => {
+        this.#update((current) => ({
+          ...current,
+          threads: updateThreadSummaryState(current.threads, event),
+        }));
+      },
+      onDisconnect: () => {
+        if (this.#snapshot.connection.kind === 'authenticated') {
+          this.#scheduleReconnect('Global event stream disconnected');
+        }
+      },
+    });
+  }
+
+  #disconnectGlobalEvents(): void {
+    this.#unsubscribeGlobalEvents?.();
+    this.#unsubscribeGlobalEvents = null;
+  }
+
   #showSelectedThread(thread: ThreadDetail): void {
     this.#disconnectEvents();
     this.#pendingEvents.set(thread.id, []);
@@ -905,6 +933,7 @@ export class BridgeThreadRuntime {
     const nextSnapshot = createInitialSnapshot(this.client.hasCredentials());
     this.#clearReconnectTimer();
     this.#disconnectEvents();
+    this.#disconnectGlobalEvents();
     this.#pendingEvents.clear();
     this.#snapshot = {
       ...nextSnapshot,

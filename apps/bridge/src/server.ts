@@ -51,6 +51,7 @@ export async function runBridgeDaemon(
     const eventRegistry = new ThreadEventStreamRegistry(
       threadService,
       config.threadUnsubscribeGraceMs,
+      initializeResult.codexHome,
     );
     const unsubscribeEvents = threadService.onBridgeEvent((event) => {
       eventRegistry.broadcast(event);

@@ -631,7 +631,7 @@ export type BridgeEvent =
   | {
       type: 'threadStarted';
       threadId: string;
-      thread: ThreadDetail;
+      thread: ThreadSummary;
     }
   | {
       type: 'threadStatusChanged';
@@ -721,6 +721,10 @@ export type BridgeEvent =
       type: 'threadContextUsageUpdated';
       threadId: string;
       contextUsage: ThreadContextUsage;
+    }
+  | {
+      type: 'threadDeleted';
+      threadId: string;
     };
 
 export interface ApiErrorPayload {

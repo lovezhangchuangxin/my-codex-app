@@ -117,10 +117,7 @@ export function updateThreadSummaryState(
     case 'threadStarted':
       return {
         kind: 'ready',
-        threads: upsertThreadSummary(
-          state.threads,
-          toThreadSummary(event.thread),
-        ),
+        threads: upsertThreadSummary(state.threads, event.thread),
       };
     case 'threadStatusChanged':
       return {
@@ -226,6 +223,11 @@ export function updateThreadSummaryState(
     case 'threadSettingsUpdated':
     case 'threadContextUsageUpdated':
       return state;
+    case 'threadDeleted':
+      return {
+        kind: 'ready',
+        threads: state.threads.filter((t) => t.id !== event.threadId),
+      };
   }
 }
 
@@ -235,7 +237,9 @@ export function applyThreadEvent(
 ): ThreadDetail {
   switch (event.type) {
     case 'threadStarted':
-      return event.thread;
+      return thread;
+    case 'threadDeleted':
+      return thread;
     case 'threadStatusChanged':
       return {
         ...thread,

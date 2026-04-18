@@ -415,6 +415,23 @@ export class BridgeClient {
       onDisconnect: (error: BridgeClientError) => void;
     },
   ): () => void {
+    return this.#createEventSource({ threadId }, handlers);
+  }
+
+  subscribeToGlobalEvents(handlers: {
+    onEvent: (event: BridgeEvent) => void;
+    onDisconnect: (error: BridgeClientError) => void;
+  }): () => void {
+    return this.#createEventSource({}, handlers);
+  }
+
+  #createEventSource(
+    params: Record<string, string>,
+    handlers: {
+      onEvent: (event: BridgeEvent) => void;
+      onDisconnect: (error: BridgeClientError) => void;
+    },
+  ): () => void {
     let closed = false;
     let eventSource: EventSource | null = null;
 
@@ -445,7 +462,7 @@ export class BridgeClient {
         this.#buildUrl(
           '/api/events',
           {
-            threadId,
+            ...params,
             access_token: credentials.accessToken,
           },
           false,

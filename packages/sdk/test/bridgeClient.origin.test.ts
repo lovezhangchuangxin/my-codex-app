@@ -52,7 +52,10 @@ test('origin guard: allows relative paths', () => {
 
 test('origin guard: allows same-origin absolute URLs', () => {
   assert.equal(
-    checkOrigin('http://192.168.1.7:8787', 'http://192.168.1.7:8787/api/pairing'),
+    checkOrigin(
+      'http://192.168.1.7:8787',
+      'http://192.168.1.7:8787/api/pairing',
+    ),
     true,
   );
   assert.equal(
@@ -85,7 +88,10 @@ test('origin guard: blocks protocol-relative URLs to different origin', () => {
 
 test('origin guard: blocks data: and blob: and javascript: URLs', () => {
   assert.equal(
-    checkOrigin('http://192.168.1.7:8787', 'data:text/html,<script>alert(1)</script>'),
+    checkOrigin(
+      'http://192.168.1.7:8787',
+      'data:text/html,<script>alert(1)</script>',
+    ),
     false,
   );
   assert.equal(

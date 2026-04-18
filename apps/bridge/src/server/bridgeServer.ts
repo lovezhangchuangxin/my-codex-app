@@ -688,12 +688,6 @@ export class BridgeServer {
     }
 
     const threadId = url.searchParams.get('threadId');
-    if (!threadId) {
-      writeJson(response, 400, {
-        error: { message: 'Missing threadId for event stream' },
-      });
-      return true;
-    }
 
     const corsOrigin = this.#resolveCorsOrigin(
       typeof request.headers.origin === 'string'
@@ -710,13 +704,34 @@ export class BridgeServer {
     response.write(`data: ${JSON.stringify({ type: 'connected' })}\n\n`);
 
     try {
-      const client = await this.services.eventRegistry.addClient(
-        response,
-        threadId,
-      );
-      request.on('close', () => {
-        this.services.eventRegistry.removeClient(client);
-      });
+      if (threadId) {
+        let clientAdded = false;
+        let client: Awaited<
+          ReturnType<typeof this.services.eventRegistry.addClient>
+        >;
+        request.on('close', () => {
+          if (clientAdded) {
+            this.services.eventRegistry.removeClient(client);
+          }
+        });
+        client = await this.services.eventRegistry.addClient(
+          response,
+          threadId,
+        );
+        clientAdded = true;
+      } else {
+        let clientAdded = false;
+        let client: Awaited<
+          ReturnType<typeof this.services.eventRegistry.addGlobalClient>
+        >;
+        request.on('close', () => {
+          if (clientAdded) {
+            this.services.eventRegistry.removeGlobalClient(client);
+          }
+        });
+        client = await this.services.eventRegistry.addGlobalClient(response);
+        clientAdded = true;
+      }
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Unknown bridge error';

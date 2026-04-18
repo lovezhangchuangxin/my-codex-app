@@ -8,6 +8,7 @@
 Android WebView's CSP implementation does **not** match non-standard ports when using `http://*` as a source expression in `connect-src`. When the bridge runs at `http://192.168.1.7:8787`, the CSP `connect-src` value `http://*` fails to match this URL, causing the WebView to block all fetch requests.
 
 Console error:
+
 ```
 Refused to connect to 'http://192.168.1.7:8787/api/version' because it violates
 the following Content Security Policy directive:
@@ -73,22 +74,25 @@ if (BuildConfig.DEBUG) {
 2. **Console manual testing**:
    ```js
    // Check if bridge URL is stored
-   localStorage.getItem('my-codex-app.bridge-target')
+   localStorage.getItem('my-codex-app.bridge-target');
    // Test fetch directly
-   fetch('http://<bridge-url>/healthz').then(r => r.text()).then(console.log).catch(console.error)
+   fetch('http://<bridge-url>/healthz')
+     .then((r) => r.text())
+     .then(console.log)
+     .catch(console.error);
    ```
 3. **Network tab**: If requests don't appear in the Network tab, they were blocked at the WebView level (CSP/mixed content)
 
 ## Hypotheses Eliminated During Investigation
 
-| Hypothesis | Conclusion | Reason |
-|---|---|---|
-| CSP `http://*` blocking | **Root cause** | Android WebView's CSP implementation does not match `http://*` against non-standard ports |
-| Mixed content blocking | Not applicable | `useHttpsScheme: false`, page loads from HTTP, no mixed content issue |
-| CORS | Not the cause | Bridge defaults to `corsOrigins: ['*']`, OPTIONS preflight handled correctly |
-| `usesCleartextTraffic` | Not the cause | Already set to `true`, and `network_security_config.xml` allows cleartext |
-| ProGuard/R8 stripping classes | Not the cause | `RustWebViewClient`, `RustWebView`, etc. all have keep rules |
-| Rust custom protocol handler blocking external requests | Not the cause | wry source confirms `handleRequest` returns `None` for non-custom-protocol URLs, WebView handles normally |
+| Hypothesis                                              | Conclusion     | Reason                                                                                                    |
+| ------------------------------------------------------- | -------------- | --------------------------------------------------------------------------------------------------------- |
+| CSP `http://*` blocking                                 | **Root cause** | Android WebView's CSP implementation does not match `http://*` against non-standard ports                 |
+| Mixed content blocking                                  | Not applicable | `useHttpsScheme: false`, page loads from HTTP, no mixed content issue                                     |
+| CORS                                                    | Not the cause  | Bridge defaults to `corsOrigins: ['*']`, OPTIONS preflight handled correctly                              |
+| `usesCleartextTraffic`                                  | Not the cause  | Already set to `true`, and `network_security_config.xml` allows cleartext                                 |
+| ProGuard/R8 stripping classes                           | Not the cause  | `RustWebViewClient`, `RustWebView`, etc. all have keep rules                                              |
+| Rust custom protocol handler blocking external requests | Not the cause  | wry source confirms `handleRequest` returns `None` for non-custom-protocol URLs, WebView handles normally |
 
 ## Tauri 2 Android Request Flow Architecture
 

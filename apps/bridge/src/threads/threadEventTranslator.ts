@@ -20,7 +20,6 @@ import {
   asRequestId,
   asNumber,
   asString,
-  attachThreadRuntime,
   toCommandActionList,
   toCommandApprovalDecisions,
   toExecPolicyAmendment,
@@ -31,7 +30,7 @@ import {
   toPendingUserInputQuestion,
   toRequestPermissionProfile,
   toThreadContextUsage,
-  toThreadDetail,
+  toThreadSummary,
   toThreadItem,
   toTurnDetail,
   toRuntimeStatus,
@@ -53,14 +52,9 @@ export class ThreadEventTranslator {
     switch (method) {
       case 'thread/started': {
         const rawThread = payload.thread as AppServerThread;
+        const pendingRequests = this.cache.listPendingRequests(rawThread.id);
         this.cache.setThreadCwd(rawThread.id, rawThread.cwd);
-        const thread = attachThreadRuntime(
-          this.cache,
-          toThreadDetail(
-            rawThread,
-            this.cache.listPendingRequests(rawThread.id),
-          ),
-        );
+        const thread = toThreadSummary(rawThread, pendingRequests);
         return { type: 'threadStarted', threadId: thread.id, thread };
       }
       case 'thread/status/changed': {

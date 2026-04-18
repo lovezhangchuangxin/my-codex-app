@@ -112,7 +112,10 @@ rewriteFileIfPresent(mainActivityFile, (original) => {
 
 rewriteFileIfPresent(mainActivityFile, (original) => {
   // Already patched (new conditional version)
-  if (original.includes('BuildConfig.DEBUG') && original.includes('setWebContentsDebuggingEnabled')) {
+  if (
+    original.includes('BuildConfig.DEBUG') &&
+    original.includes('setWebContentsDebuggingEnabled')
+  ) {
     return original;
   }
 
