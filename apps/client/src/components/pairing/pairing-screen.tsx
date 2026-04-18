@@ -1,5 +1,4 @@
 import { lazy, Suspense, useCallback, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Keyboard, QrCode } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -37,7 +36,6 @@ type ScanFeedback = {
 type ScanFeedbackEntry = Exclude<ScanFeedback, null>;
 
 export function PairingScreen() {
-  const navigate = useNavigate();
   const { t } = useI18n();
 
   const [pairingState, setPairingState] = useState<PairingState>({
@@ -78,8 +76,8 @@ export function PairingScreen() {
         await assertCompatibleBridgeVersion(pairingClient, t);
         await pairingClient.completePairing({ code, device });
         writeStoredBridgeBaseUrl(bridgeUrl);
-        setPairingState({ status: 'success' });
-        navigate('/threads', { replace: true });
+        // Keep "submitting" state — AuthGuard will navigate to /threads
+        // once the runtime bootstraps and becomes authenticated.
       } catch (error) {
         const message =
           error instanceof Error ? error.message : t('pairing.error.generic');
@@ -88,7 +86,7 @@ export function PairingScreen() {
         pairingInFlight.current = false;
       }
     },
-    [t, navigate],
+    [t],
   );
 
   const handleScanResult = useCallback(

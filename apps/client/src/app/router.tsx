@@ -51,7 +51,7 @@ export const appRouter = createBrowserRouter(
         },
         {
           path: 'pair',
-          element: withSuspense(<PairingScreen />),
+          element: <AuthGuard>{withSuspense(<PairingScreen />)}</AuthGuard>,
         },
         {
           path: 'threads',
